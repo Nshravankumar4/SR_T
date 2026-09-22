@@ -1,30 +1,47 @@
 # 🚛 Transport Management & Ledger System
 
-A lightweight Transport Management & Financial Reconciliation application built specifically for transport operations, based on your **Shinex Excel data models**.
+A production-ready Transport Management & Financial Reconciliation application built specifically for transport operations, based on your exact **Shinex Excel data models** (April 2026 to March 2027).
 
-> **Note:** Designed to run using free-tier GitHub Pages and Google Apps Script/Google Sheets services. Provider free-tier limits and policies may change over time.
+---
+
+## 🌐 Live Web Deployment
+
+* **Production URL:** [https://transportmanagement-ten.vercel.app](https://transportmanagement-ten.vercel.app/)
+* **Hosting Platform:** Vercel (Auto-deploys securely from private GitHub repository)
+* **Status:** Active & SSL Secured
 
 ---
 
 ## 🚀 Key Features
 
-1. **Continuous Data Logging:**
-   - No need to split records by months or files. The application maintains all trips from April 2026 to March 2027 in one unified, searchable table.
-2. **Dynamic Financial Accounting:**
-   - **Automatic Balances:** `Balance = ToPay - Paid` is calculated automatically.
-   - **Status Management:** Records auto-classify as `Paid`, `Partially Paid`, or `Pending`.
-   - **Company Advances:** Tracks advance payments (RTGS, Cheques, NEFT) and adjusts them against total payable debt.
-   - **Financial Reconciliation Formula:**
-     $$\text{Net Outstanding} = (\text{Opening Balance} + \text{Total ToPay}) - (\text{Total Paid} + \text{Total Advances})$$
-3. **In-Browser Excel Sync:**
-   - **Download Excel:** Exports an exact 3-sheet workbook (`Transport Records`, `Advances`, `Financial Summary`) matching your Shinex format.
-   - **Import Excel:** Batch imports existing `.xlsx` files into your database.
-4. **Resilient Dual-Mode Storage:**
+1. **Exact 1:1 Live Excel Spreadsheet View:**
+   - Visual clone of the original Shinex workbook right in the browser.
+   - Distinct **Section 1 (April – August 2026)** and **Section 2 (NEW August – September 2026)** with real-time totals and pixel-matched reconciliation boxes.
+   - **⛶ Fullscreen Mode:** Expand the spreadsheet across the entire display.
+   - **🔍 Zoom Controls (80% Fit, 90%, 100%, 115%):** Dynamically scales all 15 columns to fit any laptop or monitor without horizontal scrolling.
+
+2. **Dual-Section Financial Reconciliation:**
+   - **Section 1 Reconciliation (Closed Period):**
+     $$\text{Total Payable (₹18,93,350)} = \text{To Billed (₹16,09,850)} + \text{ToPay Bal (₹2,83,500)}$$
+     $$\text{14-08-2026 Balance (₹10,000)} = \text{Total Payable} - \text{Advances (₹18,83,350)}$$
+   - **Section 2 Reconciliation (Active Period):**
+     $$\text{Total Payable} = \text{To Billed (Section 2 Amount)} + \text{Old Balance (₹10,000)}$$
+     $$\text{Net Outstanding} = \text{Total Payable} - \text{Section 2 Advances (₹4,50,000)}$$
+
+3. **Bulletproof Excel (.xlsx) Downloads:**
+   - Bundled with local spreadsheet engines in `libs/` (`libs/exceljs.min.js`, `libs/FileSaver.min.js`, `libs/xlsx.full.min.js`).
+   - Works 100% offline, in private repositories, and on web hosts without CDN network failure.
+   - Dual-engine fallback: If one engine encounters a browser restriction, the backup engine automatically takes over.
+   - Dynamic auto-fitting column widths so notes like *"halting at 2 days loading pnt"* and cities like *"Sabdhan & kaliachak"* are never truncated.
+
+4. **Role-Based Access Control:**
+   - **Administrator:** Full permissions (Add, Edit, and Delete any transport or advance entry, manage settings).
+   - **Employee:** Data entry and read-only viewing permissions.
+   - Web Crypto SHA-256 salted password hashing with brute-force rate limiting (temporary lockout after consecutive failed attempts).
+
+5. **Dual-Mode Storage & Cloud Sync:**
    - Works immediately offline using browser `localStorage`.
-   - Syncs seamlessly to a private **Google Sheet** via **Google Apps Script** as a zero-cost serverless backend.
-5. **Role-Based Access Control:**
-   - **Admin (PIN: `7890`):** Full control (Add, Edit, Delete, Configure API, Adjust Opening Balance, Change PINs).
-   - **Employee (PIN: `1234`):** Data entry & viewing (Add records, view reports; restricted from deleting).
+   - Optionally syncs live to a private Google Sheet via Google Apps Script (`backend/Code.gs`).
 
 ---
 
@@ -32,71 +49,43 @@ A lightweight Transport Management & Financial Reconciliation application built 
 
 ```text
 D:\US\
-├── index.html            # Main UI Dashboard & Login Screen
+├── index.html            # Main UI Dashboard & Secure Login
 ├── css\
-│   └── styles.css        # Responsive, modern dashboard styling
+│   └── styles.css        # Responsive layout, widescreen table, and fullscreen overlay
 ├── js\
-│   ├── api.js            # Dual storage bridge (Google Apps Script + LocalStorage)
-│   ├── auth.js           # Session and PIN management (Admin vs Employee)
-│   ├── transport.js      # Transport table rendering, filtering, and CRUD operations
-│   ├── advances.js       # Advance payments management
-│   ├── excel.js          # SheetJS Excel import/export logic
-│   └── app.js            # Main application controller & dashboard metrics
+│   ├── api.js            # Data layer bridge (Local storage + Google Apps Script)
+│   ├── auth.js           # Salted SHA-256 authentication & session security
+│   ├── transport.js      # Transport ledger table rendering and CRUD actions
+│   ├── advances.js       # Company advance payments ledger and modals
+│   ├── sheetview.js      # Live in-browser Excel replica, Fullscreen & Zoom controller
+│   ├── excel.js          # Exact 1:1 Excel export & import engine with fallbacks
+│   └── app.js            # Application controller and metrics computation
+├── libs\                 # Local high-performance vendor libraries (Offline & Private Repo ready)
+│   ├── exceljs.min.js    # Excel styling & cell formatting engine
+│   ├── FileSaver.min.js  # File download handler
+│   └── xlsx.full.min.js  # SheetJS parser and fallback export engine
 ├── backend\
-│   └── Code.gs           # Google Apps Script Web App code for Google Sheets
-└── README.md             # Setup guide and documentation
+│   └── Code.gs           # Optional Google Apps Script backend for Google Sheets sync
+└── README.md             # Project documentation
 ```
 
 ---
 
-## 🛠️ Quick Start (Run Locally)
+## 🛠️ Usage Instructions
 
-1. Double-click [index.html](file:///D:/US/index.html) to open it directly in Google Chrome, Microsoft Edge, or Firefox.
-2. Choose your role:
-   - **Admin:** Enter PIN `7890`
-   - **Employee:** Enter PIN `1234`
-3. You can immediately add transport trips, record advances, and test Excel downloads. Pre-seeded records from your Shinex Excel file are already included!
+### Method 1: Using the Live Web App (Vercel)
+Open [https://transportmanagement-ten.vercel.app](https://transportmanagement-ten.vercel.app/) on any device (computer, tablet, or phone) and sign in.
 
----
-
-## ☁️ Zero-Cost Cloud Sync (Google Sheets Setup)
-
-To have your data automatically save to a private Google Sheet that both Admin and Employee can access from anywhere:
-
-1. Go to [Google Sheets](https://sheets.new) and create a new spreadsheet named **"Transport Management Data"**.
-2. Rename the first tab to **`Transport`** and add a second tab named **`Advances`**.
-3. In Google Sheets, click **Extensions** ➔ **Apps Script**.
-4. Delete any code in the editor and copy-paste the entire contents of [Code.gs](file:///D:/US/backend/Code.gs).
-5. Click **Deploy** ➔ **New deployment**:
-   - **Select type:** Web app
-   - **Description:** Transport API v1
-   - **Execute as:** Me (`your-email@gmail.com`)
-   - **Who has access:** Anyone
-6. Click **Deploy**, authorize access, and copy your **Web App URL** (it looks like `https://script.google.com/macros/s/AKfycb.../exec`).
-7. In your web application, log in as **Admin**, navigate to the **⚙️ Settings & API** tab, paste the URL into the **Google Apps Script Web App URL** field, and click **Save Configuration**.
-8. That's it! Your app will now show **"Cloud Connected (Google Sheet)"** and sync all changes live.
+### Method 2: Running Locally from your PC (Offline & Private)
+1. Double-click `index.html` in your local project folder to launch in Chrome, Edge, or Firefox.
+2. Sign in with your configured credentials.
+3. Add trips, record advances, view the live sheet, or download `.xlsx` files without needing internet access.
 
 ---
 
-## 🌐 Online Hosting Options
+## ☁️ Google Sheets Cloud Sync Setup (Optional)
 
-### Option 1: GitHub Pages (Direct & Simple)
-1. Push your files to your GitHub repository (just like your `S-R` project):
-   ```bash
-   git init
-   git add .
-   git commit -m "Transport System v1"
-   git remote add origin https://github.com/<your-username>/transport-system.git
-   git push -u origin main
-   ```
-2. In your repository on GitHub, go to **Settings** ➔ **Pages**.
-3. Under **Build and deployment**, select **Deploy from a branch** ➔ Branch: **`main`** / Folder: **`/(root)`** ➔ Click **Save**.
-4. GitHub Pages will provide your live URL (e.g., `https://<your-username>.github.io/transport-system/`).
-
-### Option 2: Vercel or Netlify (If hosting from a Private Repo on GitHub Free)
-If your GitHub account is on the free tier and you require the repository to remain private:
-1. Connect your private GitHub repo to [Vercel](https://vercel.com) or [Netlify](https://netlify.com) (both have free tiers).
-2. Click **Import Repository** ➔ **Deploy**.
-3. It will deploy your private repository to a free HTTPS URL without exposing your source code.
-
-
+1. Open [Google Sheets](https://sheets.new) and create a sheet named **"Transport Management Data"**.
+2. Create two tabs: `Transport` and `Advances`.
+3. Click **Extensions** ➔ **Apps Script**, paste the contents of `backend/Code.gs`, and click **Deploy ➔ New deployment (Web app, Anyone)**.
+4. Copy the Web App URL and paste it into the **⚙️ Settings & API** tab in your application dashboard.
