@@ -62,6 +62,7 @@
     <!-- Navigation Tabs -->
     <nav class="nav-tabs">
       <button class="nav-tab active" data-tab="transport">🚛 Transport Records</button>
+      <button class="nav-tab" data-tab="sheetview" style="font-weight: 700; color: #0284c7;">📑 Live Excel Sheet View</button>
       <button class="nav-tab" data-tab="advances">💰 Advance Payments</button>
       <button class="nav-tab" data-tab="financials">📊 Financial Summary</button>
       <button class="nav-tab" data-tab="excel">📥 Excel Backup & Import</button>
@@ -98,6 +99,7 @@
           </div>
 
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="btn btn-secondary" onclick="App.openSheetView()" style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd; font-weight: 600;">📑 View Excel Sheet</button>
             <button class="btn btn-secondary" onclick="window.App.restoreExactExcelSheetData()" title="Reset database to exact Shinex records">📋 Load Exact Excel Data</button>
             <button class="btn btn-secondary" onclick="window.App.refreshData()">🔄 Refresh</button>
             <button class="btn btn-primary" onclick="TransportModule.openAddModal()">➕ Add Transport Record</button>
@@ -273,6 +275,30 @@
               <li><strong>Offline Resilience:</strong> Even without internet or cloud connection, your data is preserved locally in your browser.</li>
             </ul>
           </div>
+        </div>
+      </section>
+
+      <!-- TAB: LIVE EXCEL SHEET VIEW (1:1 Exact Spreadsheet Replica) -->
+      <section id="tab-sheetview" class="tab-content">
+        <div class="toolbar" style="margin-bottom: 1rem;">
+          <div>
+            <h3>📑 Live Excel Spreadsheet View</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Exact 1:1 visual replica of your Shinex Excel file with real-time rows, totals, and reconciliation boxes.</p>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+            <div style="display: flex; background: #e2e8f0; padding: 2px; border-radius: 6px;">
+              <button id="btnViewS2" class="btn btn-sm btn-primary" onclick="SheetViewModule.setView('SECTION_2'); updateSheetViewTabs('btnViewS2');">🟢 Section 2 (Active)</button>
+              <button id="btnViewS1" class="btn btn-sm btn-secondary" onclick="SheetViewModule.setView('SECTION_1'); updateSheetViewTabs('btnViewS1');">📁 Section 1 (Archive)</button>
+              <button id="btnViewFull" class="btn btn-sm btn-secondary" onclick="SheetViewModule.setView('FULL'); updateSheetViewTabs('btnViewFull');">📋 Full Sheet (Both)</button>
+            </div>
+            <button class="btn btn-primary" onclick="ExcelModule.exportToExcel(App.transportRecords, App.advanceRecords, App.openingBalance)">💾 Download Excel (.xlsx)</button>
+            <button class="btn btn-secondary" onclick="window.print()">🖨️ Print</button>
+          </div>
+        </div>
+
+        <div id="excelSheetGrid">
+          <!-- Rendered dynamically by SheetViewModule -->
         </div>
       </section>
 
@@ -496,6 +522,7 @@
   <script src="js/transport.js"></script>
   <script src="js/advances.js"></script>
   <script src="js/excel.js"></script>
+  <script src="js/sheetview.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

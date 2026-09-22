@@ -582,29 +582,41 @@ const ExcelModule = {
     advTotRow.getCell(2).alignment = { horizontal: 'right', vertical: 'middle' };
 
     // ========================================================
-    // AUTO-FIT COLUMN WIDTHS ACROSS ALL 15 COLUMNS
+    // DYNAMIC AUTO-FIT COLUMN WIDTHS ACROSS ALL 15 COLUMNS
+    // Ensures text like "Sabdhan & kaliachak" and long halting notes never truncate!
     // ========================================================
-    const colWidths = [
-      14, // Col 1: SL.NO / Advance Date
-      16, // Col 2: LR No / Amount
-      16, // Col 3: DC No / Notes
-      16, // Col 4: Date / DC No
-      18, // Col 5: Vehicle Number / Date
-      18, // Col 6: From
-      18, // Col 7: TO
-      14, // Col 8: Quantity
-      12, // Col 9: M/TAX
-      16, // Col 10: Amount
-      18, // Col 11: ToPay
-      18, // Col 12: ToPay-paid
-      18, // Col 13: ToPay-Balc
-      22, // Col 14: Notes / Status
-      38  // Col 15: Note
-    ];
+    const baseColWidths = {
+      1: 14, // Col 1: SL.NO / Advance Date
+      2: 16, // Col 2: LR No / Amount
+      3: 16, // Col 3: DC No / Notes
+      4: 16, // Col 4: Date / DC No
+      5: 20, // Col 5: Vehicle Number
+      6: 22, // Col 6: From
+      7: 30, // Col 7: TO (Ample width for "Sabdhan & kaliachak", "Raiganj & Dalkohala")
+      8: 14, // Col 8: Quantity
+      9: 12, // Col 9: M/TAX
+      10: 18, // Col 10: Amount
+      11: 16, // Col 11: ToPay
+      12: 16, // Col 12: ToPay-paid
+      13: 16, // Col 13: ToPay-Balc
+      14: 60, // Col 14: Note (Ample width for "halting at 2 days loading pnt &2 days Unloading pnt")
+      15: 38  // Col 15: Note / March balance
+    };
 
-    colWidths.forEach((w, idx) => {
-      ws.getColumn(idx + 1).width = w;
-    });
+    for (let c = 1; c <= 15; c++) {
+      let maxLen = 0;
+      const col = ws.getColumn(c);
+      col.eachCell({ includeEmpty: false }, (cell, rowNumber) => {
+        // Skip merged title rows (1, 2, 53)
+        if (rowNumber === 1 || rowNumber === 2 || rowNumber === 53) return;
+        const text = cell.value ? String(cell.value) : '';
+        if (text.length > maxLen) {
+          maxLen = text.length;
+        }
+      });
+      const minW = baseColWidths[c] || 16;
+      col.width = Math.max(minW, Math.min(maxLen + 4, 70));
+    }
 
     // Write buffer and save exact file
     const buffer = await workbook.xlsx.writeBuffer();

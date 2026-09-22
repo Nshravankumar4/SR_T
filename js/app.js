@@ -46,6 +46,9 @@ window.App = {
     TransportModule.setRecords(this.transportRecords);
     AdvancesModule.setAdvances(this.advanceRecords);
     this.updateMetrics();
+    if (typeof SheetViewModule !== 'undefined') {
+      SheetViewModule.render();
+    }
 
     if (result.source === 'cloud') {
       this.updateCloudStatus('Cloud Connected (Google Sheet)', 'cloud');
@@ -65,6 +68,20 @@ window.App = {
       ApiService.resetToExactExcelData();
       this.refreshData();
       this.showToast("Exact Shinex Excel dataset loaded!", "success");
+    }
+  },
+
+  openSheetView() {
+    const tabs = document.querySelectorAll('.nav-tab');
+    tabs.forEach(t => t.classList.remove('active'));
+    const sheetTab = document.querySelector('.nav-tab[data-tab="sheetview"]');
+    if (sheetTab) sheetTab.classList.add('active');
+
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('tab-sheetview')?.classList.add('active');
+
+    if (typeof SheetViewModule !== 'undefined') {
+      SheetViewModule.render();
     }
   },
 
@@ -205,6 +222,10 @@ window.App = {
         const target = tab.dataset.tab;
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         document.getElementById(`tab-${target}`)?.classList.add('active');
+
+        if (target === 'sheetview' && typeof SheetViewModule !== 'undefined') {
+          SheetViewModule.render();
+        }
       });
     });
 
