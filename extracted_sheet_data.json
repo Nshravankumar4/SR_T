@@ -1,0 +1,2861 @@
+﻿[
+    {
+        "cells":  {
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  true,
+                                 "text":  "Shinex UQ Genetic Seeds Pvt.Ltd.,"
+                             }
+                  },
+        "row":  1
+    },
+    {
+        "cells":  {
+                      "C5":  {
+                                 "bg":  65535,
+                                 "fg":  0,
+                                 "bold":  true,
+                                 "text":  "April 2026 to March 2027"
+                             }
+                  },
+        "row":  2
+    },
+    {
+        "cells":  {
+                      "C15":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "Before March 2026 1,20,000"
+                              }
+                  },
+        "row":  3
+    },
+    {
+        "cells":  {
+                      "C5":  {
+                                 "bg":  6299648,
+                                 "fg":  16777215,
+                                 "bold":  true,
+                                 "text":  "Date"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  true,
+                                 "text":  "SL.NO"
+                             },
+                      "C12":  {
+                                  "bg":  6299648,
+                                  "fg":  255,
+                                  "bold":  true,
+                                  "text":  "ToPay"
+                              },
+                      "C8":  {
+                                 "bg":  6299648,
+                                 "fg":  16777215,
+                                 "bold":  true,
+                                 "text":  "TO"
+                             },
+                      "C15":  {
+                                  "bg":  15518118,
+                                  "fg":  0,
+                                  "bold":  true,
+                                  "text":  "Note"
+                              },
+                      "C13":  {
+                                  "bg":  6299648,
+                                  "fg":  255,
+                                  "bold":  true,
+                                  "text":  "ToPay-paid"
+                              },
+                      "C9":  {
+                                 "bg":  6299648,
+                                 "fg":  16777215,
+                                 "bold":  true,
+                                 "text":  "Quantity"
+                             },
+                      "C7":  {
+                                 "bg":  6299648,
+                                 "fg":  16777215,
+                                 "bold":  true,
+                                 "text":  "From"
+                             },
+                      "C11":  {
+                                  "bg":  6299648,
+                                  "fg":  16777215,
+                                  "bold":  true,
+                                  "text":  "Amount"
+                              },
+                      "C2":  {
+                                 "bg":  6299648,
+                                 "fg":  16777215,
+                                 "bold":  true,
+                                 "text":  "LR No"
+                             },
+                      "C14":  {
+                                  "bg":  6299648,
+                                  "fg":  255,
+                                  "bold":  true,
+                                  "text":  "ToPay-Balc"
+                              },
+                      "C6":  {
+                                 "bg":  6299648,
+                                 "fg":  16777215,
+                                 "bold":  true,
+                                 "text":  "Vehicle Number"
+                             },
+                      "C4":  {
+                                 "bg":  6299648,
+                                 "fg":  16777215,
+                                 "bold":  true,
+                                 "text":  "DC No"
+                             },
+                      "C10":  {
+                                  "bg":  6299648,
+                                  "fg":  16777215,
+                                  "bold":  true,
+                                  "text":  "M/TAX"
+                              }
+                  },
+        "row":  4
+    },
+    {
+        "cells":  {
+                      "C15":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "Two days halting at loading point"
+                              },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Luknow"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "20-04-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "162"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "894/1124"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "UP25FT5066"
+                             },
+                      "C11":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "1,49,500"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "35MT"
+                             }
+                  },
+        "row":  5
+    },
+    {
+        "cells":  {
+                      "C15":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "Two days halting Truck cancel"
+                              },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Raebareli"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "20-04-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "204"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C11":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "10000"
+                              },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "2"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "UP70GT0273"
+                             },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "30MT"
+                             }
+                  },
+        "row":  6
+    },
+    {
+        "cells":  {
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Ranchi"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "22-04-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "163"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C11":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "79,000"
+                              },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "3"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "JH04Z2686"
+                             },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "12MT"
+                             }
+                  },
+        "row":  7
+    },
+    {
+        "cells":  {
+                      "C12":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "1,34,000"
+                              },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Raebareli"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "25-04-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "164/165"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1125/26/27"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "4"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "AP39TV0267"
+                             },
+                      "C13":  {
+                                  "bg":  3057486,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "Paid"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "30MT"
+                             }
+                  },
+        "row":  8
+    },
+    {
+        "cells":  {
+                      "C12":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "1,44,150"
+                              },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Raebareli"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "28-04-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "166"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1128"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "5"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "CG04LR6399"
+                             },
+                      "C13":  {
+                                  "bg":  3057486,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "Paid"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "31MT"
+                             }
+                  },
+        "row":  9
+    },
+    {
+        "cells":  {
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Raipur"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "29-04-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "167"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "900/1129"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "6"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "AP39WM8829"
+                             },
+                      "C11":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "92750"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "35MT"
+                             }
+                  },
+        "row":  10
+    },
+    {
+        "cells":  {
+                      "C15":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "One day halting at loading point"
+                              },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Bilaspur"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "29-04-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "168"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1130"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "7"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "HP12G7348"
+                             },
+                      "C11":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "1,70,000"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "20MT"
+                             }
+                  },
+        "row":  11
+    },
+    {
+        "cells":  {
+                      "C10":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "7200"
+                              },
+                      "C15":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "5 Days halting at unloading point"
+                              },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "04-05-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "205"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Parkala"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "356"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "8"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "AP39UP9666"
+                             },
+                      "C11":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "85,800"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "35MT"
+                             }
+                  },
+        "row":  12
+    },
+    {
+        "cells":  {
+                      "C10":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "4800"
+                              },
+                      "C15":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "5 Days halting at unloading point"
+                              },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "04-05-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "206"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Huzurbad"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "48"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "9"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "TS07TC2355"
+                             },
+                      "C11":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "59800"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "30MT"
+                             }
+                  },
+        "row":  13
+    },
+    {
+        "cells":  {
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Kota"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "05-05-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "169"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1402"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "10"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "HR46G4209"
+                             },
+                      "C11":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "58000"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "6MT"
+                             }
+                  },
+        "row":  14
+    },
+    {
+        "cells":  {
+                      "C15":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "One day halting at loading point"
+                              },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Hamipur/Mandi"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "05-05-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "170/171"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1131/32"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "11"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "HP12G7621"
+                             },
+                      "C11":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "1,70,000"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "18MT"
+                             }
+                  },
+        "row":  15
+    },
+    {
+        "cells":  {
+                      "C15":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "One day halting at loading point"
+                              },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Haminpur"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "08-05-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "172"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1133"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "12"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "HP12S8136"
+                             },
+                      "C11":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "1,57,000"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "18MT"
+                             }
+                  },
+        "row":  16
+    },
+    {
+        "cells":  {
+                      "C12":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "1,50,000"
+                              },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Barabanki"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "08-05-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "169"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1402"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "13"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "AP39U3006"
+                             },
+                      "C13":  {
+                                  "bg":  3057486,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "Paid"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "30MT"
+                             }
+                  },
+        "row":  17
+    },
+    {
+        "cells":  {
+                      "C15":  {
+                                  "bg":  15773696,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "U\u0026S Transport truck place"
+                              },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Aslali"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "09-05-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "7915"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C11":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "65,000"
+                              },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "14"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "GJ13AX4948"
+                             },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "12MT"
+                             }
+                  },
+        "row":  18
+    },
+    {
+        "cells":  {
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Indore"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "10-05-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "174"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1135"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "15"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "RJ09GB9317"
+                             },
+                      "C11":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "99,000"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "30MT"
+                             }
+                  },
+        "row":  19
+    },
+    {
+        "cells":  {
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Jaipur"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "11-05-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "175"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Armoor"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1404"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "16"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "RJ37GA6308"
+                             },
+                      "C11":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "1,75,000"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "35MT"
+                             }
+                  },
+        "row":  20
+    },
+    {
+        "cells":  {
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Purnia"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "14-05-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "176"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1137"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "17"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "AP39WR0489"
+                             },
+                      "C11":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "1,50,000"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "18MT"
+                             }
+                  },
+        "row":  21
+    },
+    {
+        "cells":  {
+                      "C12":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "87,000"
+                              },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Raipur"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "17-05-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "177"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1138"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "18"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "CG04MT3934"
+                             },
+                      "C13":  {
+                                  "bg":  3057486,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "Paid"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "30MT"
+                             }
+                  },
+        "row":  22
+    },
+    {
+        "cells":  {
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Jabalpur"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "26-05-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "180"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1414"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "19"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "AP39UC3929"
+                             },
+                      "C11":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "89,000"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "25MT"
+                             }
+                  },
+        "row":  23
+    },
+    {
+        "cells":  {
+                      "C14":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "32,000"
+                              },
+                      "C12":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "87,000"
+                              },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Raipur"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "28-05-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "181"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Huzurbad"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1144"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "20"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "CG08AV5297"
+                             },
+                      "C13":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "55,000"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "30MT"
+                             }
+                  },
+        "row":  24
+    },
+    {
+        "cells":  {
+                      "C12":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "1,50,000"
+                              },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Nawada"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "30-05-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "182"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1145"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "21"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "UP62BT2640"
+                             },
+                      "C13":  {
+                                  "bg":  3057486,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "Paid"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "30MT"
+                             }
+                  },
+        "row":  25
+    },
+    {
+        "cells":  {
+                      "C12":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "40,000"
+                              },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Raipur"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "02-06-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "183"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1146"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "22"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "CG08AS2072"
+                             },
+                      "C13":  {
+                                  "bg":  3057486,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "Paid"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "12MT"
+                             }
+                  },
+        "row":  26
+    },
+    {
+        "cells":  {
+                      "C12":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "15,000"
+                              },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Raipur"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "02-06-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "184"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1147"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "23"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "CG04PP8909"
+                             },
+                      "C13":  {
+                                  "bg":  3057486,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "Paid"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "04MT"
+                             }
+                  },
+        "row":  27
+    },
+    {
+        "cells":  {
+                      "C14":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "1,21,500"
+                              },
+                      "C12":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "1,71,500"
+                              },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Harnut"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "02-06-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "185"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1148"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "24"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "AP39UD3564"
+                             },
+                      "C13":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "50,000"
+                              },
+                      "C15":  {
+                                  "bg":  255,
+                                  "fg":  0,
+                                  "bold":  true,
+                                  "text":  "29 bags shortage"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "35MT"
+                             }
+                  },
+        "row":  28
+    },
+    {
+        "cells":  {
+                      "C14":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "20,000"
+                              },
+                      "C12":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "85,000"
+                              },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Raipur"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "02-06-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "186"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Huzurbad"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1149"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "25"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "TS07UG2577"
+                             },
+                      "C13":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "65,000"
+                              },
+                      "C15":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "One day halting at loading point"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "30MT"
+                             }
+                  },
+        "row":  29
+    },
+    {
+        "cells":  {
+                      "C15":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "Two days halting at loading point"
+                              },
+                      "C12":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "1,50,000"
+                              },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Harnut"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "10-06-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "187"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1262/4526"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "26"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "TG15T6666"
+                             },
+                      "C13":  {
+                                  "bg":  3057486,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "Paid"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "35MT"
+                             }
+                  },
+        "row":  30
+    },
+    {
+        "cells":  {
+                      "C14":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "1,10,000"
+                              },
+                      "C12":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "1,60,000"
+                              },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Raipur/Nawada"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "17-06-2026"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "188/189"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal/huzurabad"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1272/1273"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "27"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "TS15UE1122"
+                             },
+                      "C13":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "50,000"
+                              },
+                      "C15":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "Three days halting at loading point"
+                              },
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "30MT"
+                             }
+                  },
+        "row":  31
+    },
+    {
+        "cells":  {
+                      "C14":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  true,
+                                  "text":  "283500"
+                              },
+                      "C10":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  true,
+                                  "text":  "Total"
+                              },
+                      "C11":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  true,
+                                  "text":  "16,09,850"
+                              }
+                  },
+        "row":  33
+    },
+    {
+        "cells":  {
+                      "C11":  {
+                                  "bg":  11323383,
+                                  "fg":  0,
+                                  "bold":  true,
+                                  "text":  "16,09,850"
+                              },
+                      "C10":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  true,
+                                  "text":  "To Billed"
+                              },
+                      "C2":  {
+                                 "bg":  65535,
+                                 "fg":  0,
+                                 "bold":  true,
+                                 "text":  "Amount"
+                             },
+                      "C1":  {
+                                 "bg":  65535,
+                                 "fg":  0,
+                                 "bold":  true,
+                                 "text":  "Advance"
+                             }
+                  },
+        "row":  36
+    },
+    {
+        "cells":  {
+                      "C3":  {
+                                 "bg":  65535,
+                                 "fg":  0,
+                                 "bold":  true,
+                                 "text":  "1,20,000"
+                             },
+                      "C4":  {
+                                 "bg":  65535,
+                                 "fg":  0,
+                                 "bold":  true,
+                                 "text":  "March 2026 balance"
+                             },
+                      "C10":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  true,
+                                  "text":  "ToPay bal"
+                              },
+                      "C11":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  true,
+                                  "text":  "283500"
+                              },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "19-04-2026"
+                             }
+                  },
+        "row":  37
+    },
+    {
+        "cells":  {
+                      "C11":  {
+                                  "bg":  11323383,
+                                  "fg":  0,
+                                  "bold":  true,
+                                  "text":  "18,93,350"
+                              },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "5,00,000"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "20-04-2026"
+                             }
+                  },
+        "row":  38
+    },
+    {
+        "cells":  {
+                      "C11":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  true,
+                                  "text":  "18,83,350"
+                              },
+                      "C10":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  true,
+                                  "text":  "less adv"
+                              },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "2,00,000"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "04-05-2026"
+                             }
+                  },
+        "row":  39
+    },
+    {
+        "cells":  {
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "5,00,000"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "14-05-2026"
+                             }
+                  },
+        "row":  40
+    },
+    {
+        "cells":  {
+                      "C11":  {
+                                  "bg":  16309396,
+                                  "fg":  0,
+                                  "bold":  true,
+                                  "text":  "10,000"
+                              },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "50,000"
+                             },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  true,
+                                 "text":  "14-08-2026 (out standing)"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "25-05-2026"
+                             }
+                  },
+        "row":  41
+    },
+    {
+        "cells":  {
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1,00,000"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "07-06-2026"
+                             }
+                  },
+        "row":  42
+    },
+    {
+        "cells":  {
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1,00,000"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "17-06-2026"
+                             }
+                  },
+        "row":  43
+    },
+    {
+        "cells":  {
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1,00,000"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "23-07-2026"
+                             }
+                  },
+        "row":  44
+    },
+    {
+        "cells":  {
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "50,000"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "05-08--2026"
+                             }
+                  },
+        "row":  45
+    },
+    {
+        "cells":  {
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "100000"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "14-08-2026"
+                             }
+                  },
+        "row":  46
+    },
+    {
+        "cells":  {
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "100000"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "18-08-2026"
+                             }
+                  },
+        "row":  47
+    },
+    {
+        "cells":  {
+                      "C3":  {
+                                 "bg":  49407,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Note:29 Bags Shortage at Janta agro Bihar 1044Kgs"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "35000"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "20-08-2026"
+                             }
+                  },
+        "row":  48
+    },
+    {
+        "cells":  {
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "48350"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "23-08-2026"
+                             }
+                  },
+        "row":  49
+    },
+    {
+        "cells":  {
+                      "C2":  {
+                                 "bg":  65535,
+                                 "fg":  0,
+                                 "bold":  true,
+                                 "text":  "18,83,350"
+                             },
+                      "C1":  {
+                                 "bg":  65535,
+                                 "fg":  0,
+                                 "bold":  true,
+                                 "text":  "Total"
+                             }
+                  },
+        "row":  50
+    },
+    {
+        "cells":  {
+                      "C3":  {
+                                 "bg":  14791492,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "S"
+                             },
+                      "C6":  {
+                                 "bg":  14791492,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "NEW"
+                             }
+                  },
+        "row":  53
+    },
+    {
+        "cells":  {
+                      "C14":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "Before 14-08-2026 10,000"
+                              }
+                  },
+        "row":  57
+    },
+    {
+        "cells":  {
+                      "C5":  {
+                                 "bg":  6299648,
+                                 "fg":  16777215,
+                                 "bold":  true,
+                                 "text":  "Vehicle Number"
+                             },
+                      "C1":  {
+                                 "bg":  6299648,
+                                 "fg":  16777215,
+                                 "bold":  true,
+                                 "text":  "SL.NO"
+                             },
+                      "C12":  {
+                                  "bg":  6299648,
+                                  "fg":  255,
+                                  "bold":  true,
+                                  "text":  "ToPay-paid"
+                              },
+                      "C8":  {
+                                 "bg":  6299648,
+                                 "fg":  16777215,
+                                 "bold":  true,
+                                 "text":  "Quantity"
+                             },
+                      "C13":  {
+                                  "bg":  6299648,
+                                  "fg":  255,
+                                  "bold":  true,
+                                  "text":  "ToPay-Balc"
+                              },
+                      "C9":  {
+                                 "bg":  6299648,
+                                 "fg":  16777215,
+                                 "bold":  true,
+                                 "text":  "M/TAX"
+                             },
+                      "C7":  {
+                                 "bg":  6299648,
+                                 "fg":  16777215,
+                                 "bold":  true,
+                                 "text":  "TO"
+                             },
+                      "C11":  {
+                                  "bg":  6299648,
+                                  "fg":  255,
+                                  "bold":  true,
+                                  "text":  "ToPay"
+                              },
+                      "C3":  {
+                                 "bg":  6299648,
+                                 "fg":  16777215,
+                                 "bold":  true,
+                                 "text":  "DC No"
+                             },
+                      "C2":  {
+                                 "bg":  6299648,
+                                 "fg":  16777215,
+                                 "bold":  true,
+                                 "text":  "LR No"
+                             },
+                      "C14":  {
+                                  "bg":  15518118,
+                                  "fg":  0,
+                                  "bold":  true,
+                                  "text":  "Note"
+                              },
+                      "C6":  {
+                                 "bg":  6299648,
+                                 "fg":  16777215,
+                                 "bold":  true,
+                                 "text":  "From"
+                             },
+                      "C4":  {
+                                 "bg":  6299648,
+                                 "fg":  16777215,
+                                 "bold":  true,
+                                 "text":  "Date"
+                             },
+                      "C10":  {
+                                  "bg":  6299648,
+                                  "fg":  16777215,
+                                  "bold":  true,
+                                  "text":  "Amount"
+                              }
+                  },
+        "row":  58
+    },
+    {
+        "cells":  {
+                      "C14":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "one days halting at Unloading point"
+                              },
+                      "C3":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "998"
+                             },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "21MT"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "AP39UD3564"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "22-08-2026"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Lucknow"
+                             },
+                      "C10":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "90,000"
+                              }
+                  },
+        "row":  59
+    },
+    {
+        "cells":  {
+                      "C14":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "one days halting at Unloading point"
+                              },
+                      "C3":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "540"
+                             },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "35MT"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "TG15T6666"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "03-09-2026"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "2"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Raipur(CG)"
+                             },
+                      "C10":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "1,10,250"
+                              }
+                  },
+        "row":  60
+    },
+    {
+        "cells":  {
+                      "C14":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "halting at 2 days loading pnt \u00262 days  Unloading pnt"
+                              },
+                      "C3":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1416"
+                             },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "35MT"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "TG15T6666"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "190"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "CoockBihar"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "10-09-2026"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "3"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C10":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "2,31,000"
+                              }
+                  },
+        "row":  61
+    },
+    {
+        "cells":  {
+                      "C3":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1274/75/76/77/78/79"
+                             },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "30MT"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "RJ14GN7169"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "191/192"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Raiganj \u0026 Dalkohala"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "12-09-2026"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "4"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C10":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "1,65,000"
+                              }
+                  },
+        "row":  62
+    },
+    {
+        "cells":  {
+                      "C14":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "one days halting at loading point"
+                              },
+                      "C3":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1280/1281"
+                             },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "25MT"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "UP38T6479"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "193/194"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Sabdhan \u0026 kaliachak"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "16-09-2026"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "5"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C10":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "1,50,000"
+                              }
+                  },
+        "row":  63
+    },
+    {
+        "cells":  {
+                      "C3":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "1417"
+                             },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "35"
+                             },
+                      "C5":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "TS05UF1719"
+                             },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "209"
+                             },
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Murshidabad"
+                             },
+                      "C4":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "19-09-2026"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "6"
+                             },
+                      "C6":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Medchal"
+                             },
+                      "C10":  {
+                                  "bg":  16777215,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "1,57,500"
+                              }
+                  },
+        "row":  64
+    },
+    {
+        "cells":  {
+                      "C10":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  false,
+                                  "text":  "9,03,750"
+                              },
+                      "C1":  {
+                                 "bg":  65535,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "Total"
+                             }
+                  },
+        "row":  66
+    },
+    {
+        "cells":  {
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  true,
+                                 "text":  "To Billed"
+                             },
+                      "C10":  {
+                                  "bg":  11323383,
+                                  "fg":  0,
+                                  "bold":  true,
+                                  "text":  "9,03,750"
+                              },
+                      "C2":  {
+                                 "bg":  65535,
+                                 "fg":  0,
+                                 "bold":  true,
+                                 "text":  "Amount"
+                             },
+                      "C1":  {
+                                 "bg":  65535,
+                                 "fg":  0,
+                                 "bold":  true,
+                                 "text":  "Advance Date"
+                             }
+                  },
+        "row":  69
+    },
+    {
+        "cells":  {
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  true,
+                                 "text":  "Old Balance"
+                             },
+                      "C10":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  true,
+                                  "text":  "10000"
+                              },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "50000"
+                             },
+                      "C8":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  true,
+                                 "text":  "14-08-2026"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "29-08-2026"
+                             }
+                  },
+        "row":  70
+    },
+    {
+        "cells":  {
+                      "C10":  {
+                                  "bg":  11323383,
+                                  "fg":  0,
+                                  "bold":  true,
+                                  "text":  "9,13,750"
+                              },
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "400000"
+                             },
+                      "C1":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "10-09-2026"
+                             }
+                  },
+        "row":  71
+    },
+    {
+        "cells":  {
+                      "C9":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  true,
+                                 "text":  "less adv"
+                             },
+                      "C10":  {
+                                  "bg":  65535,
+                                  "fg":  0,
+                                  "bold":  true,
+                                  "text":  "4,50,000"
+                              }
+                  },
+        "row":  72
+    },
+    {
+        "cells":  {
+                      "C7":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  true,
+                                 "text":  "16-09-2026 (out standing)"
+                             },
+                      "C10":  {
+                                  "bg":  16309396,
+                                  "fg":  0,
+                                  "bold":  true,
+                                  "text":  "4,63,750"
+                              }
+                  },
+        "row":  74
+    },
+    {
+        "cells":  {
+                      "C2":  {
+                                 "bg":  16777215,
+                                 "fg":  0,
+                                 "bold":  false,
+                                 "text":  "450000"
+                             },
+                      "C1":  {
+                                 "bg":  65535,
+                                 "fg":  0,
+                                 "bold":  true,
+                                 "text":  "Total"
+                             }
+                  },
+        "row":  75
+    }
+]

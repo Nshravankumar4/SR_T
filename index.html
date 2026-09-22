@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transport Management & Ledger System</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- ExcelJS and FileSaver for rich Excel styling, colors, and auto-fit column sizing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <!-- SheetJS for parsing imported Excel files -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+  <!-- 1. LOGIN / AUTHENTICATION SCREEN -->
+  <div id="authWrapper" class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h1>🚛 Transport System</h1>
+        <p>Select your account type to proceed</p>
+      </div>
+
+      <div class="role-selector">
+        <button type="button" class="role-btn active" data-role="Admin">Admin</button>
+        <button type="button" class="role-btn" data-role="Employee">Employee</button>
+      </div>
+
+      <form id="loginForm">
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label for="loginPin">Security PIN</label>
+          <input type="password" id="loginPin" class="form-control" placeholder="Enter Admin PIN (Default: 7890)" required>
+          <small>Default PINs: Admin = <code>7890</code> | Employee = <code>1234</code></small>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem;">Login to Dashboard</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. MAIN APPLICATION -->
+  <div id="mainApp" style="display: none;">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-brand">
+        <h1>🚛 Transport Ledger & Management</h1>
+        <div class="status-indicator">
+          <span id="cloudStatusDot" class="status-dot"></span>
+          <span id="cloudStatusText">Connecting...</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div class="user-badge">
+          <span id="currentUserName">Admin</span>
+          <span style="opacity: 0.6;">|</span>
+          <span id="currentUserRole" style="text-transform: uppercase; font-size: 0.75rem;">ADMIN</span>
+        </div>
+        <button id="logoutBtn" class="btn btn-secondary btn-sm">Logout</button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="transport">🚛 Transport Records</button>
+      <button class="nav-tab" data-tab="advances">💰 Advance Payments</button>
+      <button class="nav-tab" data-tab="financials">📊 Financial Summary</button>
+      <button class="nav-tab" data-tab="excel">📥 Excel Backup & Import</button>
+      <button class="nav-tab admin-only" data-tab="settings">⚙️ Settings & API</button>
+    </nav>
+
+    <main class="container">
+      <!-- TAB 1: TRANSPORT RECORDS -->
+      <section id="tab-transport" class="tab-content active">
+        <div class="toolbar">
+          <div class="filter-group">
+            <input type="text" id="searchInput" class="form-control" placeholder="Search LR, Vehicle, City..." style="width: 240px;">
+            <select id="statusFilter" class="form-control">
+              <option value="ALL">All Statuses</option>
+              <option value="Paid">Paid</option>
+              <option value="Partially Paid">Partially Paid</option>
+              <option value="Pending">Pending</option>
+            </select>
+            <select id="monthFilter" class="form-control">
+              <option value="ALL">All Months (Continuous)</option>
+              <option value="2026-04">April 2026</option>
+              <option value="2026-05">May 2026</option>
+              <option value="2026-06">June 2026</option>
+              <option value="2026-07">July 2026</option>
+              <option value="2026-08">August 2026</option>
+              <option value="2026-09">September 2026</option>
+              <option value="2026-10">October 2026</option>
+            </select>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="btn btn-secondary" onclick="window.App.restoreExactExcelSheetData()" title="Reset database to exact Shinex records">📋 Load Exact Excel Data</button>
+            <button class="btn btn-secondary" onclick="window.App.refreshData()">🔄 Refresh</button>
+            <button class="btn btn-primary" onclick="TransportModule.openAddModal()">➕ Add Transport Record</button>
+          </div>
+        </div>
+
+        <!-- Compact Transport Stats Bar -->
+        <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; background: #fff; padding: 0.75rem 1.25rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 1rem; font-size: 0.88rem;">
+          <div><span style="color: var(--text-muted);">Total Trips:</span> <strong id="tripCount" style="color: var(--text-main);">0</strong></div>
+          <div><span style="color: var(--text-muted);">Total Freight Billed:</span> <strong id="tripTotalFreight" style="color: var(--text-main);">₹0</strong></div>
+          <div><span style="color: var(--text-muted);">Total ToPay:</span> <strong id="tripTotalToPay" style="color: var(--primary);">₹0</strong></div>
+          <div><span style="color: var(--text-muted);">Direct Paid on Trips:</span> <strong id="tripTotalPaid" style="color: var(--success);">₹0</strong></div>
+          <div><span style="color: var(--text-muted);">Unpaid Balance:</span> <strong id="tripTotalBal" style="color: var(--danger);">₹0</strong></div>
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>SL</th>
+                <th>LR No</th>
+                <th>DC No</th>
+                <th>Date</th>
+                <th>Vehicle Number</th>
+                <th>From</th>
+                <th>TO</th>
+                <th>Quantity</th>
+                <th>M/TAX</th>
+                <th>Amount</th>
+                <th>ToPay</th>
+                <th>Paid</th>
+                <th>Balance</th>
+                <th>Status</th>
+                <th>Note / Remarks</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="transportTableBody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 2: ADVANCE PAYMENTS -->
+      <section id="tab-advances" class="tab-content">
+        <div class="toolbar">
+          <div>
+            <h3>💰 Company Advances Ledger</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Advances given to transporters, adjusted against total payable bill.</p>
+          </div>
+          <button class="btn btn-primary" onclick="AdvancesModule.openAddModal()">➕ Record New Advance</button>
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Date</th>
+                <th>Advance Amount</th>
+                <th>Description</th>
+                <th>Reference / UTR / Cheque</th>
+                <th>Entered By</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="advancesTableBody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 3: FINANCIAL SUMMARY -->
+      <section id="tab-financials" class="tab-content">
+        <div class="toolbar">
+          <h3>📊 Complete Financial Reconciliation</h3>
+        </div>
+
+        <!-- Financial Metrics Summary Grid (Displayed only on Financials tab) -->
+        <div class="metrics-grid">
+          <div class="metric-card highlight">
+            <div class="metric-title">Total Freight Billed</div>
+            <div id="metricTotalAmount" class="metric-value">₹0</div>
+          </div>
+          <div class="metric-card highlight">
+            <div class="metric-title">Total ToPay (Payable)</div>
+            <div id="metricTotalToPay" class="metric-value">₹0</div>
+          </div>
+          <div class="metric-card success">
+            <div class="metric-title">Direct Paid on Transport</div>
+            <div id="metricTotalPaid" class="metric-value">₹0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-title">Transport Balance</div>
+            <div id="metricTransportBal" class="metric-value">₹0</div>
+          </div>
+          <div class="metric-card highlight">
+            <div class="metric-title">Total Company Advances</div>
+            <div id="metricTotalAdvances" class="metric-value">₹0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-title">Opening Balance</div>
+            <div id="metricOpeningBal" class="metric-value">₹0</div>
+          </div>
+          <div class="metric-card danger">
+            <div class="metric-title">Net Current Outstanding</div>
+            <div id="metricNetOutstanding" class="metric-value">₹0</div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+          <div style="background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem;">
+            <h4 style="margin-bottom: 1rem; color: var(--primary);">Accounting Formula Breakdown</h4>
+            <div style="line-height: 2; font-size: 0.95rem;">
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.4rem 0;">
+                <span>Opening Balance (March 2026)</span>
+                <strong id="summaryOpeningBal">₹1,20,000</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.4rem 0;">
+                <span>(+) Total Transport ToPay</span>
+                <strong id="summaryToPay">₹0</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.4rem 0; color: var(--success);">
+                <span>(-) Direct Paid on Trips</span>
+                <strong id="summaryPaid">₹0</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.4rem 0; color: var(--warning);">
+                <span>(-) Total Company Advances</span>
+                <strong id="summaryAdvances">₹0</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; font-size: 1.1rem; color: var(--danger); font-weight: 700;">
+                <span>(=) Current Net Outstanding</span>
+                <strong id="summaryOutstanding">₹0</strong>
+              </div>
+            </div>
+          </div>
+
+          <div style="background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem;">
+            <h4 style="margin-bottom: 1rem; color: var(--primary);">Business Rules Applied</h4>
+            <ul style="padding-left: 1.25rem; font-size: 0.9rem; color: var(--text-muted); line-height: 1.8;">
+              <li><strong>Continuous Tracking:</strong> No need to split records by months or files. The database handles April 2026 to March 2027 seamlessly.</li>
+              <li><strong>Automatic Balances:</strong> Balance = ToPay - Paid is calculated dynamically.</li>
+              <li><strong>Advance Adjustment:</strong> Advances are counted toward reducing overall outstanding amounts.</li>
+              <li><strong>Offline Resilience:</strong> Even without internet or cloud connection, your data is preserved locally in your browser.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: EXCEL BACKUP & IMPORT -->
+      <section id="tab-excel" class="tab-content">
+        <div style="background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 2rem; max-width: 800px; margin: 0 auto;">
+          <h3 style="margin-bottom: 0.5rem; color: var(--primary);">📥 Excel Synchronizer</h3>
+          <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem;">
+            Generate exact replica Excel spreadsheets with your transport data, advances, and financial reconciliation.
+          </p>
+
+          <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <div style="border: 1px dashed var(--accent); padding: 1.5rem; border-radius: 8px; background: #f0f9ff;">
+              <h4>Export to Excel (.xlsx)</h4>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.5rem 0 1rem 0;">
+                Downloads an Excel workbook containing 3 structured sheets: <strong>Transport Records</strong>, <strong>Advances</strong>, and <strong>Financial Summary</strong>.
+              </p>
+              <button id="exportExcelBtn" class="btn btn-primary">💾 Download Full Excel Report</button>
+            </div>
+
+            <div style="border: 1px dashed var(--border); padding: 1.5rem; border-radius: 8px;">
+              <h4>Import Excel File</h4>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.5rem 0 1rem 0;">
+                Select your existing <code>Shinex_2026-08-06 _3-1.xlsx</code> file to batch import historical records directly into your database.
+              </p>
+              <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="form-control" style="max-width: 400px;">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: SETTINGS & GOOGLE APPS SCRIPT API -->
+      <section id="tab-settings" class="tab-content admin-only">
+        <div style="background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 2rem; max-width: 800px; margin: 0 auto;">
+          <h3 style="margin-bottom: 0.5rem; color: var(--primary);">⚙️ System Settings & Google Sheet API</h3>
+          <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem;">
+            Connect your website to Google Sheets via your deployed Google Apps Script Web App for ₹0 cloud database storage.
+          </p>
+
+          <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label for="settingsApiUrl">Google Apps Script Web App URL</label>
+            <input type="url" id="settingsApiUrl" class="form-control" placeholder="https://script.google.com/macros/s/AKfycb.../exec">
+            <small>Follow instructions in <code>backend/Code.gs</code> to generate this Web App URL.</small>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label for="settingsOpeningBal">March 2026 Opening Balance (₹)</label>
+            <input type="number" id="settingsOpeningBal" class="form-control" placeholder="120000">
+            <small>Carry forward balance from previous financial year.</small>
+          </div>
+
+          <button id="saveSettingsBtn" class="btn btn-primary" style="margin-bottom: 2rem;">Save Configuration</button>
+
+          <hr style="border: 0; border-top: 1px solid var(--border); margin: 1.5rem 0;">
+
+          <h4 style="margin-bottom: 1rem;">Change Security PINs</h4>
+          <div class="form-grid" style="margin-bottom: 1rem;">
+            <div class="form-group">
+              <label for="settingsAdminPin">Admin PIN</label>
+              <input type="password" id="settingsAdminPin" class="form-control" placeholder="New Admin PIN">
+            </div>
+            <div class="form-group">
+              <label for="settingsEmpPin">Employee PIN</label>
+              <input type="password" id="settingsEmpPin" class="form-control" placeholder="New Employee PIN">
+            </div>
+          </div>
+          <button id="savePinsBtn" class="btn btn-secondary">Update PINs</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL 1: ADD / EDIT TRANSPORT RECORD -->
+  <div id="transportModal" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="transportModalTitle">Add Transport Record</h3>
+        <button class="modal-close" onclick="TransportModule.closeModal()">✕</button>
+      </div>
+      <form id="transportForm">
+        <div class="modal-body">
+          <input type="hidden" id="transportId">
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="transportSlNo">SL. NO</label>
+              <input type="number" id="transportSlNo" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="transportDate">Date</label>
+              <input type="date" id="transportDate" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-grid" style="margin-top: 0.85rem;">
+            <div class="form-group">
+              <label for="transportLrNo">LR No</label>
+              <input type="text" id="transportLrNo" class="form-control" placeholder="e.g. 162" required>
+            </div>
+            <div class="form-group">
+              <label for="transportDcNo">DC No</label>
+              <input type="text" id="transportDcNo" class="form-control" placeholder="e.g. 894/1124">
+            </div>
+          </div>
+
+          <div class="form-grid" style="margin-top: 0.85rem;">
+            <div class="form-group">
+              <label for="transportVehicle">Vehicle Number</label>
+              <input type="text" id="transportVehicle" class="form-control" placeholder="e.g. UP25FT5066" required>
+            </div>
+            <div class="form-group">
+              <label for="transportQuantity">Quantity</label>
+              <input type="text" id="transportQuantity" class="form-control" placeholder="e.g. 35MT">
+            </div>
+          </div>
+
+          <div class="form-grid" style="margin-top: 0.85rem;">
+            <div class="form-group">
+              <label for="transportFrom">From</label>
+              <input type="text" id="transportFrom" class="form-control" placeholder="e.g. Medchal" required>
+            </div>
+            <div class="form-group">
+              <label for="transportTo">TO</label>
+              <input type="text" id="transportTo" class="form-control" placeholder="e.g. Lucknow" required>
+            </div>
+          </div>
+
+          <div class="form-grid" style="margin-top: 0.85rem;">
+            <div class="form-group">
+              <label for="transportAmount">Freight Amount (₹)</label>
+              <input type="number" id="transportAmount" class="form-control" placeholder="149500">
+            </div>
+            <div class="form-group">
+              <label for="transportMTax">M/TAX</label>
+              <input type="text" id="transportMTax" class="form-control" placeholder="Optional">
+            </div>
+          </div>
+
+          <!-- ToPay and Payment section with automatic calculations -->
+          <div style="background: #f8fafc; border: 1px solid var(--border); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span style="font-weight: 700; font-size: 0.9rem; color: var(--primary);">Payment Details (ToPay & Balance)</span>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="TransportModule.markFullyPaid()">⚡ Mark Fully Paid</button>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="transportToPay">ToPay Amount (₹)</label>
+                <input type="number" id="transportToPay" class="form-control" placeholder="87000" required>
+              </div>
+              <div class="form-group">
+                <label for="transportPaid">Paid Amount (₹)</label>
+                <input type="number" id="transportPaid" class="form-control" placeholder="0">
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 0.75rem;">
+              <label for="transportBalance">Balance Remaining (₹) [Auto-calculated]</label>
+              <input type="number" id="transportBalance" class="form-control" readonly style="background: #f1f5f9; font-weight: 700; color: var(--danger);">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 0.85rem;">
+            <label for="transportNote">Note / Remarks</label>
+            <input type="text" id="transportNote" class="form-control" placeholder="Any comments or payment details">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="TransportModule.closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Transport Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: ADD ADVANCE -->
+  <div id="advanceModal" class="modal-backdrop">
+    <div class="modal" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3>Record Advance Payment</h3>
+        <button class="modal-close" onclick="AdvancesModule.closeModal()">✕</button>
+      </div>
+      <form id="advanceForm">
+        <div class="modal-body">
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="advanceDate">Date</label>
+            <input type="date" id="advanceDate" class="form-control" required>
+          </div>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="advanceAmount">Advance Amount (₹)</label>
+            <input type="number" id="advanceAmount" class="form-control" placeholder="e.g. 100000" required>
+          </div>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="advanceDescription">Description</label>
+            <input type="text" id="advanceDescription" class="form-control" placeholder="e.g. Bank Transfer, Fuel advance">
+          </div>
+          <div class="form-group">
+            <label for="advanceReference">Reference / Cheque / UTR No.</label>
+            <input type="text" id="advanceReference" class="form-control" placeholder="e.g. NEFT-99410">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="AdvancesModule.closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Record Advance</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Application Scripts -->
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/transport.js"></script>
+  <script src="js/advances.js"></script>
+  <script src="js/excel.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
+
