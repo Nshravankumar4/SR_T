@@ -134,15 +134,17 @@ const SheetViewModule = {
         oldBalDate = 'Before March 2026';
         totalPayable = totalAmount + toPayBal; // 18,93,350
         netOutstanding = totalPayable - advSum; // 10,000
-        latestDate = window.getLatestTripDate(secTrips, '14-08-2026');
+        // Section 1 cut-off date in Shinex Excel was 14-08-2026
+        latestDate = '14-08-2026';
       } else {
         // Section 2, Section 3, Section 4... chained from previous section's Net Outstanding!
         oldBal = prevOutBal;
         oldBalDate = prevOutDate;
         totalPayable = totalAmount + oldBal + toPayBal;
         netOutstanding = totalPayable - advSum;
+        const allItems = [...secTrips, ...secAdvs];
         const defaultDate = (sec.name === 'Section 2') ? '16-09-2026' : (prevOutDate || new Date().toISOString().split('T')[0]);
-        latestDate = window.getLatestTripDate(secTrips, defaultDate);
+        latestDate = window.getLatestTripDate(allItems, defaultDate);
       }
 
       prevOutBal = netOutstanding;
@@ -360,9 +362,16 @@ const SheetViewModule = {
                   <td class="excel-cell bold" style="border: 1px solid #999;">Old Balance</td>
                   <td class="excel-cell right font-mono bold" style="border: 1px solid #000; background: #ffff00;">${oldBal.toLocaleString('en-IN')}</td>
                 </tr>
+                ${toPayBal > 0 ? `
                 <tr>
                   <td class="excel-cell" style="border: 1px solid #999;"></td>
+                  <td class="excel-cell bold" style="border: 1px solid #999; font-size: 0.85rem;">ToPay Bal</td>
+                  <td class="excel-cell right font-mono bold" style="border: 1px solid #000; background: #fee2e2;">${toPayBal.toLocaleString('en-IN')}</td>
+                </tr>
+                ` : ''}
+                <tr>
                   <td class="excel-cell" style="border: 1px solid #999;"></td>
+                  <td class="excel-cell bold" style="border: 1px solid #999;">(=) Total</td>
                   <td class="excel-cell right font-mono bold" style="border: 1px solid #000; background: #f7c7ac;">${totalPayable.toLocaleString('en-IN')}</td>
                 </tr>
                 <tr>
