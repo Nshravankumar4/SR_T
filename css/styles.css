@@ -31,6 +31,13 @@ body {
   min-height: 100vh;
 }
 
+/* Strict Employee Isolation */
+body.employee-mode .admin-only,
+.employee-mode .admin-only {
+  display: none !important;
+}
+
+
 /* Authentication Screen */
 .auth-wrapper {
   display: flex;

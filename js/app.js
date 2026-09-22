@@ -20,17 +20,36 @@ window.App = {
     if (!user) {
       authWrapper.style.display = 'flex';
       mainApp.style.display = 'none';
+      document.body.classList.remove('employee-mode');
     } else {
       authWrapper.style.display = 'none';
       mainApp.style.display = 'block';
       document.getElementById('currentUserName').innerText = user.name;
       document.getElementById('currentUserRole').innerText = user.role;
       
+      const isAdmin = user.role === 'Admin';
+      if (isAdmin) {
+        document.body.classList.remove('employee-mode');
+      } else {
+        document.body.classList.add('employee-mode');
+      }
+
       // Update UI for role permissions
       const adminOnlyElements = document.querySelectorAll('.admin-only');
       adminOnlyElements.forEach(el => {
-        el.style.display = user.role === 'Admin' ? '' : 'none';
+        el.style.display = isAdmin ? '' : 'none';
       });
+
+      // If user is Employee and active tab is settings, switch back to transport immediately!
+      if (!isAdmin) {
+        const activeTab = document.querySelector('.nav-tab.active');
+        if (activeTab && activeTab.dataset.tab === 'settings') {
+          document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+          document.querySelector('.nav-tab[data-tab="transport"]')?.classList.add('active');
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          document.getElementById('tab-transport')?.classList.add('active');
+        }
+      }
 
       this.refreshData();
     }
@@ -213,6 +232,7 @@ window.App = {
       
       TransportModule.populateSectionFilters();
       TransportModule.populateSectionDropdown(name);
+      AdvancesModule.populateSectionFilters();
       AdvancesModule.populateSectionDropdown(name);
       
       const viewKey = name.toUpperCase().replace(/\s+/g, '_');
@@ -221,8 +241,96 @@ window.App = {
       }
 
       this.updateMetrics();
+      this.refreshData();
     } catch (err) {
       alert(err.message || 'Error creating section');
+    }
+  },
+
+  openManageSectionModal() {
+    if (!AuthService.isAdmin()) {
+      alert("Permission denied: Only Admin can manage sections.");
+      return;
+    }
+    const container = document.getElementById('sectionManageList');
+    if (!container) return;
+
+    const sections = ApiService.getSections();
+    const trips = this.transportRecords || [];
+    const advs = this.advanceRecords || [];
+
+    let html = '';
+    sections.forEach(s => {
+      const isS1 = s.name === 'Section 1';
+      const isS2 = s.name === 'Section 2';
+      const isCore = isS1 || isS2;
+      const tripCount = trips.filter(t => window.getTripSection(t) === s.name).length;
+      const advCount = advs.filter(a => window.getAdvanceSection(a) === s.name).length;
+
+      html += `
+        <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <strong>${s.name}</strong>
+              <span class="badge ${s.isArchive ? 'badge-secondary' : 'badge-success'}" style="font-size: 0.72rem;">${s.isArchive ? 'Archive' : 'Active'}</span>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
+              ${s.title || 'Standard Section'} • ${tripCount} trips, ${advCount} advances
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.4rem;">
+            <button class="btn btn-sm btn-secondary" onclick="App.promptEditSection('${s.name}')" title="Edit Section Title">✏️ Edit</button>
+            ${!isCore ? `
+              <button class="btn btn-sm btn-danger" onclick="App.confirmDeleteSection('${s.name}')" title="Delete Section">🗑️ Delete</button>
+            ` : `
+              <span style="font-size: 0.75rem; color: #94a3b8; padding: 0.25rem 0.5rem;">Protected</span>
+            `}
+          </div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+    document.getElementById('manageSectionModal')?.classList.add('active');
+  },
+
+  closeManageSectionModal() {
+    document.getElementById('manageSectionModal')?.classList.remove('active');
+  },
+
+  promptEditSection(sectionName) {
+    if (!AuthService.isAdmin()) {
+      alert("Permission denied: Only Admin can edit sections.");
+      return;
+    }
+    const sections = ApiService.getSections();
+    const sec = sections.find(s => s.name.toLowerCase() === sectionName.toLowerCase());
+    if (!sec) return;
+
+    const isCore = sec.name === 'Section 1' || sec.name === 'Section 2';
+    let newName = sec.name;
+    if (!isCore) {
+      const inputName = prompt(`Enter new name for "${sec.name}":`, sec.name);
+      if (inputName === null) return;
+      if (!inputName.trim()) {
+        alert("Section name cannot be empty.");
+        return;
+      }
+      newName = inputName.trim();
+    }
+
+    const inputTitle = prompt(`Enter period or subtitle for "${newName}":`, sec.title || '');
+    if (inputTitle === null) return;
+
+    try {
+      ApiService.updateSection(sec.name, newName, inputTitle);
+      this.showToast(`Updated "${newName}" successfully!`, 'success');
+      this.openManageSectionModal(); // Refresh modal view
+      TransportModule.populateSectionFilters();
+      AdvancesModule.populateSectionFilters();
+      this.refreshData();
+    } catch (err) {
+      alert(err.message || 'Error updating section');
     }
   },
 
@@ -231,10 +339,15 @@ window.App = {
       alert('Permission denied: Only Admin can delete a section!');
       return;
     }
+    const normalized = window.normalizeSection(sectionName);
+    if (normalized === 'Section 1' || normalized === 'Section 2') {
+      alert('Default Section 1 and Section 2 are protected and cannot be deleted.');
+      return;
+    }
     const trips = this.transportRecords.filter(r => window.getTripSection(r) === sectionName);
     const advs = this.advanceRecords.filter(a => window.getAdvanceSection(a) === sectionName);
     if (trips.length > 0 || advs.length > 0) {
-      if (!confirm(`Warning: "${sectionName}" contains ${trips.length} trips and ${advs.length} advances. Are you sure you want to delete this section?`)) {
+      if (!confirm(`Warning: "${sectionName}" contains ${trips.length} trips and ${advs.length} advances. Deleting this section will delete this section grouping. Are you sure you want to proceed?`)) {
         return;
       }
     } else {
@@ -244,10 +357,12 @@ window.App = {
     try {
       ApiService.deleteSection(sectionName);
       this.showToast(`Deleted ${sectionName}.`, 'info');
+      this.closeManageSectionModal();
       if (typeof SheetViewModule !== 'undefined') {
         SheetViewModule.setView('SECTION_2');
       }
       TransportModule.populateSectionFilters();
+      AdvancesModule.populateSectionFilters();
       this.refreshData();
     } catch (err) {
       alert(err.message || 'Error deleting section');
@@ -299,10 +414,14 @@ window.App = {
     const tabs = document.querySelectorAll('.nav-tab');
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
+        const target = tab.dataset.tab;
+        if (target === 'settings' && !AuthService.isAdmin()) {
+          return; // Strictly block employee from accessing settings
+        }
+
         tabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
 
-        const target = tab.dataset.tab;
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         document.getElementById(`tab-${target}`)?.classList.add('active');
 

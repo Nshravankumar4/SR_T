@@ -105,6 +105,7 @@
 
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
             <button class="btn btn-secondary" onclick="App.openSectionModal()" style="background: #fef3c7; color: #92400e; border-color: #fde68a; font-weight: 600;">➕ Add Section</button>
+            <button class="btn btn-secondary admin-only" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
             <button class="btn btn-secondary" onclick="App.openSheetView()" style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd; font-weight: 600;">📑 View Excel Sheet</button>
             <button class="btn btn-secondary" onclick="window.App.restoreExactExcelSheetData()" title="Reset database to exact Shinex records">📋 Load Exact Excel Data</button>
             <button class="btn btn-secondary" onclick="window.App.refreshData()">🔄 Refresh</button>
@@ -154,21 +155,40 @@
       <!-- TAB 2: ADVANCE PAYMENTS -->
       <section id="tab-advances" class="tab-content">
         <div class="toolbar">
-          <div>
-            <h3>💰 Company Advances Ledger</h3>
-            <p style="font-size: 0.85rem; color: var(--text-muted);">Advances given to transporters, adjusted against total payable bill.</p>
+          <div class="filter-group">
+            <select id="advFilterSection" class="form-control" style="font-weight: 600; background: #eff6ff; color: #1e40af; border-color: #93c5fd;" onchange="AdvancesModule.applyFilters()">
+              <!-- Dynamically populated by AdvancesModule.populateSectionFilters() -->
+              <option value="ALL">📋 All Sections (Combined)</option>
+              <option value="Section 2" selected>🟢 Section 2: Active</option>
+              <option value="Section 1">📁 Section 1: Archive</option>
+            </select>
+            <input type="text" id="advSearchInput" class="form-control" placeholder="Search Description, UTR, Mode..." style="width: 240px;" oninput="AdvancesModule.applyFilters()">
           </div>
-          <button class="btn btn-primary" onclick="AdvancesModule.openAddModal()">➕ Record New Advance</button>
+
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button class="btn btn-secondary" onclick="App.openSectionModal()" style="background: #fef3c7; color: #92400e; border-color: #fde68a; font-weight: 600;">➕ Add Section</button>
+            <button class="btn btn-secondary admin-only" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
+            <button class="btn btn-primary" onclick="AdvancesModule.openAddModal()">➕ Record New Advance</button>
+          </div>
+        </div>
+
+        <!-- Advances Stats Bar -->
+        <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; background: #fff; padding: 0.75rem 1.25rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 1rem; font-size: 0.88rem;">
+          <div><span style="color: var(--text-muted);">Advances in View:</span> <strong id="advCountStat" style="color: var(--text-main);">0</strong></div>
+          <div><span style="color: var(--text-muted);">Section Total Advances:</span> <strong id="advTotalStat" style="color: var(--success); font-size: 1rem;">₹0</strong></div>
+          <div><span style="color: var(--text-muted);">Section 1 Advances:</span> <strong id="advS1Stat" style="color: var(--text-muted);">₹18,83,350</strong></div>
+          <div><span style="color: var(--text-muted);">Section 2 Advances:</span> <strong id="advS2Stat" style="color: var(--primary);">₹4,50,000</strong></div>
         </div>
 
         <div class="table-responsive">
           <table>
             <thead>
               <tr>
-                <th>#</th>
+                <th>SL</th>
+                <th>Section</th>
                 <th>Date</th>
                 <th>Advance Amount</th>
-                <th>Description</th>
+                <th>Description / Payment Mode</th>
                 <th>Reference / UTR / Cheque</th>
                 <th>Entered By</th>
                 <th>Action</th>
@@ -300,6 +320,7 @@
             </div>
 
             <button id="btnAddSectionSheet" class="btn btn-sm btn-secondary" onclick="App.openSectionModal()" style="font-weight: 600; background: #fef3c7; color: #92400e; border-color: #fde68a;" title="Create Section 3 or next sequence">➕ Add Section</button>
+            <button id="btnManageSections" class="btn btn-sm btn-secondary admin-only" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
 
             <!-- Zoom Controls -->
             <div class="zoom-controls" style="display: flex; align-items: center; background: #e2e8f0; padding: 2px; border-radius: 6px; gap: 2px;">
@@ -555,8 +576,8 @@
   </div>
 
   <!-- Add New Section Modal (Accessible to Employee and Admin) -->
-  <div id="sectionModal" class="modal">
-    <div class="modal-content" style="max-width: 480px;">
+  <div id="sectionModal" class="modal-backdrop">
+    <div class="modal" style="max-width: 480px;">
       <div class="modal-header">
         <h3 id="sectionModalTitle">➕ Add New Section</h3>
         <button class="modal-close" onclick="App.closeSectionModal()">✕</button>
@@ -585,17 +606,39 @@
     </div>
   </div>
 
+  <!-- MODAL: MANAGE SECTIONS (Admin Full Edit & Delete Access) -->
+  <div id="manageSectionModal" class="modal-backdrop">
+    <div class="modal" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3>⚙️ Section Management (Admin Only)</h3>
+        <button class="modal-close" onclick="App.closeManageSectionModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Edit section titles or delete custom sections. Preceding section balances chain automatically.
+        </p>
+        <div id="sectionManageList" style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <!-- Dynamically populated by App.openManageSectionModal() -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="App.closeManageSectionModal()">Close</button>
+        <button type="button" class="btn btn-primary" onclick="App.closeManageSectionModal(); App.openSectionModal();">➕ Add Another Section</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Application Scripts with Cache Busters -->
-  <script src="js/auth.js?v=3.5"></script>
-  <script src="js/api.js?v=3.5"></script>
-  <script src="js/transport.js?v=3.5"></script>
-  <script src="js/advances.js?v=3.5"></script>
-  <script src="js/excel.js?v=3.5"></script>
-  <script src="js/sheetview.js?v=3.5"></script>
-  <script src="js/app.js?v=3.5"></script>
+  <script src="js/auth.js?v=4.0"></script>
+  <script src="js/api.js?v=4.0"></script>
+  <script src="js/transport.js?v=4.0"></script>
+  <script src="js/advances.js?v=4.0"></script>
+  <script src="js/excel.js?v=4.0"></script>
+  <script src="js/sheetview.js?v=4.0"></script>
+  <script src="js/app.js?v=4.0"></script>
 </body>
 </html>
 

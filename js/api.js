@@ -876,6 +876,47 @@ const ApiService = {
     return newSec;
   },
 
+  updateSection(oldName, newName, newTitle) {
+    const user = typeof AuthService !== 'undefined' ? AuthService.getCurrentUser() : null;
+    if (!user || user.role !== 'Admin') {
+      throw new Error('Permission denied: Only Admin can edit sections!');
+    }
+    const cleanOld = window.normalizeSection(oldName);
+    const cleanNew = (newName || '').trim();
+    if (!cleanNew) throw new Error('Section name cannot be empty.');
+    let sections = this.getSections();
+    const idx = sections.findIndex(s => s.name.toLowerCase() === cleanOld.toLowerCase());
+    if (idx === -1) throw new Error(`Section "${oldName}" not found.`);
+
+    if (cleanOld === 'Section 1' || cleanOld === 'Section 2') {
+      sections[idx].title = (newTitle || sections[idx].title || '').trim();
+    } else {
+      sections[idx].name = cleanNew;
+      if (newTitle !== undefined) sections[idx].title = (newTitle || '').trim();
+    }
+    localStorage.setItem(API_CONFIG.storageKeySections, JSON.stringify(sections));
+
+    // Cascade rename to trips and advances
+    if (cleanOld.toLowerCase() !== cleanNew.toLowerCase()) {
+      const trips = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyTransport) || '[]');
+      trips.forEach(t => {
+        if (window.getTripSection(t).toLowerCase() === cleanOld.toLowerCase()) {
+          t.section = cleanNew;
+        }
+      });
+      localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(trips));
+
+      const advs = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyAdvances) || '[]');
+      advs.forEach(a => {
+        if (window.getAdvanceSection(a).toLowerCase() === cleanOld.toLowerCase()) {
+          a.section = cleanNew;
+        }
+      });
+      localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(advs));
+    }
+    return sections[idx];
+  },
+
   deleteSection(sectionName) {
     const user = typeof AuthService !== 'undefined' ? AuthService.getCurrentUser() : null;
     if (!user || user.role !== 'Admin') {

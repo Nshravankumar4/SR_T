@@ -287,6 +287,10 @@ const TransportModule = {
   },
 
   async confirmDelete(id) {
+    if (!AuthService.isAdmin()) {
+      alert("Permission denied: Only Admin can delete transport records!");
+      return;
+    }
     if (!confirm("Are you sure you want to delete this transport record?")) return;
     try {
       await ApiService.deleteTransport(id);

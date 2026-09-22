@@ -258,10 +258,21 @@ const SheetViewModule = {
           </div>
         ` : ''}
 
-        <!-- Top Excel Banner Row with Old Balance badge -->
-        <div style="display: flex; justify-content: flex-end; margin-bottom: 4px;">
-          <div style="background: #ffff00; border: 1px solid #000; padding: 4px 16px; font-weight: 600; font-size: 0.85rem;">
-            Before ${oldBalDate || '14-08-2026'} ${oldBal.toLocaleString('en-IN')}
+        <!-- Section Header Bar with Admin Controls -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; background: #e0f2fe; padding: 6px 12px; border-radius: 6px; border: 1px solid #bae6fd;">
+          <div style="font-weight: 700; color: #0369a1; font-size: 0.95rem;">
+            📑 ${section.name}: ${section.title || (section.isArchive ? 'Archive' : 'Active Ledger')}
+          </div>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <div style="background: #ffff00; border: 1px solid #000; padding: 3px 12px; font-weight: 600; font-size: 0.82rem;">
+              Before ${oldBalDate || '14-08-2026'}: ₹${oldBal.toLocaleString('en-IN')}
+            </div>
+            ${isAdmin ? `
+              <button class="btn btn-sm btn-secondary" onclick="App.promptEditSection('${section.name}')" style="font-size: 0.75rem; padding: 2px 8px;" title="Edit Section Title">✏️ Edit</button>
+            ` : ''}
+            ${isAdmin && isCustomSec ? `
+              <button class="btn btn-sm btn-danger" onclick="App.confirmDeleteSection('${section.name}')" style="font-size: 0.75rem; padding: 2px 8px;" title="Delete this Section">🗑️ Delete</button>
+            ` : ''}
           </div>
         </div>
 
