@@ -406,7 +406,14 @@ const ExcelModule = {
     s2Trips.forEach((r, idx) => {
       const row = ws.getRow(curRowS2);
       const amt = Number(r.amount) || 0;
+      const toPay = Number(r.toPay) || 0;
+      const bal = Number(r.balance) || 0;
       s2TotalAmount += amt;
+
+      let paidVal = r.paid;
+      if (typeof paidVal === 'number' && paidVal > 0) {
+        paidVal = (paidVal === toPay) ? 'Paid' : paidVal.toLocaleString('en-IN');
+      }
 
       row.values = [
         r.slNo || (idx + 1),
@@ -419,9 +426,9 @@ const ExcelModule = {
         r.quantity || '',
         r.mTax || '',
         amt > 0 ? amt : '',
-        '',
-        '',
-        '',
+        toPay > 0 ? toPay : '',
+        paidVal || '',
+        bal > 0 ? bal : '',
         r.note || ''
       ];
       row.height = 20;
@@ -647,25 +654,29 @@ const ExcelModule = {
   },
 
   saveBlob(blob, filename) {
-    if (typeof saveAs === 'function') {
-      try {
+    try {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        try {
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        } catch (e) {}
+      }, 2000);
+      return;
+    } catch (err) {
+      console.warn("Direct anchor download error, attempting saveAs fallback:", err);
+      if (typeof saveAs === 'function') {
         saveAs(blob, filename);
         return;
-      } catch (e) {
-        console.warn("saveAs error, using fallback anchor:", e);
       }
+      throw err;
     }
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.style.display = 'none';
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    }, 1000);
   },
 
   exportWithSheetJS(tRecords, aRecords) {

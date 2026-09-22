@@ -256,8 +256,8 @@ window.App = {
     document.getElementById('advanceForm')?.addEventListener('submit', (e) => AdvancesModule.handleFormSubmit(e));
 
     // Export to Excel
-    document.getElementById('exportExcelBtn')?.addEventListener('click', () => {
-      ExcelModule.exportToExcel(this.transportRecords, this.advanceRecords, this.openingBalance);
+    document.getElementById('exportExcelBtn')?.addEventListener('click', (e) => {
+      window.downloadShinexExcel(e.currentTarget);
     });
 
     // Import from Excel file selector
@@ -331,6 +331,28 @@ window.App = {
     setTimeout(() => {
       toast.remove();
     }, 3500);
+  }
+};
+
+window.downloadShinexExcel = async function(btn) {
+  const originalText = btn ? btn.innerText : '';
+  if (btn) {
+    btn.innerText = '⏳ Generating Excel...';
+    btn.disabled = true;
+  }
+  try {
+    const transport = window.App?.transportRecords || [];
+    const advances = window.App?.advanceRecords || [];
+    const openBal = window.App?.openingBalance || 120000;
+    await ExcelModule.exportToExcel(transport, advances, openBal);
+  } catch (err) {
+    console.error("Excel download error:", err);
+    alert("Excel Export failed: " + err.message);
+  } finally {
+    if (btn) {
+      btn.innerText = originalText;
+      btn.disabled = false;
+    }
   }
 };
 
