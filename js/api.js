@@ -905,6 +905,7 @@ const ApiService = {
 
   // Save advance record
   async saveAdvance(advance) {
+    const isEdit = Boolean(advance.id);
     const cleanAdv = {
       ...advance,
       id: advance.id || ('ADV-' + Date.now().toString().slice(-5)),
@@ -913,7 +914,13 @@ const ApiService = {
     };
 
     const list = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyAdvances) || '[]');
-    list.unshift(cleanAdv);
+    if (isEdit) {
+      const idx = list.findIndex(a => a.id === cleanAdv.id);
+      if (idx !== -1) list[idx] = cleanAdv;
+      else list.unshift(cleanAdv);
+    } else {
+      list.unshift(cleanAdv);
+    }
     localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(list));
 
     const url = this.getApiUrl();
@@ -923,7 +930,7 @@ const ApiService = {
           method: 'POST',
           mode: 'no-cors',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'addAdvance', data: cleanAdv })
+          body: JSON.stringify({ action: isEdit ? 'updateAdvance' : 'addAdvance', data: cleanAdv })
         });
       } catch (err) {
         console.error("Cloud sync error for advance:", err);

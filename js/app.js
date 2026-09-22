@@ -182,27 +182,37 @@ window.App = {
   },
 
   setupEventListeners() {
-    // Role selection in login
-    let selectedRole = 'Admin';
-    const roleBtns = document.querySelectorAll('.role-btn');
-    roleBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        roleBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        selectedRole = btn.dataset.role;
-        document.getElementById('loginPin').placeholder = selectedRole === 'Admin' ? 'Enter Admin PIN (Default: 7890)' : 'Enter Employee PIN (Default: 1234)';
-      });
+    // Toggle password visibility
+    document.getElementById('togglePasswordBtn')?.addEventListener('click', () => {
+      const pwdInput = document.getElementById('loginPassword');
+      if (!pwdInput) return;
+      pwdInput.type = pwdInput.type === 'password' ? 'text' : 'password';
     });
 
-    // Login submit
+    // Login submit (Username + Password)
     document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const pin = document.getElementById('loginPin').value;
-      const res = await AuthService.login(selectedRole, pin);
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const errorMsg = document.getElementById('loginErrorMsg');
+      const submitBtn = document.getElementById('loginSubmitBtn');
+
+      if (submitBtn) submitBtn.disabled = true;
+      if (errorMsg) errorMsg.style.display = 'none';
+
+      const res = await AuthService.login(username, password);
+      if (submitBtn) submitBtn.disabled = false;
+
       if (res.success) {
         this.checkAuth();
+        this.showToast(`Welcome back, ${res.user.name}!`, 'success');
       } else {
-        alert(res.message);
+        if (errorMsg) {
+          errorMsg.innerText = res.message || 'Login failed';
+          errorMsg.style.display = 'block';
+        } else {
+          alert(res.message);
+        }
       }
     });
 
@@ -275,12 +285,37 @@ window.App = {
       this.refreshData();
     });
 
-    // PIN update
-    document.getElementById('savePinsBtn')?.addEventListener('click', () => {
-      const adminPin = document.getElementById('settingsAdminPin').value;
-      const empPin = document.getElementById('settingsEmpPin').value;
-      AuthService.updatePins(adminPin, empPin);
-      this.showToast("Security PINs updated!", "success");
+    // Passwords update
+    document.getElementById('savePasswordsBtn')?.addEventListener('click', async () => {
+      const adminPass = document.getElementById('settingsAdminPass')?.value;
+      const empPass = document.getElementById('settingsEmpPass')?.value;
+
+      let updated = false;
+      if (adminPass && adminPass.trim()) {
+        const res1 = await AuthService.updatePassword('Admin1', adminPass);
+        if (res1.success) {
+          this.showToast("Admin1 password updated successfully!", "success");
+          document.getElementById('settingsAdminPass').value = '';
+          updated = true;
+        } else {
+          this.showToast(res1.message, "error");
+        }
+      }
+
+      if (empPass && empPass.trim()) {
+        const res2 = await AuthService.updatePassword('EAdmin2', empPass);
+        if (res2.success) {
+          this.showToast("EAdmin2 password updated successfully!", "success");
+          document.getElementById('settingsEmpPass').value = '';
+          updated = true;
+        } else {
+          this.showToast(res2.message, "error");
+        }
+      }
+
+      if (!updated && (!adminPass || !adminPass.trim()) && (!empPass || !empPass.trim())) {
+        this.showToast("Please enter a new password to update.", "info");
+      }
     });
   },
 

@@ -17,23 +17,34 @@
   <div id="authWrapper" class="auth-wrapper">
     <div class="auth-card">
       <div class="auth-header">
-        <h1>🚛 Transport System</h1>
-        <p>Select your account type to proceed</p>
+        <h1>🚛 Transport Ledger Management</h1>
+        <p>Sign in with your secure account</p>
       </div>
 
-      <div class="role-selector">
-        <button type="button" class="role-btn active" data-role="Admin">Admin</button>
-        <button type="button" class="role-btn" data-role="Employee">Employee</button>
-      </div>
+      <div id="loginErrorMsg" style="display: none; color: #b91c1c; background: #fee2e2; border: 1px solid #fca5a5; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem; text-align: center;"></div>
 
       <form id="loginForm">
-        <div class="form-group" style="margin-bottom: 1.25rem;">
-          <label for="loginPin">Security PIN</label>
-          <input type="password" id="loginPin" class="form-control" placeholder="Enter Admin PIN (Default: 7890)" required>
-          <small>Default PINs: Admin = <code>7890</code> | Employee = <code>1234</code></small>
+        <div class="form-group" style="margin-bottom: 1rem;">
+          <label for="loginUsername">Username</label>
+          <input type="text" id="loginUsername" class="form-control" placeholder="Admin1 or EAdmin2" required autocomplete="username" autofocus>
         </div>
-        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem;">Login to Dashboard</button>
+
+        <div class="form-group" style="margin-bottom: 1.25rem;">
+          <label for="loginPassword">Password</label>
+          <div style="position: relative;">
+            <input type="password" id="loginPassword" class="form-control" placeholder="Enter Password" required autocomplete="current-password" style="padding-right: 2.5rem;">
+            <button type="button" id="togglePasswordBtn" style="position: absolute; right: 0.6rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 0; line-height: 1;" title="Show/Hide Password">👁️</button>
+          </div>
+        </div>
+
+        <button type="submit" id="loginSubmitBtn" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-weight: 600;">Secure Login</button>
       </form>
+
+      <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem; margin-top: 1.25rem; font-size: 0.82rem; color: var(--text-muted); line-height: 1.6;">
+        <div style="font-weight: 700; color: var(--primary); margin-bottom: 0.25rem;">🔐 Configured Accounts:</div>
+        <div><strong>Administrator:</strong> <code>Admin1</code> / <code>Shravan@1</code> (Full Edit/Delete)</div>
+        <div><strong>Employee:</strong> <code>EAdmin2</code> / <code>EShravan@2</code> (Add & View)</div>
+      </div>
     </div>
   </div>
 
@@ -354,18 +365,21 @@
 
           <hr style="border: 0; border-top: 1px solid var(--border); margin: 1.5rem 0;">
 
-          <h4 style="margin-bottom: 1rem;">Change Security PINs</h4>
+          <h4 style="margin-bottom: 0.5rem; color: var(--primary);">🔐 Update Account Passwords</h4>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Change secure passwords for <strong>Admin1</strong> and <strong>EAdmin2</strong> accounts.
+          </p>
           <div class="form-grid" style="margin-bottom: 1rem;">
             <div class="form-group">
-              <label for="settingsAdminPin">Admin PIN</label>
-              <input type="password" id="settingsAdminPin" class="form-control" placeholder="New Admin PIN">
+              <label for="settingsAdminPass">New Administrator Password (Admin1)</label>
+              <input type="password" id="settingsAdminPass" class="form-control" placeholder="New password for Admin1 (Min 6 chars)">
             </div>
             <div class="form-group">
-              <label for="settingsEmpPin">Employee PIN</label>
-              <input type="password" id="settingsEmpPin" class="form-control" placeholder="New Employee PIN">
+              <label for="settingsEmpPass">New Employee Password (EAdmin2)</label>
+              <input type="password" id="settingsEmpPass" class="form-control" placeholder="New password for EAdmin2 (Min 6 chars)">
             </div>
           </div>
-          <button id="savePinsBtn" class="btn btn-secondary">Update PINs</button>
+          <button id="savePasswordsBtn" class="btn btn-secondary">💾 Update Passwords Securely</button>
         </div>
       </section>
     </main>
@@ -483,11 +497,13 @@
   <div id="advanceModal" class="modal-backdrop">
     <div class="modal" style="max-width: 500px;">
       <div class="modal-header">
-        <h3>Record Advance Payment</h3>
+        <h3 id="advanceModalTitle">Record Advance Payment</h3>
         <button class="modal-close" onclick="AdvancesModule.closeModal()">✕</button>
       </div>
       <form id="advanceForm">
         <div class="modal-body">
+          <input type="hidden" id="advanceId">
+
           <div class="form-group" style="margin-bottom: 1rem;">
             <label for="advanceDate">Date</label>
             <input type="date" id="advanceDate" class="form-control" required>
@@ -507,7 +523,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" onclick="AdvancesModule.closeModal()">Cancel</button>
-          <button type="submit" class="btn btn-primary">Record Advance</button>
+          <button type="submit" class="btn btn-primary">Save Advance Record</button>
         </div>
       </form>
     </div>

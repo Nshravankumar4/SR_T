@@ -53,18 +53,20 @@ function doPost(e) {
     
     // 1. Secure Backend Authentication Check
     if (action === 'login') {
-      var role = body.role || 'Employee';
-      var pin = String(body.pin || '').trim();
+      var username = String(body.username || '').trim();
+      var password = String(body.password || '').trim();
       var props = PropertiesService.getScriptProperties();
-      var adminPin = props.getProperty('ADMIN_PIN') || '7890';
-      var empPin = props.getProperty('EMPLOYEE_PIN') || '1234';
+      var adminUser = props.getProperty('ADMIN_USER') || 'Admin1';
+      var adminPass = props.getProperty('ADMIN_PASS') || 'Shravan@1';
+      var empUser = props.getProperty('EMP_USER') || 'EAdmin2';
+      var empPass = props.getProperty('EMP_PASS') || 'EShravan@2';
 
-      if (role === 'Admin' && pin === adminPin) {
+      if (username.toLowerCase() === adminUser.toLowerCase() && password === adminPass) {
         return jsonResponse({ success: true, role: 'Admin', name: 'Administrator', token: Utilities.getUuid() });
-      } else if (role === 'Employee' && pin === empPin) {
+      } else if (username.toLowerCase() === empUser.toLowerCase() && password === empPass) {
         return jsonResponse({ success: true, role: 'Employee', name: 'Employee', token: Utilities.getUuid() });
       } else {
-        return jsonResponse({ success: false, message: 'Invalid PIN for ' + role });
+        return jsonResponse({ success: false, message: 'Invalid Username or Password' });
       }
     }
 
@@ -109,7 +111,7 @@ function doPost(e) {
         newId,
         item.date || '',
         Number(item.amount) || 0,
-        item.description || '',
+        item.description || item.note || '',
         item.reference || '',
         item.createdBy || 'Unknown',
         now
@@ -117,6 +119,31 @@ function doPost(e) {
       
       sheet.appendRow(row);
       return jsonResponse({ success: true, id: newId });
+    }
+
+    if (action === 'updateAdvance') {
+      var sheet = getOrCreateSheet(ss, 'Advances');
+      var item = body.data;
+      var data = sheet.getDataRange().getValues();
+      var targetRow = -1;
+      
+      for (var i = 1; i < data.length; i++) {
+        if (String(data[i][0]) === String(item.id)) {
+          targetRow = i + 1;
+          break;
+        }
+      }
+
+      if (targetRow > 0) {
+        sheet.getRange(targetRow, 2, 1, 4).setValues([[
+          item.date || '',
+          Number(item.amount) || 0,
+          item.description || item.note || '',
+          item.reference || ''
+        ]]);
+        return jsonResponse({ success: true, message: 'Advance updated' });
+      }
+      return jsonResponse({ success: false, message: 'Advance not found' });
     }
     
     if (action === 'updateTransport') {
