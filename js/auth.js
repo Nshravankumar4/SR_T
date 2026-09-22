@@ -188,6 +188,16 @@ const AuthService = {
     return user && user.role === 'Admin';
   },
 
+  canAddSection() {
+    // Both Admin and Employee can create/add a new section
+    return Boolean(this.getCurrentUser());
+  },
+
+  canDeleteSection() {
+    // Only Admin can delete a section
+    return this.isAdmin();
+  },
+
   async updatePassword(targetUsername, newPassword) {
     await this.init();
     const users = this.getUsers();

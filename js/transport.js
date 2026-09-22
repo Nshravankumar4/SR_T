@@ -11,16 +11,38 @@ const TransportModule = {
     this.applyFilters();
   },
 
+  populateSectionFilters() {
+    const filterEl = document.getElementById('sectionFilter');
+    if (!filterEl) return;
+    const currentVal = filterEl.value;
+    const sections = typeof ApiService !== 'undefined' ? ApiService.getSections() : [];
+    let opts = '<option value="ALL">📋 All Sections (Complete 2026-2027)</option>';
+    sections.forEach(s => {
+      const isAct = !s.isArchive;
+      opts += `<option value="${s.name}">${isAct ? '🟢' : '📁'} ${s.name}: ${s.title || (isAct ? 'Active' : 'Archive')}</option>`;
+    });
+    filterEl.innerHTML = opts;
+    if (currentVal && Array.from(filterEl.options).some(o => o.value === currentVal)) {
+      filterEl.value = currentVal;
+    } else {
+      const active = sections.filter(s => !s.isArchive);
+      filterEl.value = active.length > 0 ? active[active.length - 1].name : 'Section 2';
+    }
+  },
+
   applyFilters() {
+    this.populateSectionFilters();
     const searchVal = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
     const statusVal = document.getElementById('statusFilter')?.value || 'ALL';
     const monthVal = document.getElementById('monthFilter')?.value || 'ALL';
-    const sectionVal = document.getElementById('sectionFilter')?.value || 'SECTION_2';
+    const sectionVal = document.getElementById('sectionFilter')?.value || 'ALL';
 
     this.filteredRecords = this.records.filter(item => {
-      // Section filter
-      if (sectionVal === 'SECTION_1' && !window.isSection1Trip(item)) return false;
-      if (sectionVal === 'SECTION_2' && !window.isSection2Trip(item)) return false;
+      // Dynamic Section filter
+      if (sectionVal !== 'ALL') {
+        const itemSec = window.getTripSection(item);
+        if (itemSec.toLowerCase() !== sectionVal.toLowerCase()) return false;
+      }
 
       // Search matches LR, Vehicle, From, To, DC
       const matchesSearch = !searchVal || 
@@ -42,12 +64,13 @@ const TransportModule = {
       return matchesSearch && matchesStatus && matchesMonth;
     });
 
-    // Sort order: Section 1 first (by slNo), then Section 2 (by slNo)
+    // Sort order: Section 1, Section 2, Section 3... then by slNo
     this.filteredRecords.sort((a, b) => {
-      const aS1 = window.isSection1Trip(a);
-      const bS1 = window.isSection1Trip(b);
-      if (aS1 && !bS1) return -1;
-      if (!aS1 && bS1) return 1;
+      const aSec = window.getTripSection(a);
+      const bSec = window.getTripSection(b);
+      const aNum = Number(aSec.replace(/\D+/g, '')) || 0;
+      const bNum = Number(bSec.replace(/\D+/g, '')) || 0;
+      if (aNum !== bNum) return aNum - bNum;
       return (Number(a.slNo) || 0) - (Number(b.slNo) || 0);
     });
 
@@ -66,7 +89,12 @@ const TransportModule = {
     const isAdmin = AuthService.isAdmin();
 
     tbody.innerHTML = this.filteredRecords.map((r, index) => {
-      const isS2 = window.isSection2Trip(r);
+      const secName = window.getTripSection(r);
+      const isS1 = secName === 'Section 1';
+      const isS2 = secName === 'Section 2';
+      const badgeBg = isS1 ? '#f1f5f9' : (isS2 ? '#dbeafe' : '#fef3c7');
+      const badgeColor = isS1 ? '#475569' : (isS2 ? '#1e40af' : '#92400e');
+
       const badgeClass = r.status === 'Paid' ? 'badge-success' : (r.status === 'Partially Paid' ? 'badge-warning' : 'badge-danger');
       const formattedAmount = (Number(r.amount) || 0).toLocaleString('en-IN');
       const formattedToPay = (Number(r.toPay) || 0).toLocaleString('en-IN');
@@ -76,7 +104,7 @@ const TransportModule = {
       return `
         <tr>
           <td><strong>${r.slNo || (index + 1)}</strong></td>
-          <td><span class="badge" style="background: ${isS2 ? '#dbeafe' : '#f1f5f9'}; color: ${isS2 ? '#1e40af' : '#475569'}; font-size: 0.72rem; font-weight: 600;">${isS2 ? 'Sec 2 (Active)' : 'Sec 1 (Closed)'}</span></td>
+          <td><span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; font-size: 0.72rem; font-weight: 600;">${secName}</span></td>
           <td><strong>${r.lrNo || '-'}</strong></td>
           <td>${r.dcNo || '-'}</td>
           <td>${r.date || '-'}</td>
@@ -111,19 +139,48 @@ const TransportModule = {
     }).join('');
   },
 
-  openAddModal() {
+  populateSectionDropdown(selectedSection) {
+    const secSelect = document.getElementById('transportSection');
+    if (!secSelect) return;
+    const sections = typeof ApiService !== 'undefined' ? ApiService.getSections() : [];
+    const activeSections = sections.filter(s => !s.isArchive);
+    const defaultSec = activeSections.length > 0 ? activeSections[activeSections.length - 1].name : 'Section 2';
+    const target = selectedSection || defaultSec;
+
+    secSelect.innerHTML = sections.map(s => `
+      <option value="${s.name}" ${s.name.toLowerCase() === target.toLowerCase() ? 'selected' : ''}>
+        ${s.name} (${s.title || (s.isArchive ? 'Archive' : 'Active')})
+      </option>
+    `).join('');
+  },
+
+  onSectionChange() {
+    const secSelect = document.getElementById('transportSection');
+    if (!secSelect) return;
+    const chosen = secSelect.value;
+    const secTrips = this.records.filter(r => window.getTripSection(r) === chosen);
+    const nextSl = secTrips.length > 0
+      ? Math.max(...secTrips.map(r => Number(r.slNo) || 0)) + 1
+      : (chosen === 'Section 1' ? 34 : 1);
+    
+    // Only auto-update SL NO if it's a new record
+    if (!document.getElementById('transportId').value) {
+      document.getElementById('transportSlNo').value = nextSl;
+    }
+    const hint = document.getElementById('transportSectionHint');
+    if (hint) {
+      hint.innerText = `Trip will be logged sequentially under ${chosen} (Next SL.NO: ${nextSl}).`;
+    }
+  },
+
+  openAddModal(preselectedSection = null) {
     document.getElementById('transportForm').reset();
     document.getElementById('transportId').value = '';
-    document.getElementById('transportModalTitle').innerText = 'Add Transport Record (Section 2 - Active)';
+    document.getElementById('transportModalTitle').innerText = '➕ Add Transport Record';
     document.getElementById('transportDate').value = new Date().toISOString().split('T')[0];
     
-    // Auto-calculate default SL NO for the active section (Section 2)
-    // Section 2 starts with 1..6, so next is 7, then 8, 9, etc.
-    const s2Records = this.records.filter(r => window.isSection2Trip(r));
-    const nextSlNo = s2Records.length > 0 
-      ? Math.max(...s2Records.map(r => Number(r.slNo) || 0)) + 1 
-      : 7;
-    document.getElementById('transportSlNo').value = nextSlNo;
+    this.populateSectionDropdown(preselectedSection);
+    this.onSectionChange();
     
     document.getElementById('transportModal').classList.add('active');
   },
@@ -132,6 +189,7 @@ const TransportModule = {
     const record = this.records.find(r => r.id === id);
     if (!record) return;
 
+    this.populateSectionDropdown(window.getTripSection(record));
     document.getElementById('transportId').value = record.id;
     document.getElementById('transportSlNo').value = record.slNo || '';
     document.getElementById('transportLrNo').value = record.lrNo || '';
@@ -148,7 +206,7 @@ const TransportModule = {
     document.getElementById('transportBalance').value = record.balance || 0;
     document.getElementById('transportNote').value = record.note || '';
 
-    document.getElementById('transportModalTitle').innerText = `Edit Record (LR: ${record.lrNo || id})`;
+    document.getElementById('transportModalTitle').innerText = `✏️ Edit Record (LR: ${record.lrNo || id})`;
     document.getElementById('transportModal').classList.add('active');
   },
 
@@ -191,9 +249,10 @@ const TransportModule = {
     if (balance <= 0 && toPay > 0) status = 'Paid';
     else if (paid > 0 && balance > 0) status = 'Partially Paid';
 
-    // Check if editing existing record to preserve section
+    // Get section from section dropdown
+    const secSelect = document.getElementById('transportSection');
     const existing = id ? this.records.find(r => r.id === id) : null;
-    const section = existing ? (existing.section || 'NEW August to September 2026') : 'NEW August to September 2026';
+    const chosenSection = secSelect ? secSelect.value : (existing ? (existing.section || 'Section 2') : 'Section 2');
 
     const record = {
       id: id || undefined,
@@ -212,7 +271,7 @@ const TransportModule = {
       balance,
       status,
       note: document.getElementById('transportNote').value.trim(),
-      section: section,
+      section: chosenSection,
       createdBy: user ? user.role : 'User'
     };
 

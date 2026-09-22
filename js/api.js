@@ -718,36 +718,89 @@ if (REAL_SHINEX_ADVANCES.length > 0 && REAL_SHINEX_ADVANCES[0].id === 'ADV-S1-37
 }
 
 // Global section helpers
+window.normalizeSection = function(secStr) {
+  if (!secStr) return 'Section 2';
+  const s = String(secStr).trim();
+  const lower = s.toLowerCase();
+  if (lower.includes('section 1') || lower.includes('april') || lower === 's1') return 'Section 1';
+  const m = lower.match(/section\s*(\d+)/i);
+  if (m) return 'Section ' + m[1];
+  if (lower.includes('s2') || lower.includes('new') || lower.includes('august') || lower.includes('september')) return 'Section 2';
+  return s;
+};
+
+window.getTripSection = function(r) {
+  if (!r) return 'Section 2';
+  if (r.section) return window.normalizeSection(r.section);
+  if (/^TR-([1-9]|1[0-9]|2[0-7])$/.test(String(r.id))) return 'Section 1';
+  if (String(r.id).includes('S2')) return 'Section 2';
+  if (String(r.id).includes('S3')) return 'Section 3';
+  return 'Section 2';
+};
+
+window.getAdvanceSection = function(a) {
+  if (!a) return 'Section 2';
+  if (a.section) return window.normalizeSection(a.section);
+  if (a.date && (a.date.startsWith("29-08-2026") || a.date.startsWith("10-09-2026"))) return 'Section 2';
+  if (String(a.id).includes('S2')) return 'Section 2';
+  if (String(a.id).includes('S3')) return 'Section 3';
+  if (String(a.id).includes('S1')) return 'Section 1';
+  if (a.date && (a.date.includes('-04-') || a.date.includes('-05-') || a.date.includes('-06-') || a.date.includes('-07-') || a.date.includes('-08-2026'))) {
+    if (!a.date.startsWith("29-08-2026")) return 'Section 1';
+  }
+  return 'Section 1';
+};
+
 window.isSection1Trip = function(r) {
-  if (!r) return false;
-  if (r.section && r.section.includes("April")) return true;
-  if (r.section && (r.section.includes("NEW") || r.section.includes("August") || r.section.includes("September"))) return false;
-  if (String(r.id).includes("S2")) return false;
-  if (/^TR-([1-9]|1[0-9]|2[0-7])$/.test(String(r.id))) return true;
-  return false;
+  return window.getTripSection(r) === 'Section 1';
 };
 
 window.isSection2Trip = function(r) {
-  return !window.isSection1Trip(r);
+  return window.getTripSection(r) === 'Section 2';
 };
 
 window.isSection1Advance = function(a) {
-  if (!a) return false;
-  if (a.section === "Section 2" || String(a.id).includes("S2")) return false;
-  if (a.section === "Section 1") return true;
-  if (a.date && (a.date.startsWith("29-08-2026") || a.date.startsWith("10-09-2026"))) return false;
-  return true;
+  return window.getAdvanceSection(a) === 'Section 1';
 };
 
 window.isSection2Advance = function(a) {
-  return !window.isSection1Advance(a);
+  return window.getAdvanceSection(a) === 'Section 2';
+};
+
+window.getLatestTripDate = function(trips, defaultDate = '16-09-2026') {
+  if (!trips || trips.length === 0) return defaultDate;
+
+  // Filter trips that have a non-empty date
+  const valid = trips.filter(r => r && r.date && String(r.date).trim());
+  if (valid.length === 0) return defaultDate;
+
+  function parseDateToTs(dStr) {
+    const s = String(dStr).trim();
+    let day, month, year;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      [year, month, day] = s.split('-');
+    } else if (/^\d{2}-\d{2}-\d{4}$/.test(s)) {
+      [day, month, year] = s.split('-');
+    } else {
+      return { ts: 0, str: s };
+    }
+    const d = new Date(`${year}-${month}-${day}`);
+    const ts = isNaN(d.getTime()) ? 0 : d.getTime();
+    return { ts, str: `${day}-${month}-${year}` };
+  }
+
+  const items = valid.map(r => parseDateToTs(r.date));
+  items.sort((a, b) => a.ts - b.ts);
+  const latest = items[items.length - 1];
+  return latest.str || defaultDate;
 };
 
 const API_CONFIG = {
   webAppUrl: localStorage.getItem('transport_api_url') || '',
   storageKeyTransport: 'transport_records_shinex_v7',
   storageKeyAdvances: 'transport_advances_shinex_v7',
-  storageKeyOpeningBal: 'transport_opening_bal_shinex_v7'
+  storageKeyOpeningBal: 'transport_opening_bal_shinex_v7',
+  storageKeySections: 'transport_sections_shinex_v1'
 };
 
 const ApiService = {
@@ -764,6 +817,80 @@ const ApiService = {
     return Boolean(this.getApiUrl());
   },
 
+  // Dynamic Section Management
+  getSections() {
+    const raw = localStorage.getItem(API_CONFIG.storageKeySections);
+    let sections = [];
+    if (raw) {
+      try { sections = JSON.parse(raw); } catch (e) {}
+    }
+    if (!sections || !Array.isArray(sections) || sections.length === 0) {
+      sections = [
+        { id: 'section-1', name: 'Section 1', title: 'April 2026 to August 2026', num: 1, isArchive: true },
+        { id: 'section-2', name: 'Section 2', title: 'NEW August – September 2026', num: 2, isArchive: false }
+      ];
+      localStorage.setItem(API_CONFIG.storageKeySections, JSON.stringify(sections));
+    }
+
+    // Auto-discover any new sections present in existing trips or advances
+    const trips = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyTransport) || '[]');
+    trips.forEach(t => {
+      const secName = window.getTripSection(t);
+      if (secName && !sections.find(s => s.name.toLowerCase() === secName.toLowerCase())) {
+        const numMatch = secName.match(/\d+/);
+        const num = numMatch ? Number(numMatch[0]) : (sections.length + 1);
+        sections.push({
+          id: 'section-' + num,
+          name: secName,
+          title: 'NEW',
+          num: num,
+          isArchive: false
+        });
+      }
+    });
+
+    sections.sort((a, b) => (Number(a.num) || 0) - (Number(b.num) || 0));
+    return sections;
+  },
+
+  addSection(name, title = 'NEW') {
+    const sections = this.getSections();
+    const cleanName = (name || '').trim();
+    if (!cleanName) throw new Error('Section name cannot be empty.');
+    if (sections.some(s => s.name.toLowerCase() === cleanName.toLowerCase())) {
+      throw new Error(`Section "${cleanName}" already exists!`);
+    }
+    const numMatch = cleanName.match(/\d+/);
+    const num = numMatch ? Number(numMatch[0]) : (sections.length + 1);
+    const newSec = {
+      id: 'section-' + Date.now(),
+      name: cleanName,
+      title: title || 'NEW',
+      num: num,
+      isArchive: false,
+      createdAt: new Date().toISOString()
+    };
+    sections.push(newSec);
+    sections.sort((a, b) => (Number(a.num) || 0) - (Number(b.num) || 0));
+    localStorage.setItem(API_CONFIG.storageKeySections, JSON.stringify(sections));
+    return newSec;
+  },
+
+  deleteSection(sectionName) {
+    const user = typeof AuthService !== 'undefined' ? AuthService.getCurrentUser() : null;
+    if (!user || user.role !== 'Admin') {
+      throw new Error('Permission denied: Only Admin can delete a section!');
+    }
+    const normalized = window.normalizeSection(sectionName);
+    if (normalized === 'Section 1' || normalized === 'Section 2') {
+      throw new Error('Default Section 1 and Section 2 cannot be deleted.');
+    }
+    let sections = this.getSections();
+    sections = sections.filter(s => s.name.toLowerCase() !== normalized.toLowerCase());
+    localStorage.setItem(API_CONFIG.storageKeySections, JSON.stringify(sections));
+    return true;
+  },
+
   // Initialize storage with exact real Shinex data
   initLocalData() {
     if (!localStorage.getItem(API_CONFIG.storageKeyTransport)) {
@@ -775,6 +902,7 @@ const ApiService = {
     if (!localStorage.getItem(API_CONFIG.storageKeyOpeningBal)) {
       localStorage.setItem(API_CONFIG.storageKeyOpeningBal, '120000'); // March 2026 balance from your Excel
     }
+    this.getSections(); // Ensures sections are initialized
   },
 
   // Reset function to restore the exact 33 Shinex records and 15 advances
@@ -782,6 +910,10 @@ const ApiService = {
     localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(REAL_SHINEX_TRANSPORT));
     localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(REAL_SHINEX_ADVANCES));
     localStorage.setItem(API_CONFIG.storageKeyOpeningBal, '120000');
+    localStorage.setItem(API_CONFIG.storageKeySections, JSON.stringify([
+      { id: 'section-1', name: 'Section 1', title: 'April 2026 to August 2026', num: 1, isArchive: true },
+      { id: 'section-2', name: 'Section 2', title: 'NEW August – September 2026', num: 2, isArchive: false }
+    ]));
   },
 
   getOpeningBalance() {

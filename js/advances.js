@@ -24,12 +24,21 @@ const AdvancesModule = {
 
     tbody.innerHTML = this.advances.map((a, index) => {
       const formattedAmount = (Number(a.amount) || 0).toLocaleString('en-IN');
+      const secName = window.getAdvanceSection(a);
+      const isS1 = secName === 'Section 1';
+      const isS2 = secName === 'Section 2';
+      const badgeBg = isS1 ? '#f1f5f9' : (isS2 ? '#dbeafe' : '#fef3c7');
+      const badgeColor = isS1 ? '#475569' : (isS2 ? '#1e40af' : '#92400e');
+
       return `
         <tr>
           <td>${index + 1}</td>
           <td><strong>${a.date || '-'}</strong></td>
           <td style="color: var(--primary); font-weight: 700;">₹${formattedAmount}</td>
-          <td>${a.description || a.note || 'Advance Payment'}</td>
+          <td>
+            <span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; font-size: 0.72rem; font-weight: 600; margin-right: 6px;">${secName}</span>
+            ${a.description || a.note || 'Advance Payment'}
+          </td>
           <td><code>${a.reference || '-'}</code></td>
           <td><span class="badge ${a.createdBy === 'Admin' ? 'badge-primary' : 'badge-success'}">${a.createdBy || 'Admin'}</span></td>
           <td>
@@ -45,11 +54,27 @@ const AdvancesModule = {
     }).join('');
   },
 
-  openAddModal() {
+  populateSectionDropdown(selectedSection) {
+    const secSelect = document.getElementById('advanceSection');
+    if (!secSelect) return;
+    const sections = typeof ApiService !== 'undefined' ? ApiService.getSections() : [];
+    const activeSections = sections.filter(s => !s.isArchive);
+    const defaultSec = activeSections.length > 0 ? activeSections[activeSections.length - 1].name : 'Section 2';
+    const target = selectedSection || defaultSec;
+
+    secSelect.innerHTML = sections.map(s => `
+      <option value="${s.name}" ${s.name.toLowerCase() === target.toLowerCase() ? 'selected' : ''}>
+        ${s.name} (${s.title || (s.isArchive ? 'Archive' : 'Active')})
+      </option>
+    `).join('');
+  },
+
+  openAddModal(preselectedSection = null) {
     document.getElementById('advanceForm').reset();
     document.getElementById('advanceId').value = '';
-    document.getElementById('advanceModalTitle').innerText = 'Record Advance Payment';
+    document.getElementById('advanceModalTitle').innerText = '➕ Record Advance Payment';
     document.getElementById('advanceDate').value = new Date().toISOString().split('T')[0];
+    this.populateSectionDropdown(preselectedSection);
     document.getElementById('advanceModal').classList.add('active');
   },
 
@@ -57,8 +82,9 @@ const AdvancesModule = {
     const adv = this.advances.find(a => a.id === id);
     if (!adv) return;
 
+    this.populateSectionDropdown(window.getAdvanceSection(adv));
     document.getElementById('advanceId').value = adv.id;
-    document.getElementById('advanceModalTitle').innerText = 'Edit Advance Payment';
+    document.getElementById('advanceModalTitle').innerText = '✏️ Edit Advance Payment';
     document.getElementById('advanceDate').value = adv.date || '';
     document.getElementById('advanceAmount').value = adv.amount || '';
     document.getElementById('advanceDescription').value = adv.description || adv.note || '';
@@ -80,8 +106,9 @@ const AdvancesModule = {
       return;
     }
 
+    const secSelect = document.getElementById('advanceSection');
     const existing = id ? this.advances.find(a => a.id === id) : null;
-    const section = existing ? (existing.section || 'Section 2') : 'Section 2';
+    const chosenSection = secSelect ? secSelect.value : (existing ? (existing.section || 'Section 2') : 'Section 2');
 
     const advance = {
       id: id || undefined,
@@ -90,7 +117,7 @@ const AdvancesModule = {
       description: document.getElementById('advanceDescription').value.trim(),
       note: document.getElementById('advanceDescription').value.trim(),
       reference: document.getElementById('advanceReference').value.trim(),
-      section: section,
+      section: chosenSection,
       createdBy: existing?.createdBy || (user ? user.role : 'Admin')
     };
 

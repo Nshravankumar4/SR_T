@@ -57,18 +57,18 @@ const ExcelModule = {
       const boldBlack11     = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FF000000' } };
       const regular10       = { name: 'Calibri', size: 10, color: { argb: 'FF000000' } };
 
-      // Separate Section 1 trips from Section 2 trips using global helpers
-      const s1Trips = tRecords
+      // Retrieve dynamic sections computation
+      const allSectionsData = (typeof SheetViewModule !== 'undefined' && SheetViewModule.computeAllSectionsData)
+        ? SheetViewModule.computeAllSectionsData()
+        : [];
+
+      // Section 1 trips and advances
+      const s1Trips = allSectionsData[0]?.trips || tRecords
         .filter(r => (typeof window !== 'undefined' && window.isSection1Trip ? window.isSection1Trip(r) : !r.section?.includes('NEW')))
         .sort((a, b) => (Number(a.slNo) || 0) - (Number(b.slNo) || 0));
 
-      const s2Trips = tRecords
-        .filter(r => (typeof window !== 'undefined' && window.isSection2Trip ? window.isSection2Trip(r) : r.section?.includes('NEW')))
-        .sort((a, b) => (Number(a.slNo) || 0) - (Number(b.slNo) || 0));
-
-      // Separate Section 1 advances from Section 2 advances
-      const s1Advances = aRecords.filter(a => (typeof window !== 'undefined' && window.isSection1Advance ? window.isSection1Advance(a) : a.section !== 'Section 2'));
-      const s2Advances = aRecords.filter(a => (typeof window !== 'undefined' && window.isSection2Advance ? window.isSection2Advance(a) : a.section === 'Section 2'));
+      const s1Advances = allSectionsData[0]?.advances || aRecords
+        .filter(a => (typeof window !== 'undefined' && window.isSection1Advance ? window.isSection1Advance(a) : a.section !== 'Section 2'));
 
     // ========================================================
     // ROW 1: COMPANY TITLE BANNER
@@ -347,7 +347,10 @@ const ExcelModule = {
     ws.getCell('K39').numFmt = '#,##,##0';
 
     // Outstanding in Row 41
-    ws.getCell('H41').value = '14-08-2026 (out standing)';
+    const s1LatestDate = (typeof window.getLatestTripDate === 'function')
+      ? window.getLatestTripDate(s1Trips, '14-08-2026')
+      : '14-08-2026';
+    ws.getCell('H41').value = `${s1LatestDate} (out standing)`;
     ws.getCell('H41').border = thinBorder;
     const s1Outstanding = s1TotalPayable - (s1AdvSum || 1883350);
     ws.getCell('K41').value = s1Outstanding; // 10,000
@@ -357,251 +360,246 @@ const ExcelModule = {
     ws.getCell('K41').numFmt = '#,##,##0';
 
     // ========================================================
-    // ROW 53: BLUE DIVIDER BANNER (S ... NEW)
+    // SECTIONS 2, 3, 4... DYNAMIC MULTI-SECTION LOOP
     // ========================================================
-    ws.mergeCells('A53:O53');
-    const divCell = ws.getCell('A53');
-    divCell.value = 'S                                                                        NEW';
-    divCell.fill = cyanDivider;
-    divCell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
-    divCell.alignment = { horizontal: 'center', vertical: 'middle' };
-    ws.getRow(53).height = 20;
+    const defaultS2Trips = tRecords
+      .filter(r => (typeof window !== 'undefined' && window.isSection2Trip ? window.isSection2Trip(r) : r.section?.includes('NEW')))
+      .sort((a, b) => (Number(a.slNo) || 0) - (Number(b.slNo) || 0));
+    const defaultS2Advs = aRecords
+      .filter(a => (typeof window !== 'undefined' && window.isSection2Advance ? window.isSection2Advance(a) : a.section === 'Section 2'));
 
-    // ========================================================
-    // ROW 57 & 58: SECTION 2 HEADERS
-    // ========================================================
-    ws.getCell('N57').value = 'Before 14-08-2026 10,000';
-    ws.getCell('N57').fill = yellowFill;
-    ws.getCell('N57').font = { name: 'Calibri', size: 10, bold: false };
-    ws.getCell('N57').alignment = { horizontal: 'center', vertical: 'middle' };
-    ws.getCell('N57').border = thinBorder;
+    const laterSections = (allSectionsData && allSectionsData.length > 1)
+      ? allSectionsData.slice(1)
+      : [{
+          section: { name: 'Section 2', num: 2 },
+          trips: defaultS2Trips,
+          advances: defaultS2Advs,
+          totalAmount: 903750,
+          oldBal: s1Outstanding || 10000,
+          oldBalDate: s1LatestDate || '14-08-2026',
+          totalPayable: 913750,
+          advSum: 450000,
+          netOutstanding: 463750,
+          latestDate: '16-09-2026'
+        }];
 
-    const r58 = ws.getRow(58);
-    r58.values = [
-      'SL.NO', 'LR No', 'DC No', 'Date', 'Vehicle Number', 'From', 'TO',
-      'Quantity', 'M/TAX', 'Amount', 'ToPay', 'ToPay-paid', 'ToPay-Balc', 'Note'
-    ];
-    r58.height = 25;
-    for (let c = 1; c <= 14; c++) {
-      const cell = r58.getCell(c);
-      cell.border = thinBorder;
-      cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      if (c === 1) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
-        cell.font = boldBlack11;
-      } else if ([11, 12, 13].includes(c)) {
-        cell.fill = navyHeaderFill;
-        cell.font = headerFontRed;
-      } else {
-        cell.fill = navyHeaderFill;
-        cell.font = headerFontWhite;
-      }
-    }
+    let curStartRow = 53;
 
-    // ========================================================
-    // ROWS 59+: SECTION 2 DATA ROWS
-    // ========================================================
-    let curRowS2 = 59;
-    let s2TotalAmount = 0;
-    s2Trips.forEach((r, idx) => {
-      const row = ws.getRow(curRowS2);
-      const amt = Number(r.amount) || 0;
-      const toPay = Number(r.toPay) || 0;
-      const bal = Number(r.balance) || 0;
-      s2TotalAmount += amt;
+    laterSections.forEach((secData) => {
+      const { section, trips, advances, totalAmount, oldBal, oldBalDate, totalPayable, advSum, netOutstanding, latestDate } = secData;
 
-      let paidVal = r.paid;
-      if (typeof paidVal === 'number' && paidVal > 0) {
-        paidVal = (paidVal === toPay) ? 'Paid' : paidVal.toLocaleString('en-IN');
-      }
+      // 1. Blue divider banner (matching Shinex Excel format)
+      ws.mergeCells(`A${curStartRow}:O${curStartRow}`);
+      const divCell = ws.getCell(`A${curStartRow}`);
+      divCell.value = `${section.name}                                                                        NEW`;
+      divCell.fill = cyanDivider;
+      divCell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+      divCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      ws.getRow(curStartRow).height = 20;
 
-      row.values = [
-        r.slNo || (idx + 1),
-        r.lrNo || '',
-        r.dcNo || '',
-        r.date || '',
-        r.vehicleNumber || '',
-        r.fromCity || '',
-        r.toCity || '',
-        r.quantity || '',
-        r.mTax || '',
-        amt > 0 ? amt : '',
-        toPay > 0 ? toPay : '',
-        paidVal || '',
-        bal > 0 ? bal : '',
-        r.note || ''
+      // 2. Yellow note row (Before [Date] [Old Balance])
+      const noteRow = curStartRow + 4;
+      ws.getCell(`N${noteRow}`).value = `Before ${oldBalDate || '14-08-2026'} ${oldBal.toLocaleString('en-IN')}`;
+      ws.getCell(`N${noteRow}`).fill = yellowFill;
+      ws.getCell(`N${noteRow}`).font = { name: 'Calibri', size: 10, bold: false };
+      ws.getCell(`N${noteRow}`).alignment = { horizontal: 'center', vertical: 'middle' };
+      ws.getCell(`N${noteRow}`).border = thinBorder;
+
+      // 3. Headers row
+      const headerRowIndex = curStartRow + 5;
+      const hRow = ws.getRow(headerRowIndex);
+      hRow.values = [
+        'SL.NO', 'LR No', 'DC No', 'Date', 'Vehicle Number', 'From', 'TO',
+        'Quantity', 'M/TAX', 'Amount', 'ToPay', 'ToPay-paid', 'ToPay-Balc', 'Note'
       ];
-      row.height = 20;
-
+      hRow.height = 25;
       for (let c = 1; c <= 14; c++) {
-        const cell = row.getCell(c);
+        const cell = hRow.getCell(c);
         cell.border = thinBorder;
-        cell.font = regular10;
-        if ([1, 2, 3, 4, 5, 7, 8].includes(c)) cell.alignment = { horizontal: 'center', vertical: 'middle' };
-        else if (c === 10) {
-          cell.alignment = { horizontal: 'right', vertical: 'middle' };
-          cell.numFmt = '#,##,##0';
-        } else cell.alignment = { horizontal: 'left', vertical: 'middle' };
-
-        // Halting note yellow
-        if (c === 14 && cell.value && String(cell.value).toLowerCase().includes('halting')) {
-          cell.fill = yellowFill;
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        if (c === 1) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
+          cell.font = boldBlack11;
+        } else if ([11, 12, 13].includes(c)) {
+          cell.fill = navyHeaderFill;
+          cell.font = headerFontRed;
+        } else {
+          cell.fill = navyHeaderFill;
+          cell.font = headerFontWhite;
         }
       }
-      curRowS2++;
-    });
 
-    // Section 2 Total Row: 1 row after trips (at least row 66)
-    const s2TotalRowIndex = Math.max(curRowS2 + 1, 66);
-    const totalRow = ws.getRow(s2TotalRowIndex);
-    totalRow.height = 22;
-    totalRow.getCell(1).value = 'Total';
-    totalRow.getCell(1).fill = yellowFill;
-    totalRow.getCell(1).font = boldBlack11;
-    totalRow.getCell(1).border = thinBorder;
-    totalRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+      // 4. Data rows
+      let curDataRow = headerRowIndex + 1;
+      trips.forEach((r, idx) => {
+        const row = ws.getRow(curDataRow);
+        row.height = 20;
+        const amt = Number(r.amount) || 0;
+        const toPay = Number(r.toPay) || 0;
+        const paid = Number(r.paid) || 0;
+        const bal = Number(r.balance) || 0;
 
-    totalRow.getCell(10).value = s2TotalAmount || 903750;
-    totalRow.getCell(10).fill = yellowFill;
-    totalRow.getCell(10).font = boldBlack11;
-    totalRow.getCell(10).border = thinBorder;
-    totalRow.getCell(10).numFmt = '#,##,##0';
-    totalRow.getCell(10).alignment = { horizontal: 'right', vertical: 'middle' };
+        let paidVal = r.paid;
+        if (typeof paidVal === 'number' && paidVal > 0) {
+          paidVal = (paidVal === toPay) ? 'Paid' : paidVal.toLocaleString('en-IN');
+        }
 
-    // ========================================================
-    // DYNAMIC SECTION 2 ADVANCES & RECONCILIATION
-    // Starts 3 rows below the Total Row (row 69 when 6 trips)
-    // ========================================================
-    const reconRow = s2TotalRowIndex + 3;
+        row.values = [
+          r.slNo ? Number(r.slNo) : (idx + 1),
+          r.lrNo || '',
+          r.dcNo || '',
+          r.date || '',
+          r.vehicleNumber || '',
+          r.fromCity || '',
+          r.toCity || '',
+          r.quantity || '',
+          r.mTax || '',
+          amt > 0 ? amt : '',
+          toPay > 0 ? toPay : '',
+          paidVal || '',
+          bal > 0 ? bal : '',
+          r.note || ''
+        ];
 
-    // Advances Header (Left)
-    ws.getCell(`A${reconRow}`).value = 'Advance Date';
-    ws.getCell(`A${reconRow}`).fill = yellowFill;
-    ws.getCell(`A${reconRow}`).font = boldBlack11;
-    ws.getCell(`A${reconRow}`).border = thinBorder;
-    ws.getCell(`A${reconRow}`).alignment = { horizontal: 'center', vertical: 'middle' };
+        for (let c = 1; c <= 14; c++) {
+          const cell = row.getCell(c);
+          cell.border = thinBorder;
+          cell.font = regular10;
+          if (c === 1) cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          else if ([2, 3, 4, 5, 8, 9].includes(c)) cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          else if ([6, 7, 14].includes(c)) cell.alignment = { horizontal: 'left', vertical: 'middle' };
+          else if ([10, 11, 12, 13].includes(c)) {
+            cell.alignment = { horizontal: 'right', vertical: 'middle' };
+            if (typeof cell.value === 'number') cell.numFmt = '#,##,##0';
+          }
+        }
 
-    ws.getCell(`B${reconRow}`).value = 'Amount';
-    ws.getCell(`B${reconRow}`).fill = yellowFill;
-    ws.getCell(`B${reconRow}`).font = boldBlack11;
-    ws.getCell(`B${reconRow}`).border = thinBorder;
-    ws.getCell(`B${reconRow}`).alignment = { horizontal: 'center', vertical: 'middle' };
+        const isHalting = r.note && String(r.note).toLowerCase().includes('halting');
+        if (isHalting) {
+          row.getCell(14).fill = yellowFill;
+        }
 
-    // Right side reconciliation: To Billed
-    ws.getCell(`I${reconRow}`).value = 'To Billed';
-    ws.getCell(`I${reconRow}`).border = thinBorder;
-    ws.getCell(`I${reconRow}`).font = boldBlack11;
-    ws.getCell(`J${reconRow}`).value = s2TotalAmount || 903750;
-    ws.getCell(`J${reconRow}`).fill = peachFill;
-    ws.getCell(`J${reconRow}`).font = boldBlack11;
-    ws.getCell(`J${reconRow}`).border = thinBorder;
-    ws.getCell(`J${reconRow}`).numFmt = '#,##,##0';
-    ws.getCell(`J${reconRow}`).alignment = { horizontal: 'right', vertical: 'middle' };
+        curDataRow++;
+      });
 
-    // Old Balance from Section 1 (Row reconRow + 1)
-    const r2 = reconRow + 1;
-    ws.getCell(`H${r2}`).value = '14-08-2026';
-    ws.getCell(`H${r2}`).border = thinBorder;
-    ws.getCell(`I${r2}`).value = 'Old Balance';
-    ws.getCell(`I${r2}`).border = thinBorder;
-    ws.getCell(`I${r2}`).font = boldBlack11;
-    const s2OldBalance = s1Outstanding || 10000;
-    ws.getCell(`J${r2}`).value = s2OldBalance;
-    ws.getCell(`J${r2}`).fill = yellowFill;
-    ws.getCell(`J${r2}`).font = boldBlack11;
-    ws.getCell(`J${r2}`).border = thinBorder;
-    ws.getCell(`J${r2}`).numFmt = '#,##,##0';
-    ws.getCell(`J${r2}`).alignment = { horizontal: 'right', vertical: 'middle' };
+      // 5. Total Row
+      const totalRowIndex = Math.max(curDataRow, headerRowIndex + 8);
+      const secTotalRow = ws.getRow(totalRowIndex);
+      secTotalRow.height = 22;
+      secTotalRow.getCell(1).value = 'Total';
+      secTotalRow.getCell(1).fill = yellowFill;
+      secTotalRow.getCell(1).font = boldBlack11;
+      secTotalRow.getCell(1).border = thinBorder;
+      secTotalRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
 
-    // Total Payable (Row reconRow + 2)
-    const r3 = reconRow + 2;
-    const s2TotalPayable = (s2TotalAmount || 903750) + s2OldBalance;
-    ws.getCell(`J${r3}`).value = s2TotalPayable;
-    ws.getCell(`J${r3}`).fill = peachFill;
-    ws.getCell(`J${r3}`).font = boldBlack11;
-    ws.getCell(`J${r3}`).border = thinBorder;
-    ws.getCell(`J${r3}`).numFmt = '#,##,##0';
-    ws.getCell(`J${r3}`).alignment = { horizontal: 'right', vertical: 'middle' };
+      secTotalRow.getCell(10).value = totalAmount;
+      secTotalRow.getCell(10).fill = yellowFill;
+      secTotalRow.getCell(10).font = boldBlack11;
+      secTotalRow.getCell(10).border = thinBorder;
+      secTotalRow.getCell(10).numFmt = '#,##,##0';
+      secTotalRow.getCell(10).alignment = { horizontal: 'right', vertical: 'middle' };
 
-    // Populate Section 2 Advances on Left (Rows reconRow + 1 onwards)
-    let s2AdvSum = 0;
-    let advCursor = reconRow + 1;
-    s2Advances.forEach(adv => {
-      const amt = Number(adv.amount) || 0;
-      s2AdvSum += amt;
-      const advR = ws.getRow(advCursor);
-      advR.getCell(1).value = adv.date || '';
-      advR.getCell(1).border = thinBorder;
-      advR.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+      // 6. Advances Table on Left
+      const reconRow = totalRowIndex + 3;
+      const advHRow = ws.getRow(reconRow);
+      advHRow.getCell(1).value = 'Advance Date';
+      advHRow.getCell(1).fill = yellowFill;
+      advHRow.getCell(1).font = boldBlack11;
+      advHRow.getCell(1).border = thinBorder;
+      advHRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
 
-      advR.getCell(2).value = amt > 0 ? amt : '';
-      advR.getCell(2).border = thinBorder;
-      advR.getCell(2).numFmt = '#,##,##0';
-      advR.getCell(2).alignment = { horizontal: 'right', vertical: 'middle' };
-      advCursor++;
-    });
+      advHRow.getCell(2).value = 'Amount';
+      advHRow.getCell(2).fill = yellowFill;
+      advHRow.getCell(2).font = boldBlack11;
+      advHRow.getCell(2).border = thinBorder;
+      advHRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
 
-    // If no advances found in state, fallback to the 2 real Section 2 advances
-    if (s2Advances.length === 0) {
-      const fallbackAdvs = [
-        { date: '29-08-2026', amount: 50000 },
-        { date: '10-09-2026', amount: 400000 }
-      ];
-      fallbackAdvs.forEach(adv => {
-        s2AdvSum += adv.amount;
+      let advCursor = reconRow + 1;
+      advances.forEach(adv => {
         const advR = ws.getRow(advCursor);
         advR.getCell(1).value = adv.date;
         advR.getCell(1).border = thinBorder;
         advR.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
 
-        advR.getCell(2).value = adv.amount;
+        advR.getCell(2).value = Number(adv.amount) || 0;
         advR.getCell(2).border = thinBorder;
         advR.getCell(2).numFmt = '#,##,##0';
         advR.getCell(2).alignment = { horizontal: 'right', vertical: 'middle' };
         advCursor++;
       });
-    }
 
-    // less adv on Right (Row reconRow + 3)
-    const reconRowAdv = reconRow + 3;
-    ws.getCell(`I${reconRowAdv}`).value = 'less adv';
-    ws.getCell(`I${reconRowAdv}`).border = thinBorder;
-    ws.getCell(`I${reconRowAdv}`).font = boldBlack11;
-    ws.getCell(`J${reconRowAdv}`).value = s2AdvSum;
-    ws.getCell(`J${reconRowAdv}`).fill = yellowFill;
-    ws.getCell(`J${reconRowAdv}`).font = boldBlack11;
-    ws.getCell(`J${reconRowAdv}`).border = thinBorder;
-    ws.getCell(`J${reconRowAdv}`).numFmt = '#,##,##0';
-    ws.getCell(`J${reconRowAdv}`).alignment = { horizontal: 'right', vertical: 'middle' };
+      // 7. Reconciliation Box on Right
+      ws.getCell(`H${reconRow}`).value = 'To Billed';
+      ws.getCell(`H${reconRow}`).border = thinBorder;
+      ws.getCell(`H${reconRow}`).font = boldBlack11;
+      ws.getCell(`J${reconRow}`).value = totalAmount;
+      ws.getCell(`J${reconRow}`).fill = peachFill;
+      ws.getCell(`J${reconRow}`).font = boldBlack11;
+      ws.getCell(`J${reconRow}`).border = thinBorder;
+      ws.getCell(`J${reconRow}`).numFmt = '#,##,##0';
+      ws.getCell(`J${reconRow}`).alignment = { horizontal: 'right', vertical: 'middle' };
 
-    // Net Outstanding on Right (Row reconRow + 5)
-    const r6 = reconRow + 5;
-    ws.getCell(`G${r6}`).value = '16-09-2026 (out standing)';
-    ws.getCell(`G${r6}`).border = thinBorder;
-    ws.getCell(`G${r6}`).font = boldBlack11;
-    const s2NetOutstanding = s2TotalPayable - s2AdvSum;
-    ws.getCell(`J${r6}`).value = s2NetOutstanding;
-    ws.getCell(`J${r6}`).fill = cyanOutFill;
-    ws.getCell(`J${r6}`).font = boldBlack11;
-    ws.getCell(`J${r6}`).border = thinBorder;
-    ws.getCell(`J${r6}`).numFmt = '#,##,##0';
-    ws.getCell(`J${r6}`).alignment = { horizontal: 'right', vertical: 'middle' };
+      const r2 = reconRow + 1;
+      ws.getCell(`G${r2}`).value = oldBalDate || '14-08-2026';
+      ws.getCell(`G${r2}`).border = thinBorder;
+      ws.getCell(`G${r2}`).alignment = { horizontal: 'center', vertical: 'middle' };
+      ws.getCell(`H${r2}`).value = 'Old Balance';
+      ws.getCell(`H${r2}`).border = thinBorder;
+      ws.getCell(`H${r2}`).font = boldBlack11;
+      ws.getCell(`J${r2}`).value = oldBal;
+      ws.getCell(`J${r2}`).fill = yellowFill;
+      ws.getCell(`J${r2}`).font = boldBlack11;
+      ws.getCell(`J${r2}`).border = thinBorder;
+      ws.getCell(`J${r2}`).numFmt = '#,##,##0';
+      ws.getCell(`J${r2}`).alignment = { horizontal: 'right', vertical: 'middle' };
 
-    // Advances Total on Left (Row reconRow + 6)
-    const advTotRowIndex = Math.max(advCursor, reconRow + 6);
-    const s2AdvTotRow = ws.getRow(advTotRowIndex);
-    s2AdvTotRow.getCell(1).value = 'Total';
-    s2AdvTotRow.getCell(1).fill = yellowFill;
-    s2AdvTotRow.getCell(1).font = boldBlack11;
-    s2AdvTotRow.getCell(1).border = thinBorder;
-    s2AdvTotRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+      const r3 = reconRow + 2;
+      ws.getCell(`J${r3}`).value = totalPayable;
+      ws.getCell(`J${r3}`).fill = peachFill;
+      ws.getCell(`J${r3}`).font = boldBlack11;
+      ws.getCell(`J${r3}`).border = thinBorder;
+      ws.getCell(`J${r3}`).numFmt = '#,##,##0';
+      ws.getCell(`J${r3}`).alignment = { horizontal: 'right', vertical: 'middle' };
 
-    s2AdvTotRow.getCell(2).value = s2AdvSum;
-    s2AdvTotRow.getCell(2).fill = yellowFill;
-    s2AdvTotRow.getCell(2).font = boldBlack11;
-    s2AdvTotRow.getCell(2).border = thinBorder;
-    s2AdvTotRow.getCell(2).numFmt = '#,##,##0';
-    s2AdvTotRow.getCell(2).alignment = { horizontal: 'right', vertical: 'middle' };
+      const r4 = reconRow + 3;
+      ws.getCell(`H${r4}`).value = 'less adv';
+      ws.getCell(`H${r4}`).border = thinBorder;
+      ws.getCell(`H${r4}`).font = boldBlack11;
+      ws.getCell(`J${r4}`).value = advSum;
+      ws.getCell(`J${r4}`).fill = yellowFill;
+      ws.getCell(`J${r4}`).font = boldBlack11;
+      ws.getCell(`J${r4}`).border = thinBorder;
+      ws.getCell(`J${r4}`).numFmt = '#,##,##0';
+      ws.getCell(`J${r4}`).alignment = { horizontal: 'right', vertical: 'middle' };
+
+      const r6 = reconRow + 5;
+      ws.getCell(`G${r6}`).value = `${latestDate} (out standing)`;
+      ws.getCell(`G${r6}`).border = thinBorder;
+      ws.getCell(`G${r6}`).font = boldBlack11;
+      ws.getCell(`J${r6}`).value = netOutstanding;
+      ws.getCell(`J${r6}`).fill = cyanOutFill;
+      ws.getCell(`J${r6}`).font = boldBlack11;
+      ws.getCell(`J${r6}`).border = thinBorder;
+      ws.getCell(`J${r6}`).numFmt = '#,##,##0';
+      ws.getCell(`J${r6}`).alignment = { horizontal: 'right', vertical: 'middle' };
+
+      const advTotRowIndex = Math.max(advCursor, reconRow + 6);
+      const secAdvTotRow = ws.getRow(advTotRowIndex);
+      secAdvTotRow.getCell(1).value = 'Total';
+      secAdvTotRow.getCell(1).fill = yellowFill;
+      secAdvTotRow.getCell(1).font = boldBlack11;
+      secAdvTotRow.getCell(1).border = thinBorder;
+      secAdvTotRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+
+      secAdvTotRow.getCell(2).value = advSum;
+      secAdvTotRow.getCell(2).fill = yellowFill;
+      secAdvTotRow.getCell(2).font = boldBlack11;
+      secAdvTotRow.getCell(2).border = thinBorder;
+      secAdvTotRow.getCell(2).numFmt = '#,##,##0';
+      secAdvTotRow.getCell(2).alignment = { horizontal: 'right', vertical: 'middle' };
+
+      curStartRow = Math.max(r6, advTotRowIndex) + 4;
+    });
 
     // ========================================================
     // DYNAMIC AUTO-FIT COLUMN WIDTHS ACROSS ALL 15 COLUMNS
