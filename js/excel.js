@@ -556,16 +556,16 @@ const ExcelModule = {
     }
 
     // less adv on Right (Row reconRow + 3)
-    const r4 = reconRow + 3;
-    ws.getCell(`I${r4}`).value = 'less adv';
-    ws.getCell(`I${r4}`).border = thinBorder;
-    ws.getCell(`I${r4}`).font = boldBlack11;
-    ws.getCell(`J${r4}`).value = s2AdvSum;
-    ws.getCell(`J${r4}`).fill = yellowFill;
-    ws.getCell(`J${r4}`).font = boldBlack11;
-    ws.getCell(`J${r4}`).border = thinBorder;
-    ws.getCell(`J${r4}`).numFmt = '#,##,##0';
-    ws.getCell(`J${r4}`).alignment = { horizontal: 'right', vertical: 'middle' };
+    const reconRowAdv = reconRow + 3;
+    ws.getCell(`I${reconRowAdv}`).value = 'less adv';
+    ws.getCell(`I${reconRowAdv}`).border = thinBorder;
+    ws.getCell(`I${reconRowAdv}`).font = boldBlack11;
+    ws.getCell(`J${reconRowAdv}`).value = s2AdvSum;
+    ws.getCell(`J${reconRowAdv}`).fill = yellowFill;
+    ws.getCell(`J${reconRowAdv}`).font = boldBlack11;
+    ws.getCell(`J${reconRowAdv}`).border = thinBorder;
+    ws.getCell(`J${reconRowAdv}`).numFmt = '#,##,##0';
+    ws.getCell(`J${reconRowAdv}`).alignment = { horizontal: 'right', vertical: 'middle' };
 
     // Net Outstanding on Right (Row reconRow + 5)
     const r6 = reconRow + 5;
@@ -582,19 +582,19 @@ const ExcelModule = {
 
     // Advances Total on Left (Row reconRow + 6)
     const advTotRowIndex = Math.max(advCursor, reconRow + 6);
-    const advTotRow = ws.getRow(advTotRowIndex);
-    advTotRow.getCell(1).value = 'Total';
-    advTotRow.getCell(1).fill = yellowFill;
-    advTotRow.getCell(1).font = boldBlack11;
-    advTotRow.getCell(1).border = thinBorder;
-    advTotRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+    const s2AdvTotRow = ws.getRow(advTotRowIndex);
+    s2AdvTotRow.getCell(1).value = 'Total';
+    s2AdvTotRow.getCell(1).fill = yellowFill;
+    s2AdvTotRow.getCell(1).font = boldBlack11;
+    s2AdvTotRow.getCell(1).border = thinBorder;
+    s2AdvTotRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
 
-    advTotRow.getCell(2).value = s2AdvSum;
-    advTotRow.getCell(2).fill = yellowFill;
-    advTotRow.getCell(2).font = boldBlack11;
-    advTotRow.getCell(2).border = thinBorder;
-    advTotRow.getCell(2).numFmt = '#,##,##0';
-    advTotRow.getCell(2).alignment = { horizontal: 'right', vertical: 'middle' };
+    s2AdvTotRow.getCell(2).value = s2AdvSum;
+    s2AdvTotRow.getCell(2).fill = yellowFill;
+    s2AdvTotRow.getCell(2).font = boldBlack11;
+    s2AdvTotRow.getCell(2).border = thinBorder;
+    s2AdvTotRow.getCell(2).numFmt = '#,##,##0';
+    s2AdvTotRow.getCell(2).alignment = { horizontal: 'right', vertical: 'middle' };
 
     // ========================================================
     // DYNAMIC AUTO-FIT COLUMN WIDTHS ACROSS ALL 15 COLUMNS
