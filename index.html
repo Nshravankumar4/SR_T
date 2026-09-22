@@ -5,11 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Transport Management & Ledger System</title>
   <link rel="stylesheet" href="css/styles.css">
-  <!-- ExcelJS and FileSaver for rich Excel styling, colors, and auto-fit column sizing -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-  <!-- SheetJS for parsing imported Excel files -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- High-Performance Spreadsheet Engines (Local for 100% Offline & Private Repo Support) -->
+  <script src="libs/exceljs.min.js"></script>
+  <script src="libs/FileSaver.min.js"></script>
+  <script src="libs/xlsx.full.min.js"></script>
+  <!-- CDN fallbacks if local files ever fail -->
+  <script>
+    if (typeof ExcelJS === 'undefined') document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"><\/script>');
+    if (typeof saveAs === 'undefined') document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"><\/script>');
+    if (typeof XLSX === 'undefined') document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');
+  </script>
 </head>
 <body>
 

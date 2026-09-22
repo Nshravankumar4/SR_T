@@ -6,54 +6,69 @@
 
 const ExcelModule = {
   async exportToExcel(transportRecords, advanceRecords, openingBalance) {
+    // Robust record resolution from parameters, window.App, or default dataset
+    const tRecords = (transportRecords && transportRecords.length > 0)
+      ? transportRecords
+      : (window.App?.transportRecords && window.App.transportRecords.length > 0)
+        ? window.App.transportRecords
+        : (typeof REAL_SHINEX_TRANSPORT !== 'undefined' ? REAL_SHINEX_TRANSPORT : []);
+
+    const aRecords = (advanceRecords && advanceRecords.length > 0)
+      ? advanceRecords
+      : (window.App?.advanceRecords && window.App.advanceRecords.length > 0)
+        ? window.App.advanceRecords
+        : (typeof REAL_SHINEX_ADVANCES !== 'undefined' ? REAL_SHINEX_ADVANCES : []);
+
+    // If ExcelJS is not ready or failed to load, seamlessly use SheetJS engine
     if (typeof ExcelJS === 'undefined') {
-      alert("ExcelJS library is still loading, please try again in a moment.");
-      return;
+      console.warn("ExcelJS not available, falling back to SheetJS engine.");
+      return this.exportWithSheetJS(tRecords, aRecords);
     }
 
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = "Shinex UQ Genetic Seeds Pvt.Ltd.";
-    workbook.created = new Date();
+    try {
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = "Shinex UQ Genetic Seeds Pvt.Ltd.";
+      workbook.created = new Date();
 
-    const ws = workbook.addWorksheet('Sheet1', {
-      views: [{ showGridLines: true }]
-    });
+      const ws = workbook.addWorksheet('Sheet1', {
+        views: [{ showGridLines: true }]
+      });
 
-    // Styling Palette matching Shinex Excel exactly
-    const navyHeaderFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF002060' } };
-    const yellowFill     = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
-    const greenPaidFill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4EA72E' } };
-    const softBlueNote   = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFA6C9EC' } };
-    const cyanDivider    = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF44B3E1' } };
-    const cyanOutFill    = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF94DCF8' } };
-    const peachFill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7C7AC' } };
-    const orangeFill     = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC000' } };
-    const redShortage    = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF0000' } };
+      // Styling Palette matching Shinex Excel exactly
+      const navyHeaderFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF002060' } };
+      const yellowFill     = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+      const greenPaidFill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4EA72E' } };
+      const softBlueNote   = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFA6C9EC' } };
+      const cyanDivider    = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF44B3E1' } };
+      const cyanOutFill    = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF94DCF8' } };
+      const peachFill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7C7AC' } };
+      const orangeFill     = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC000' } };
+      const redShortage    = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF0000' } };
 
-    const thinBorder = {
-      top: { style: 'thin', color: { argb: 'FFB0B0B0' } },
-      left: { style: 'thin', color: { argb: 'FFB0B0B0' } },
-      bottom: { style: 'thin', color: { argb: 'FFB0B0B0' } },
-      right: { style: 'thin', color: { argb: 'FFB0B0B0' } }
-    };
+      const thinBorder = {
+        top: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+        left: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+        bottom: { style: 'thin', color: { argb: 'FFB0B0B0' } },
+        right: { style: 'thin', color: { argb: 'FFB0B0B0' } }
+      };
 
-    const headerFontWhite = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
-    const headerFontRed   = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFF0000' } };
-    const boldBlack11     = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FF000000' } };
-    const regular10       = { name: 'Calibri', size: 10, color: { argb: 'FF000000' } };
+      const headerFontWhite = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+      const headerFontRed   = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFF0000' } };
+      const boldBlack11     = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FF000000' } };
+      const regular10       = { name: 'Calibri', size: 10, color: { argb: 'FF000000' } };
 
-    // Separate Section 1 trips from Section 2 trips using global helpers
-    const s1Trips = transportRecords
-      .filter(r => (typeof window !== 'undefined' && window.isSection1Trip ? window.isSection1Trip(r) : !r.section?.includes('NEW')))
-      .sort((a, b) => (Number(a.slNo) || 0) - (Number(b.slNo) || 0));
+      // Separate Section 1 trips from Section 2 trips using global helpers
+      const s1Trips = tRecords
+        .filter(r => (typeof window !== 'undefined' && window.isSection1Trip ? window.isSection1Trip(r) : !r.section?.includes('NEW')))
+        .sort((a, b) => (Number(a.slNo) || 0) - (Number(b.slNo) || 0));
 
-    const s2Trips = transportRecords
-      .filter(r => (typeof window !== 'undefined' && window.isSection2Trip ? window.isSection2Trip(r) : r.section?.includes('NEW')))
-      .sort((a, b) => (Number(a.slNo) || 0) - (Number(b.slNo) || 0));
+      const s2Trips = tRecords
+        .filter(r => (typeof window !== 'undefined' && window.isSection2Trip ? window.isSection2Trip(r) : r.section?.includes('NEW')))
+        .sort((a, b) => (Number(a.slNo) || 0) - (Number(b.slNo) || 0));
 
-    // Separate Section 1 advances from Section 2 advances
-    const s1Advances = advanceRecords.filter(a => (typeof window !== 'undefined' && window.isSection1Advance ? window.isSection1Advance(a) : a.section !== 'Section 2'));
-    const s2Advances = advanceRecords.filter(a => (typeof window !== 'undefined' && window.isSection2Advance ? window.isSection2Advance(a) : a.section === 'Section 2'));
+      // Separate Section 1 advances from Section 2 advances
+      const s1Advances = aRecords.filter(a => (typeof window !== 'undefined' && window.isSection1Advance ? window.isSection1Advance(a) : a.section !== 'Section 2'));
+      const s2Advances = aRecords.filter(a => (typeof window !== 'undefined' && window.isSection2Advance ? window.isSection2Advance(a) : a.section === 'Section 2'));
 
     // ========================================================
     // ROW 1: COMPANY TITLE BANNER
@@ -618,10 +633,85 @@ const ExcelModule = {
       col.width = Math.max(minW, Math.min(maxLen + 4, 70));
     }
 
-    // Write buffer and save exact file
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    saveAs(blob, "Shinex_2026-08-06 _3-1_Updated.xlsx");
+      // Write buffer and save exact file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      this.saveBlob(blob, "Shinex_2026-08-06 _3-1_Updated.xlsx");
+      if (window.App?.showToast) {
+        window.App.showToast("Excel spreadsheet downloaded successfully!", "success");
+      }
+    } catch (err) {
+      console.error("ExcelJS export error, falling back to SheetJS engine:", err);
+      return this.exportWithSheetJS(tRecords, aRecords);
+    }
+  },
+
+  saveBlob(blob, filename) {
+    if (typeof saveAs === 'function') {
+      try {
+        saveAs(blob, filename);
+        return;
+      } catch (e) {
+        console.warn("saveAs error, using fallback anchor:", e);
+      }
+    }
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }, 1000);
+  },
+
+  exportWithSheetJS(tRecords, aRecords) {
+    if (typeof XLSX === 'undefined') {
+      alert("Spreadsheet engines are loading, please try again in a moment.");
+      return;
+    }
+    try {
+      const wb = XLSX.utils.book_new();
+
+      const wsTransport = XLSX.utils.json_to_sheet(tRecords.map(r => ({
+        "SL.NO": r.slNo,
+        "Section": r.section || '',
+        "LR No": r.lrNo || '',
+        "DC No": r.dcNo || '',
+        "Date": r.date || '',
+        "Vehicle Number": r.vehicleNumber || '',
+        "From": r.fromCity || '',
+        "TO": r.toCity || '',
+        "Quantity": r.quantity || '',
+        "M/TAX": r.mTax || '',
+        "Amount": Number(r.amount) || 0,
+        "ToPay": Number(r.toPay) || 0,
+        "ToPay-paid": r.paid || '',
+        "ToPay-Balc": Number(r.balance) || 0,
+        "Note": r.note || ''
+      })));
+      XLSX.utils.book_append_sheet(wb, wsTransport, "Transport Records");
+
+      const wsAdvances = XLSX.utils.json_to_sheet(aRecords.map((a, i) => ({
+        "Index": i + 1,
+        "Date": a.date || '',
+        "Amount": Number(a.amount) || 0,
+        "Section": a.section || '',
+        "Note": a.note || a.description || ''
+      })));
+      XLSX.utils.book_append_sheet(wb, wsAdvances, "Advances Ledger");
+
+      XLSX.writeFile(wb, "Shinex_2026-08-06 _3-1_Updated.xlsx");
+      if (window.App?.showToast) {
+        window.App.showToast("Excel report downloaded successfully!", "success");
+      }
+    } catch (e) {
+      console.error("SheetJS export failed:", e);
+      alert("Failed to export Excel file: " + e.message);
+    }
   },
 
   importFromExcel(file, onComplete) {
