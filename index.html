@@ -297,6 +297,17 @@
               <button id="btnViewS1" class="btn btn-sm btn-secondary" onclick="SheetViewModule.setView('SECTION_1'); updateSheetViewTabs('btnViewS1');">📁 Section 1 (Archive)</button>
               <button id="btnViewFull" class="btn btn-sm btn-secondary" onclick="SheetViewModule.setView('FULL'); updateSheetViewTabs('btnViewFull');">📋 Full Sheet (Both)</button>
             </div>
+
+            <!-- Zoom Controls -->
+            <div class="zoom-controls" style="display: flex; align-items: center; background: #e2e8f0; padding: 2px; border-radius: 6px; gap: 2px;">
+              <span style="font-size: 0.78rem; font-weight: 600; padding: 0 6px; color: var(--text-muted);">Zoom:</span>
+              <button id="zoom80" class="btn btn-sm btn-secondary" onclick="SheetViewModule.setZoom(80)" title="Fit all 15 columns on any screen">80% Fit</button>
+              <button id="zoom90" class="btn btn-sm btn-secondary" onclick="SheetViewModule.setZoom(90)">90%</button>
+              <button id="zoom100" class="btn btn-sm btn-primary" onclick="SheetViewModule.setZoom(100)">100%</button>
+              <button id="zoom115" class="btn btn-sm btn-secondary" onclick="SheetViewModule.setZoom(115)">115%</button>
+            </div>
+
+            <button id="btnToggleFullscreen" class="btn btn-secondary" onclick="SheetViewModule.toggleFullscreen()" style="font-weight: 600; background: #e0f2fe; color: #0369a1; border-color: #bae6fd;">⛶ Full Screen</button>
             <button class="btn btn-primary" onclick="ExcelModule.exportToExcel(App.transportRecords, App.advanceRecords, App.openingBalance)">💾 Download Excel (.xlsx)</button>
             <button class="btn btn-secondary" onclick="window.print()">🖨️ Print</button>
           </div>

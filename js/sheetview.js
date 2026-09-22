@@ -6,10 +6,96 @@
 
 const SheetViewModule = {
   activeView: 'SECTION_2', // 'SECTION_2', 'SECTION_1', 'FULL'
+  zoomLevel: 100,
+  isFullscreen: false,
 
   setView(view) {
     this.activeView = view;
     this.render();
+  },
+
+  setZoom(percent) {
+    this.zoomLevel = percent;
+    ['zoom80', 'zoom90', 'zoom100', 'zoom115'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      if (id === 'zoom' + percent) {
+        btn.className = 'btn btn-sm btn-primary';
+      } else {
+        btn.className = 'btn btn-sm btn-secondary';
+      }
+    });
+    this.applyZoom();
+  },
+
+  applyZoom() {
+    const grid = document.getElementById('excelSheetGrid');
+    if (!grid) return;
+    const scale = this.zoomLevel / 100;
+    grid.style.zoom = scale;
+    // Fallback for browsers that do not support CSS zoom
+    if (grid.style.zoom === undefined || grid.style.zoom === '') {
+      grid.style.transform = `scale(${scale})`;
+      grid.style.transformOrigin = 'top left';
+      grid.style.width = `${100 / scale}%`;
+    }
+  },
+
+  toggleFullscreen() {
+    this.isFullscreen = !this.isFullscreen;
+    const tab = document.getElementById('tab-sheetview');
+    const btn = document.getElementById('btnToggleFullscreen');
+    
+    if (this.isFullscreen) {
+      tab?.classList.add('sheet-fullscreen-mode');
+      document.body.classList.add('in-sheet-fullscreen');
+      if (btn) {
+        btn.innerHTML = '✕ Exit Full Screen';
+        btn.classList.remove('btn-secondary');
+        btn.classList.add('btn-danger');
+      }
+      try {
+        if (!document.fullscreenElement && tab?.requestFullscreen) {
+          tab.requestFullscreen().catch(() => {});
+        }
+      } catch (e) {}
+    } else {
+      tab?.classList.remove('sheet-fullscreen-mode');
+      document.body.classList.remove('in-sheet-fullscreen');
+      if (btn) {
+        btn.innerHTML = '⛶ Full Screen';
+        btn.classList.remove('btn-danger');
+        btn.classList.add('btn-secondary');
+      }
+      try {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+      } catch (e) {}
+    }
+  },
+
+  init() {
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.isFullscreen) {
+        this.toggleFullscreen();
+      }
+    });
+
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && this.isFullscreen) {
+        this.isFullscreen = false;
+        const tab = document.getElementById('tab-sheetview');
+        const btn = document.getElementById('btnToggleFullscreen');
+        tab?.classList.remove('sheet-fullscreen-mode');
+        document.body.classList.remove('in-sheet-fullscreen');
+        if (btn) {
+          btn.innerHTML = '⛶ Full Screen';
+          btn.classList.remove('btn-danger');
+          btn.classList.add('btn-secondary');
+        }
+      }
+    });
   },
 
   render() {
@@ -50,6 +136,8 @@ const SheetViewModule = {
     } else {
       container.innerHTML = this.renderFullView(s1Trips, s1Advances, s1Amount, s1ToPayBal, s1TotalPayable, s1AdvSum, s1Outstanding, s2Trips, s2Advances, s2Amount, s2OldBalance, s2TotalPayable, s2AdvSum, s2NetOutstanding);
     }
+
+    this.applyZoom();
   },
 
   renderSection2View(trips, advances, totalAmount, oldBal, totalPayable, advSum, netOutstanding) {
@@ -364,3 +452,9 @@ window.updateSheetViewTabs = function(activeBtnId) {
     }
   });
 };
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => SheetViewModule.init());
+} else {
+  SheetViewModule.init();
+}

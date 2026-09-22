@@ -633,3 +633,67 @@ tbody tr:hover {
   font-weight: bold;
 }
 
+.excel-table thead tr {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.excel-table tbody tr:hover td:not(.excel-yellow):not(.excel-peach):not(.excel-cyan):not(.excel-row-num) {
+  background-color: #f0f7ff;
+}
+
+/* Widescreen container for Excel view */
+.container:has(#tab-sheetview.active),
+body.in-sheet-fullscreen .container {
+  max-width: 98% !important;
+  width: 98% !important;
+  padding: 0 0.5rem !important;
+}
+
+#tab-sheetview {
+  width: 100%;
+}
+
+/* Fullscreen mode for live excel spreadsheet view */
+.sheet-fullscreen-mode {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 999999 !important;
+  background: #f1f5f9 !important;
+  padding: 1rem 1.5rem !important;
+  overflow: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+}
+
+.sheet-fullscreen-mode .toolbar {
+  background: #ffffff;
+  padding: 0.85rem 1.25rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  margin-bottom: 1rem;
+}
+
+.sheet-fullscreen-mode .excel-sheet-wrapper {
+  flex: 1;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.zoom-controls button {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-radius: 4px;
+}
+
