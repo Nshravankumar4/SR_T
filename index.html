@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Transport Management & Ledger System</title>
-  <link rel="stylesheet" href="css/styles.css?v=4.1">
+  <link rel="stylesheet" href="css/styles.css?v=4.3">
   <!-- High-Performance Spreadsheet Engines (Local for 100% Offline & Private Repo Support) -->
   <script src="libs/exceljs.min.js?v=3.0"></script>
   <script src="libs/FileSaver.min.js?v=3.0"></script>
@@ -42,218 +42,270 @@
   </div>
 
   <!-- 2. MAIN APPLICATION -->
-  <div id="mainApp" style="display: none;">
-    <!-- Top Header -->
-    <header class="app-header">
-      <div class="header-brand">
-        <h1>🚛 Transport Ledger & Management</h1>
+  <div id="mainApp" class="app-layout" style="display: none;">
+    <!-- LEFT SIDEBAR (Top to Down Navigation) -->
+    <aside class="app-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand">
+          <div class="brand-icon">🚛</div>
+          <div class="brand-text">
+            <h3>Shinex Ledger</h3>
+            <span>Transport & Accounts</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Profile Card -->
+      <div class="sidebar-user-card">
+        <div class="user-avatar">👤</div>
+        <div class="user-details">
+          <div id="currentUserName" class="user-name">Admin1</div>
+          <div class="user-role-badge"><span id="currentUserRole">ADMIN</span></div>
+        </div>
+      </div>
+
+      <!-- Vertical Nav Tabs (Top to Down) -->
+      <nav class="sidebar-menu">
+        <button class="nav-tab active" data-tab="dashboard">
+          <span class="nav-tab-icon">📊</span>
+          <span class="nav-tab-label">Dashboard</span>
+        </button>
+        <button class="nav-tab" data-tab="transport">
+          <span class="nav-tab-icon">🚛</span>
+          <span class="nav-tab-label">Transport Records</span>
+        </button>
+        <button class="nav-tab" data-tab="sheetview">
+          <span class="nav-tab-icon">📑</span>
+          <span class="nav-tab-label">Live Excel Sheet</span>
+        </button>
+        <button class="nav-tab" data-tab="advances">
+          <span class="nav-tab-icon">💰</span>
+          <span class="nav-tab-label">Advance Payments</span>
+        </button>
+        <button class="nav-tab" data-tab="excel">
+          <span class="nav-tab-icon">📥</span>
+          <span class="nav-tab-label">Excel Backup & Import</span>
+        </button>
+        <button class="nav-tab admin-only" data-tab="settings">
+          <span class="nav-tab-icon">⚙️</span>
+          <span class="nav-tab-label">Settings & API</span>
+        </button>
+      </nav>
+
+      <!-- Sidebar Bottom: Live Status Indicator & Logout -->
+      <div class="sidebar-footer">
         <div class="status-indicator">
-          <span id="cloudStatusDot" class="status-dot"></span>
-          <span id="cloudStatusText">Connecting...</span>
+          <span id="cloudStatusDot" class="status-dot online"></span>
+          <span id="cloudStatusText">Online • Live Database Active</span>
         </div>
+        <button id="logoutBtn" class="sidebar-logout-btn">
+          <span>🚪</span> Logout
+        </button>
+      </div>
+    </aside>
+
+    <!-- RIGHT MAIN CONTENT VIEWPORT -->
+    <div class="app-main-viewport">
+      <!-- Mobile Bar (Shown only on small screens) -->
+      <div class="mobile-top-bar">
+        <div style="display: flex; align-items: center; gap: 0.6rem;">
+          <span style="font-size: 1.3rem;">🚛</span>
+          <strong>Shinex Transport Ledger</strong>
+        </div>
+        <button class="btn btn-sm btn-secondary" onclick="document.querySelector('.app-sidebar').classList.toggle('open')">☰ Menu</button>
       </div>
 
-      <div class="header-actions">
-        <div class="user-badge">
-          <span id="currentUserName">Admin</span>
-          <span style="opacity: 0.6;">|</span>
-          <span id="currentUserRole" style="text-transform: uppercase; font-size: 0.75rem;">ADMIN</span>
-        </div>
-        <button id="logoutBtn" class="btn btn-secondary btn-sm">Logout</button>
-      </div>
-    </header>
-
-    <!-- Navigation Tabs -->
-    <nav class="nav-tabs">
-      <button class="nav-tab active" data-tab="transport">🚛 Transport Records</button>
-      <button class="nav-tab" data-tab="sheetview" style="font-weight: 700; color: #0284c7;">📑 Live Excel Sheet View</button>
-      <button class="nav-tab" data-tab="advances">💰 Advance Payments</button>
-      <button class="nav-tab" data-tab="financials">📊 Financial Summary</button>
-      <button class="nav-tab" data-tab="excel">📥 Excel Backup & Import</button>
-      <button class="nav-tab admin-only" data-tab="settings">⚙️ Settings & API</button>
-    </nav>
-
-    <main class="container">
-      <!-- TAB 1: TRANSPORT RECORDS -->
-      <section id="tab-transport" class="tab-content active">
-        <div class="toolbar">
-          <div class="filter-group">
-            <select id="sectionFilter" class="form-control" style="font-weight: 600; background: #eff6ff; color: #1e40af; border-color: #93c5fd;">
-              <!-- Dynamically populated by TransportModule.populateSectionFilters() -->
-              <option value="ALL">📋 All Sections</option>
-              <option value="SECTION_2" selected>🟢 Section 2: Active</option>
-              <option value="SECTION_1">📁 Section 1: Archive</option>
-            </select>
-            <input type="text" id="searchInput" class="form-control" placeholder="Search LR, Vehicle, City..." style="width: 220px;">
-            <select id="statusFilter" class="form-control">
-              <option value="ALL">All Statuses</option>
-              <option value="Paid">Paid</option>
-              <option value="Partially Paid">Partially Paid</option>
-              <option value="Pending">Pending</option>
-            </select>
-            <select id="monthFilter" class="form-control">
-              <option value="ALL">All Months</option>
-              <option value="2026-04">April 2026</option>
-              <option value="2026-05">May 2026</option>
-              <option value="2026-06">June 2026</option>
-              <option value="2026-07">July 2026</option>
-              <option value="2026-08">August 2026</option>
-              <option value="2026-09">September 2026</option>
-              <option value="2026-10">October 2026</option>
-            </select>
+      <main class="main-content-scroll">
+        <!-- TAB 1: 📊 DASHBOARD (Active by Default) -->
+        <section id="tab-dashboard" class="tab-content active">
+          <!-- Welcome Hero Banner -->
+          <div class="dashboard-hero-banner">
+            <div class="banner-welcome">
+              <h2 id="dashWelcomeTitle">👋 Hello, Admin1! Welcome to Shinex Transport Ledger & Dashboard</h2>
+              <p>Real-time freight billing, continuous section tracking, and 100% transparent reconciliation.</p>
+            </div>
+            <div class="banner-quick-actions">
+              <button class="btn btn-primary" onclick="TransportModule.openAddModal()">➕ Add Transport Record</button>
+              <button class="btn btn-secondary" onclick="AdvancesModule.openAddModal()" style="background: #f0fdf4; color: #166534; border-color: #bbf7d0; font-weight: 600;">➕ Record Advance</button>
+              <button class="btn btn-secondary" onclick="App.openSheetView()" style="background: #eff6ff; color: #1e40af; border-color: #bfdbfe; font-weight: 600;">📑 View Excel Sheet</button>
+              <button class="btn btn-secondary" onclick="window.downloadShinexExcel(this)">💾 Export Excel</button>
+            </div>
           </div>
 
-          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <button class="btn btn-secondary" onclick="App.openSectionModal()" style="background: #fef3c7; color: #92400e; border-color: #fde68a; font-weight: 600;">➕ Add Section</button>
-            <button class="btn btn-secondary admin-only" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
-            <button class="btn btn-secondary" onclick="App.openSheetView()" style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd; font-weight: 600;">📑 View Excel Sheet</button>
-            <button class="btn btn-secondary" onclick="window.App.restoreExactExcelSheetData()" title="Reset database to exact Shinex records">📋 Load Exact Excel Data</button>
-            <button class="btn btn-secondary" onclick="window.App.refreshData()">🔄 Refresh</button>
-            <button class="btn btn-primary" onclick="TransportModule.openAddModal()">➕ Add Transport Record</button>
-          </div>
-        </div>
-
-        <!-- Compact Transport Stats Bar -->
-        <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; background: #fff; padding: 0.75rem 1.25rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 1rem; font-size: 0.88rem;">
-          <div><span style="color: var(--text-muted);">Trips in View:</span> <strong id="tripCount" style="color: var(--text-main);">0</strong></div>
-          <div><span style="color: var(--text-muted);">Section 2 Billed:</span> <strong id="s2BilledStat" style="color: var(--primary);">₹9,03,750</strong></div>
-          <div><span style="color: var(--text-muted);">S1 Old Balance:</span> <strong style="color: #b45309;">₹10,000</strong></div>
-          <div><span style="color: var(--text-muted);">Section 2 Advances:</span> <strong id="s2AdvStat" style="color: var(--success);">₹4,50,000</strong></div>
-          <div><span style="color: var(--text-muted);">Current Outstanding:</span> <strong id="s2OutStat" style="color: var(--danger); font-size: 1rem;">₹4,63,750</strong></div>
-        </div>
-
-        <div class="table-responsive">
-          <table>
-            <thead>
-              <tr>
-                <th>SL</th>
-                <th>Section</th>
-                <th>LR No</th>
-                <th>DC No</th>
-                <th>Date</th>
-                <th>Vehicle Number</th>
-                <th>From</th>
-                <th>TO</th>
-                <th>Quantity</th>
-                <th>M/TAX</th>
-                <th>Amount</th>
-                <th>ToPay</th>
-                <th>Paid</th>
-                <th>Balance</th>
-                <th>Status</th>
-                <th>Note / Remarks</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="transportTableBody">
-              <!-- Rendered dynamically -->
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- TAB 2: ADVANCE PAYMENTS -->
-      <section id="tab-advances" class="tab-content">
-        <div class="toolbar">
-          <div class="filter-group">
-            <select id="advFilterSection" class="form-control" style="font-weight: 600; background: #eff6ff; color: #1e40af; border-color: #93c5fd;" onchange="AdvancesModule.applyFilters()">
-              <!-- Dynamically populated by AdvancesModule.populateSectionFilters() -->
-              <option value="ALL">📋 All Sections (Combined)</option>
-              <option value="Section 2" selected>🟢 Section 2: Active</option>
-              <option value="Section 1">📁 Section 1: Archive</option>
-            </select>
-            <input type="text" id="advSearchInput" class="form-control" placeholder="Search Description, UTR, Mode..." style="width: 240px;" oninput="AdvancesModule.applyFilters()">
+          <!-- Financial Metrics Summary Grid -->
+          <div class="metrics-grid">
+            <div class="metric-card highlight">
+              <div class="metric-title">Total Freight Billed (Amount)</div>
+              <div id="metricTotalAmount" class="metric-value">₹0</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-title">ToPay Balance Remaining</div>
+              <div id="metricTransportBal" class="metric-value">₹0</div>
+            </div>
+            <div class="metric-card highlight">
+              <div class="metric-title">Total Payable Debt</div>
+              <div id="metricTotalDebt" class="metric-value">₹0</div>
+            </div>
+            <div class="metric-card success">
+              <div class="metric-title">Total Company Advances</div>
+              <div id="metricTotalAdvances" class="metric-value">₹0</div>
+            </div>
+            <div class="metric-card">
+              <div id="metricS1Title" class="metric-title">14-08-2026 Old Balance (S1)</div>
+              <div id="metricS1Outstanding" class="metric-value">₹10,000</div>
+            </div>
+            <div class="metric-card">
+              <div id="metricActiveAdvTitle" class="metric-title">Active Section Advances</div>
+              <div id="metricActiveAdvances" class="metric-value">₹4,50,000</div>
+            </div>
+            <div class="metric-card danger">
+              <div id="metricNetOutTitle" class="metric-title">16-09-2026 Net Outstanding</div>
+              <div id="metricNetOutstanding" class="metric-value">₹0</div>
+            </div>
           </div>
 
-          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <button class="btn btn-secondary" onclick="App.openSectionModal()" style="background: #fef3c7; color: #92400e; border-color: #fde68a; font-weight: 600;">➕ Add Section</button>
-            <button class="btn btn-secondary admin-only" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
-            <button class="btn btn-primary" onclick="AdvancesModule.openAddModal()">➕ Record New Advance</button>
+          <!-- Dynamic Multi-Section Reconciliation Cards (Section 1, Section 2, Section 3, Section 4...) -->
+          <div id="financialSectionReconGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+            <!-- Dynamically generated by App.updateMetrics() for all active & archive sections -->
           </div>
-        </div>
 
-        <!-- Advances Stats Bar -->
-        <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; background: #fff; padding: 0.75rem 1.25rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 1rem; font-size: 0.88rem;">
-          <div><span style="color: var(--text-muted);">Advances in View:</span> <strong id="advCountStat" style="color: var(--text-main);">0</strong></div>
-          <div><span style="color: var(--text-muted);">Section Total Advances:</span> <strong id="advTotalStat" style="color: var(--success); font-size: 1rem;">₹0</strong></div>
-          <div><span style="color: var(--text-muted);">Section 1 Advances:</span> <strong id="advS1Stat" style="color: var(--text-muted);">₹18,83,350</strong></div>
-          <div><span style="color: var(--text-muted);">Section 2 Advances:</span> <strong id="advS2Stat" style="color: var(--primary);">₹4,50,000</strong></div>
-        </div>
+          <div style="background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem;">
+            <h4 style="margin-bottom: 0.75rem; color: var(--primary);">Business Rules & Financial Reconciliation Formula</h4>
+            <ul style="padding-left: 1.25rem; font-size: 0.9rem; color: var(--text-muted); line-height: 1.8;">
+              <li><strong>Chained Reconciliation:</strong> Each subsequent section automatically starts with the preceding section's closing Net Outstanding and latest date as its starting Old Balance.</li>
+              <li><strong>Total Payable:</strong> <code>Total Payable = Freight Billed (Amount) + Old Balance + ToPay Balance</code>. All components are transparently displayed.</li>
+              <li><strong>Net Outstanding:</strong> <code>Net Outstanding = Total Payable - Section Advances</code>.</li>
+              <li><strong>Continuous Tracking:</strong> No need to split records across multiple files. All sections remain linked and reconcilable in real time.</li>
+            </ul>
+          </div>
+        </section>
 
-        <div class="table-responsive">
-          <table>
-            <thead>
-              <tr>
-                <th>SL</th>
-                <th>Section</th>
-                <th>Date</th>
-                <th>Advance Amount</th>
-                <th>Description / Payment Mode</th>
-                <th>Reference / UTR / Cheque</th>
-                <th>Entered By</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="advancesTableBody">
-              <!-- Rendered dynamically -->
-            </tbody>
-          </table>
-        </div>
-      </section>
+        <!-- TAB 2: TRANSPORT RECORDS -->
+        <section id="tab-transport" class="tab-content">
+          <div class="toolbar">
+            <div class="filter-group">
+              <select id="sectionFilter" class="form-control" style="font-weight: 600; background: #eff6ff; color: #1e40af; border-color: #93c5fd;">
+                <!-- Dynamically populated by TransportModule.populateSectionFilters() -->
+                <option value="ALL">📋 All Sections</option>
+                <option value="SECTION_2" selected>🟢 Section 2: Active</option>
+                <option value="SECTION_1">📁 Section 1: Archive</option>
+              </select>
+              <input type="text" id="searchInput" class="form-control" placeholder="Search LR, Vehicle, City..." style="width: 220px;">
+              <select id="statusFilter" class="form-control">
+                <option value="ALL">All Statuses</option>
+                <option value="Paid">Paid</option>
+                <option value="Partially Paid">Partially Paid</option>
+                <option value="Pending">Pending</option>
+              </select>
+              <select id="monthFilter" class="form-control">
+                <option value="ALL">All Months</option>
+                <option value="2026-04">April 2026</option>
+                <option value="2026-05">May 2026</option>
+                <option value="2026-06">June 2026</option>
+                <option value="2026-07">July 2026</option>
+                <option value="2026-08">August 2026</option>
+                <option value="2026-09">September 2026</option>
+                <option value="2026-10">October 2026</option>
+              </select>
+            </div>
 
-      <!-- TAB 3: FINANCIAL SUMMARY -->
-      <section id="tab-financials" class="tab-content">
-        <div class="toolbar">
-          <h3>📊 Complete Financial Reconciliation</h3>
-        </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="btn btn-secondary" onclick="App.openSectionModal()" style="background: #fef3c7; color: #92400e; border-color: #fde68a; font-weight: 600;">➕ Add Section</button>
+              <button class="btn btn-secondary admin-only" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
+              <button class="btn btn-secondary" onclick="App.openSheetView()" style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd; font-weight: 600;">📑 View Excel Sheet</button>
+              <button class="btn btn-secondary" onclick="window.App.restoreExactExcelSheetData()" title="Reset database to exact Shinex records">📋 Load Exact Excel Data</button>
+              <button class="btn btn-secondary" onclick="window.App.refreshData()">🔄 Refresh</button>
+              <button class="btn btn-primary" onclick="TransportModule.openAddModal()">➕ Add Transport Record</button>
+            </div>
+          </div>
 
-        <!-- Financial Metrics Summary Grid (Displayed only on Financials tab) -->
-        <div class="metrics-grid">
-          <div class="metric-card highlight">
-            <div class="metric-title">Total Freight Billed (Amount)</div>
-            <div id="metricTotalAmount" class="metric-value">₹0</div>
+          <!-- Compact Transport Stats Bar -->
+          <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; background: #fff; padding: 0.75rem 1.25rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 1rem; font-size: 0.88rem;">
+            <div><span style="color: var(--text-muted);">Trips in View:</span> <strong id="tripCount" style="color: var(--text-main);">0</strong></div>
+            <div><span style="color: var(--text-muted);">Section 2 Billed:</span> <strong id="s2BilledStat" style="color: var(--primary);">₹9,03,750</strong></div>
+            <div><span style="color: var(--text-muted);">S1 Old Balance:</span> <strong style="color: #b45309;">₹10,000</strong></div>
+            <div><span style="color: var(--text-muted);">Section 2 Advances:</span> <strong id="s2AdvStat" style="color: var(--success);">₹4,50,000</strong></div>
+            <div><span style="color: var(--text-muted);">Current Outstanding:</span> <strong id="s2OutStat" style="color: var(--danger); font-size: 1rem;">₹4,63,750</strong></div>
           </div>
-          <div class="metric-card">
-            <div class="metric-title">ToPay Balance Remaining</div>
-            <div id="metricTransportBal" class="metric-value">₹0</div>
-          </div>
-          <div class="metric-card highlight">
-            <div class="metric-title">Total Payable Debt</div>
-            <div id="metricTotalDebt" class="metric-value">₹0</div>
-          </div>
-          <div class="metric-card success">
-            <div class="metric-title">Total Company Advances</div>
-            <div id="metricTotalAdvances" class="metric-value">₹0</div>
-          </div>
-          <div class="metric-card">
-            <div id="metricS1Title" class="metric-title">14-08-2026 Old Balance (S1)</div>
-            <div id="metricS1Outstanding" class="metric-value">₹10,000</div>
-          </div>
-          <div class="metric-card">
-            <div id="metricActiveAdvTitle" class="metric-title">Active Section Advances</div>
-            <div id="metricActiveAdvances" class="metric-value">₹4,50,000</div>
-          </div>
-          <div class="metric-card danger">
-            <div id="metricNetOutTitle" class="metric-title">16-09-2026 Net Outstanding</div>
-            <div id="metricNetOutstanding" class="metric-value">₹0</div>
-          </div>
-        </div>
 
-        <!-- Dynamic Multi-Section Reconciliation Cards (Section 1, Section 2, Section 3, Section 4...) -->
-        <div id="financialSectionReconGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
-          <!-- Dynamically generated by App.updateMetrics() for all active & archive sections -->
-        </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>SL</th>
+                  <th>Section</th>
+                  <th>LR No</th>
+                  <th>DC No</th>
+                  <th>Date</th>
+                  <th>Vehicle Number</th>
+                  <th>From</th>
+                  <th>TO</th>
+                  <th>Quantity</th>
+                  <th>M/TAX</th>
+                  <th>Amount</th>
+                  <th>ToPay</th>
+                  <th>Paid</th>
+                  <th>Balance</th>
+                  <th>Status</th>
+                  <th>Note / Remarks</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="transportTableBody">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-        <div style="background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem;">
-          <h4 style="margin-bottom: 0.75rem; color: var(--primary);">Business Rules & Financial Reconciliation Formula</h4>
-          <ul style="padding-left: 1.25rem; font-size: 0.9rem; color: var(--text-muted); line-height: 1.8;">
-            <li><strong>Chained Reconciliation:</strong> Each subsequent section automatically starts with the preceding section's closing Net Outstanding and latest date as its starting Old Balance.</li>
-            <li><strong>Total Payable:</strong> <code>Total Payable = Freight Billed (Amount) + Old Balance + ToPay Balance</code>. All components are transparently displayed.</li>
-            <li><strong>Net Outstanding:</strong> <code>Net Outstanding = Total Payable - Section Advances</code>.</li>
-            <li><strong>Continuous Tracking:</strong> No need to split records across multiple files. All sections remain linked and reconcilable in real time.</li>
-          </ul>
-        </div>
-      </section>
+        <!-- TAB 3: ADVANCE PAYMENTS -->
+        <section id="tab-advances" class="tab-content">
+          <div class="toolbar">
+            <div class="filter-group">
+              <select id="advFilterSection" class="form-control" style="font-weight: 600; background: #eff6ff; color: #1e40af; border-color: #93c5fd;" onchange="AdvancesModule.applyFilters()">
+                <!-- Dynamically populated by AdvancesModule.populateSectionFilters() -->
+                <option value="ALL">📋 All Sections (Combined)</option>
+                <option value="Section 2" selected>🟢 Section 2: Active</option>
+                <option value="Section 1">📁 Section 1: Archive</option>
+              </select>
+              <input type="text" id="advSearchInput" class="form-control" placeholder="Search Description, UTR, Mode..." style="width: 240px;" oninput="AdvancesModule.applyFilters()">
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="btn btn-secondary" onclick="App.openSectionModal()" style="background: #fef3c7; color: #92400e; border-color: #fde68a; font-weight: 600;">➕ Add Section</button>
+              <button class="btn btn-secondary admin-only" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
+              <button class="btn btn-primary" onclick="AdvancesModule.openAddModal()">➕ Record New Advance</button>
+            </div>
+          </div>
+
+          <!-- Advances Stats Bar -->
+          <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; background: #fff; padding: 0.75rem 1.25rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 1rem; font-size: 0.88rem;">
+            <div><span style="color: var(--text-muted);">Advances in View:</span> <strong id="advCountStat" style="color: var(--text-main);">0</strong></div>
+            <div><span style="color: var(--text-muted);">Section Total Advances:</span> <strong id="advTotalStat" style="color: var(--success); font-size: 1rem;">₹0</strong></div>
+            <div><span style="color: var(--text-muted);">Section 1 Advances:</span> <strong id="advS1Stat" style="color: var(--text-muted);">₹18,83,350</strong></div>
+            <div><span style="color: var(--text-muted);">Section 2 Advances:</span> <strong id="advS2Stat" style="color: var(--primary);">₹4,50,000</strong></div>
+          </div>
+
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>SL</th>
+                  <th>Section</th>
+                  <th>Date</th>
+                  <th>Advance Amount</th>
+                  <th>Description / Payment Mode</th>
+                  <th>Reference / UTR / Cheque</th>
+                  <th>Entered By</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="advancesTableBody">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </section>
 
       <!-- TAB: LIVE EXCEL SHEET VIEW (1:1 Exact Spreadsheet Replica) -->
       <section id="tab-sheetview" class="tab-content">
@@ -362,7 +414,8 @@
           <button id="savePasswordsBtn" class="btn btn-secondary">💾 Update Passwords Securely</button>
         </div>
       </section>
-    </main>
+      </main>
+    </div>
   </div>
 
   <!-- MODAL 1: ADD / EDIT TRANSPORT RECORD -->
@@ -583,13 +636,13 @@
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Application Scripts with Cache Busters -->
-  <script src="js/auth.js?v=4.2"></script>
-  <script src="js/api.js?v=4.2"></script>
-  <script src="js/transport.js?v=4.2"></script>
-  <script src="js/advances.js?v=4.2"></script>
-  <script src="js/excel.js?v=4.2"></script>
-  <script src="js/sheetview.js?v=4.2"></script>
-  <script src="js/app.js?v=4.2"></script>
+  <script src="js/auth.js?v=4.3"></script>
+  <script src="js/api.js?v=4.3"></script>
+  <script src="js/transport.js?v=4.3"></script>
+  <script src="js/advances.js?v=4.3"></script>
+  <script src="js/excel.js?v=4.3"></script>
+  <script src="js/sheetview.js?v=4.3"></script>
+  <script src="js/app.js?v=4.3"></script>
 </body>
 </html>
 

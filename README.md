@@ -14,7 +14,18 @@ A production-ready Transport Management & Financial Reconciliation application b
 
 ## 🚀 Key Features
 
-1. **Exact 1:1 Live Excel Spreadsheet View:**
+1. **Modern Left Sidebar Navigation (Top-to-Down):**
+   - Sleek dark slate vertical sidebar (`270px`) replacing horizontal top tabs for an intuitive, modern SaaS experience.
+   - User profile badge with greeting, role badge, status indicator, and quick logout.
+   - Collapsible slide-out menu with hamburger toggle for tablets and smartphones.
+
+2. **📊 Tab #1 Default Dashboard with Personalized Welcome Hero:**
+   - Automatically loads upon login with a personalized greeting: `👋 Hello, [Admin1/EAdmin2]! Welcome to Shinex Transport Ledger & Dashboard`.
+   - Instant quick action buttons: `➕ Add Transport Record`, `➕ Record Advance`, `📑 View Excel Sheet`, `💾 Export Excel`.
+   - 7 key financial metric cards (Total Freight Billed, ToPay Remaining, Total Debt, Total Company Advances, Section 1 Old Balance, Active Section Advances, Net Outstanding).
+   - Dynamic multi-section reconciliation grid chaining balances automatically across sections.
+
+3. **Exact 1:1 Live Excel Spreadsheet View:**
    - Visual clone of your Shinex workbook directly inside the browser.
    - Distinct tabs and views for **Section 1 (April – August 2026)**, **Section 2 (NEW August – September 2026)**, and any custom added sections (**Section 3, Section 4...**).
    - Real-time totals, advance deduction blocks, and pixel-matched reconciliation boxes.

@@ -23,9 +23,14 @@ window.App = {
       document.body.classList.remove('employee-mode');
     } else {
       authWrapper.style.display = 'none';
-      mainApp.style.display = 'block';
+      mainApp.style.display = 'flex';
       document.getElementById('currentUserName').innerText = user.name;
       document.getElementById('currentUserRole').innerText = user.role;
+      
+      const dashGreeting = document.getElementById('dashWelcomeTitle');
+      if (dashGreeting) {
+        dashGreeting.innerText = `👋 Hello, ${user.name}! Welcome to Shinex Transport Ledger & Dashboard`;
+      }
       
       const isAdmin = user.role === 'Admin';
       if (isAdmin) {
@@ -40,14 +45,14 @@ window.App = {
         el.style.display = isAdmin ? '' : 'none';
       });
 
-      // If user is Employee and active tab is settings, switch back to transport immediately!
+      // If user is Employee and active tab is settings, switch back to dashboard immediately!
       if (!isAdmin) {
         const activeTab = document.querySelector('.nav-tab.active');
         if (activeTab && activeTab.dataset.tab === 'settings') {
           document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-          document.querySelector('.nav-tab[data-tab="transport"]')?.classList.add('active');
+          document.querySelector('.nav-tab[data-tab="dashboard"]')?.classList.add('active');
           document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-          document.getElementById('tab-transport')?.classList.add('active');
+          document.getElementById('tab-dashboard')?.classList.add('active');
         }
       }
 
@@ -57,24 +62,29 @@ window.App = {
 
   async refreshData() {
     this.updateCloudStatus('Syncing...', 'online');
-    const result = await ApiService.fetchAll();
-    this.transportRecords = result.transport;
-    this.advanceRecords = result.advances;
-    this.openingBalance = ApiService.getOpeningBalance();
+    try {
+      const result = await ApiService.fetchAll();
+      this.transportRecords = result.transport || [];
+      this.advanceRecords = result.advances || [];
+      this.openingBalance = ApiService.getOpeningBalance();
 
-    TransportModule.setRecords(this.transportRecords);
-    AdvancesModule.setAdvances(this.advanceRecords);
-    this.updateMetrics();
-    if (typeof SheetViewModule !== 'undefined') {
-      SheetViewModule.render();
-    }
+      TransportModule.setRecords(this.transportRecords);
+      AdvancesModule.setAdvances(this.advanceRecords);
+      this.updateMetrics();
+      if (typeof SheetViewModule !== 'undefined') {
+        SheetViewModule.render();
+      }
 
-    const isOnline = window.navigator.onLine !== false;
-    if (!isOnline) {
-      this.updateCloudStatus('Offline (Device Storage)', 'offline');
-    } else if (result.source === 'cloud') {
-      this.updateCloudStatus('Online • Cloud Synced (Google Sheets)', 'cloud');
-    } else {
+      const isOnline = window.navigator.onLine !== false;
+      if (!isOnline) {
+        this.updateCloudStatus('Offline (Device Storage)', 'offline');
+      } else if (result.source === 'cloud') {
+        this.updateCloudStatus('Online • Cloud Synced (Google Sheets)', 'cloud');
+      } else {
+        this.updateCloudStatus('Online • Live Database Active', 'online');
+      }
+    } catch (err) {
+      console.error("refreshData error:", err);
       this.updateCloudStatus('Online • Live Database Active', 'online');
     }
 
@@ -123,121 +133,133 @@ window.App = {
   },
 
   updateMetrics() {
-    const allSecs = typeof SheetViewModule !== 'undefined' 
-      ? SheetViewModule.computeAllSectionsData() 
-      : [];
+    try {
+      const allSecs = typeof SheetViewModule !== 'undefined' 
+        ? SheetViewModule.computeAllSectionsData() 
+        : [];
 
-    const s1 = allSecs[0] || { totalAmount: 0, toPayBal: 0, totalPayable: 0, advSum: 0, netOutstanding: 0, latestDate: '14-08-2026' };
-    const s2 = allSecs[1] || { totalAmount: 0, oldBal: 10000, oldBalDate: '14-08-2026', totalPayable: 0, advSum: 0, netOutstanding: 0, latestDate: '16-09-2026' };
+      const s1 = allSecs[0] || { section: { name: 'Section 1', title: 'April – August 2026' }, totalAmount: 0, toPayBal: 0, totalPayable: 0, advSum: 0, netOutstanding: 0, latestDate: '14-08-2026' };
+      const s2 = allSecs[1] || { section: { name: 'Section 2', title: 'Active Period' }, totalAmount: 0, oldBal: 10000, oldBalDate: '14-08-2026', totalPayable: 0, advSum: 0, netOutstanding: 0, latestDate: '16-09-2026' };
 
-    // The final active section is the newest section
-    const activeSec = allSecs.length > 1 ? allSecs[allSecs.length - 1] : s2;
+      if (!s1.section) s1.section = { name: 'Section 1', title: 'April – August 2026' };
+      if (!s2.section) s2.section = { name: 'Section 2', title: 'Active Period' };
 
-    const totalFreightBilled = allSecs.reduce((sum, s) => sum + s.totalAmount, 0);
-    const totalCompanyAdvances = allSecs.reduce((sum, s) => sum + s.advSum, 0);
-    const totalToPayRemaining = allSecs.reduce((sum, s) => sum + s.toPayBal, 0);
-    const totalPayableDebt = totalFreightBilled + totalToPayRemaining;
-    const finalNetOutstanding = activeSec.netOutstanding;
+      // The final active section is the newest section
+      const activeSec = (allSecs && allSecs.length > 1) ? allSecs[allSecs.length - 1] : s2;
+      if (!activeSec.section) {
+        activeSec.section = { name: 'Section 2', title: 'Active Period' };
+      }
 
-    // Populate compact transport stats bar (on Transport tab)
-    const tripCountEl = document.getElementById('tripCount');
-    if (tripCountEl) tripCountEl.innerText = TransportModule.filteredRecords ? TransportModule.filteredRecords.length : this.transportRecords.length;
-    const s2BilledStat = document.getElementById('s2BilledStat');
-    if (s2BilledStat) s2BilledStat.innerText = '₹' + activeSec.totalAmount.toLocaleString('en-IN');
-    const s2AdvStat = document.getElementById('s2AdvStat');
-    if (s2AdvStat) s2AdvStat.innerText = '₹' + activeSec.advSum.toLocaleString('en-IN');
-    const s2OutStat = document.getElementById('s2OutStat');
-    if (s2OutStat) s2OutStat.innerText = '₹' + finalNetOutstanding.toLocaleString('en-IN');
+      const activeName = activeSec.section.name || 'Section 2';
 
-    // Populate Top Financial Summary Cards (Tab 3)
-    const mAmount = document.getElementById('metricTotalAmount');
-    if (mAmount) mAmount.innerText = '₹' + totalFreightBilled.toLocaleString('en-IN');
-    const mBal = document.getElementById('metricTransportBal');
-    if (mBal) mBal.innerText = '₹' + totalToPayRemaining.toLocaleString('en-IN');
-    const mDebt = document.getElementById('metricTotalDebt');
-    if (mDebt) mDebt.innerText = '₹' + totalPayableDebt.toLocaleString('en-IN');
-    const mAdv = document.getElementById('metricTotalAdvances');
-    if (mAdv) mAdv.innerText = '₹' + totalCompanyAdvances.toLocaleString('en-IN');
-    const mS1 = document.getElementById('metricS1Outstanding');
-    if (mS1) mS1.innerText = '₹' + s1.netOutstanding.toLocaleString('en-IN');
+      const totalFreightBilled = allSecs.reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0);
+      const totalCompanyAdvances = allSecs.reduce((sum, s) => sum + (Number(s.advSum) || 0), 0);
+      const totalToPayRemaining = allSecs.reduce((sum, s) => sum + (Number(s.toPayBal) || 0), 0);
+      const totalPayableDebt = totalFreightBilled + totalToPayRemaining;
+      const finalNetOutstanding = Number(activeSec.netOutstanding) || 0;
 
-    // Active Section Advances card (dynamically titled)
-    const mActiveAdvTitle = document.getElementById('metricActiveAdvTitle');
-    if (mActiveAdvTitle) mActiveAdvTitle.innerText = `${activeSec.section.name} Advances`;
-    const mActiveAdv = document.getElementById('metricActiveAdvances');
-    if (mActiveAdv) mActiveAdv.innerText = '₹' + activeSec.advSum.toLocaleString('en-IN');
+      // Populate compact transport stats bar (on Transport tab)
+      const tripCountEl = document.getElementById('tripCount');
+      if (tripCountEl) tripCountEl.innerText = TransportModule?.filteredRecords ? TransportModule.filteredRecords.length : (this.transportRecords?.length || 0);
+      const s2BilledStat = document.getElementById('s2BilledStat');
+      if (s2BilledStat) s2BilledStat.innerText = '₹' + (Number(activeSec.totalAmount) || 0).toLocaleString('en-IN');
+      const s2AdvStat = document.getElementById('s2AdvStat');
+      if (s2AdvStat) s2AdvStat.innerText = '₹' + (Number(activeSec.advSum) || 0).toLocaleString('en-IN');
+      const s2OutStat = document.getElementById('s2OutStat');
+      if (s2OutStat) s2OutStat.innerText = '₹' + finalNetOutstanding.toLocaleString('en-IN');
 
-    const outEl = document.getElementById('metricNetOutstanding');
-    if (outEl) {
-      outEl.innerText = '₹' + finalNetOutstanding.toLocaleString('en-IN');
-      outEl.parentElement.className = finalNetOutstanding > 0 ? 'metric-card danger' : 'metric-card success';
-    }
+      // Populate Dashboard Metric Cards
+      const mAmount = document.getElementById('metricTotalAmount');
+      if (mAmount) mAmount.innerText = '₹' + totalFreightBilled.toLocaleString('en-IN');
+      const mBal = document.getElementById('metricTransportBal');
+      if (mBal) mBal.innerText = '₹' + totalToPayRemaining.toLocaleString('en-IN');
+      const mDebt = document.getElementById('metricTotalDebt');
+      if (mDebt) mDebt.innerText = '₹' + totalPayableDebt.toLocaleString('en-IN');
+      const mAdv = document.getElementById('metricTotalAdvances');
+      if (mAdv) mAdv.innerText = '₹' + totalCompanyAdvances.toLocaleString('en-IN');
+      const mS1 = document.getElementById('metricS1Outstanding');
+      if (mS1) mS1.innerText = '₹' + (Number(s1.netOutstanding) || 0).toLocaleString('en-IN');
 
-    // Dynamic Titles
-    const mS1Title = document.getElementById('metricS1Title');
-    if (mS1Title) mS1Title.innerText = `${s1.latestDate} Old Balance (S1)`;
-    const mNetOutTitle = document.getElementById('metricNetOutTitle');
-    if (mNetOutTitle) mNetOutTitle.innerText = `${activeSec.latestDate} Net Outstanding (${activeSec.section.name})`;
+      // Active Section Advances card (dynamically titled)
+      const mActiveAdvTitle = document.getElementById('metricActiveAdvTitle');
+      if (mActiveAdvTitle) mActiveAdvTitle.innerText = `${activeName} Advances`;
+      const mActiveAdv = document.getElementById('metricActiveAdvances');
+      if (mActiveAdv) mActiveAdv.innerText = '₹' + (Number(activeSec.advSum) || 0).toLocaleString('en-IN');
 
-    // Dynamically render all Section Reconciliation Cards in #financialSectionReconGrid
-    const reconGrid = document.getElementById('financialSectionReconGrid');
-    if (reconGrid) {
-      reconGrid.innerHTML = allSecs.map((secData, idx) => {
-        const sec = secData.section;
-        const isS1 = idx === 0;
-        const badgeClass = sec.isArchive ? 'badge-secondary' : 'badge-success';
-        const badgeText = sec.isArchive ? 'Archive' : 'Active';
+      const outEl = document.getElementById('metricNetOutstanding');
+      if (outEl) {
+        outEl.innerText = '₹' + finalNetOutstanding.toLocaleString('en-IN');
+        outEl.parentElement.className = finalNetOutstanding > 0 ? 'metric-card danger' : 'metric-card success';
+      }
 
-        return `
-          <div style="background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.85rem;">
-                <div>
-                  <h4 style="color: var(--primary); font-size: 1.05rem; margin-bottom: 2px;">${sec.name} Reconciliation</h4>
-                  <div style="font-size: 0.8rem; color: var(--text-muted);">${sec.title || (isS1 ? 'April – August 2026' : 'Active Period')}</div>
+      // Dynamic Titles
+      const mS1Title = document.getElementById('metricS1Title');
+      if (mS1Title) mS1Title.innerText = `${s1.latestDate || '14-08-2026'} Old Balance (S1)`;
+      const mNetOutTitle = document.getElementById('metricNetOutTitle');
+      if (mNetOutTitle) mNetOutTitle.innerText = `${activeSec.latestDate || '16-09-2026'} Net Outstanding (${activeName})`;
+
+      // Dynamically render all Section Reconciliation Cards in #financialSectionReconGrid
+      const reconGrid = document.getElementById('financialSectionReconGrid');
+      if (reconGrid) {
+        reconGrid.innerHTML = allSecs.map((secData, idx) => {
+          const sec = secData.section || { name: `Section ${idx + 1}` };
+          const isS1 = idx === 0;
+          const badgeClass = sec.isArchive ? 'badge-secondary' : 'badge-success';
+          const badgeText = sec.isArchive ? 'Archive' : 'Active';
+
+          return `
+            <div style="background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.85rem;">
+                  <div>
+                    <h4 style="color: var(--primary); font-size: 1.05rem; margin-bottom: 2px;">${sec.name} Reconciliation</h4>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">${sec.title || (isS1 ? 'April – August 2026' : 'Active Period')}</div>
+                  </div>
+                  <span class="badge ${badgeClass}">${badgeText}</span>
                 </div>
-                <span class="badge ${badgeClass}">${badgeText}</span>
+
+                <div style="line-height: 1.9; font-size: 0.92rem;">
+                  <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.35rem 0;">
+                    <span>To Billed (Freight Amount)</span>
+                    <strong>₹${(Number(secData.totalAmount) || 0).toLocaleString('en-IN')}</strong>
+                  </div>
+
+                  ${!isS1 ? `
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.35rem 0; color: #92400e;">
+                      <span>(+) ${secData.oldBalDate || 'Previous'} Old Balance</span>
+                      <strong>₹${(Number(secData.oldBal) || 0).toLocaleString('en-IN')}</strong>
+                    </div>
+                  ` : ''}
+
+                  ${(Number(secData.toPayBal) || 0) > 0 ? `
+                    <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.35rem 0; color: #b45309;">
+                      <span>(+) ToPay Balance Remaining</span>
+                      <strong>₹${(Number(secData.toPayBal) || 0).toLocaleString('en-IN')}</strong>
+                    </div>
+                  ` : ''}
+
+                  <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.35rem 0; color: var(--primary); font-weight: 600;">
+                    <span>(=) Total Payable</span>
+                    <strong>₹${(Number(secData.totalPayable) || 0).toLocaleString('en-IN')}</strong>
+                  </div>
+
+                  <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.35rem 0; color: var(--warning);">
+                    <span>(-) Less Advances</span>
+                    <strong>₹${(Number(secData.advSum) || 0).toLocaleString('en-IN')}</strong>
+                  </div>
+                </div>
               </div>
 
-              <div style="line-height: 1.9; font-size: 0.92rem;">
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.35rem 0;">
-                  <span>To Billed (Freight Amount)</span>
-                  <strong>₹${secData.totalAmount.toLocaleString('en-IN')}</strong>
-                </div>
-
-                ${!isS1 ? `
-                  <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.35rem 0; color: #92400e;">
-                    <span>(+) ${secData.oldBalDate || 'Previous'} Old Balance</span>
-                    <strong>₹${secData.oldBal.toLocaleString('en-IN')}</strong>
-                  </div>
-                ` : ''}
-
-                ${secData.toPayBal > 0 ? `
-                  <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.35rem 0; color: #b45309;">
-                    <span>(+) ToPay Balance Remaining</span>
-                    <strong>₹${secData.toPayBal.toLocaleString('en-IN')}</strong>
-                  </div>
-                ` : ''}
-
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.35rem 0; color: var(--primary); font-weight: 600;">
-                  <span>(=) Total Payable</span>
-                  <strong>₹${secData.totalPayable.toLocaleString('en-IN')}</strong>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.35rem 0; color: var(--warning);">
-                  <span>(-) Less Advances</span>
-                  <strong>₹${secData.advSum.toLocaleString('en-IN')}</strong>
-                </div>
+              <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 2px dashed #e2e8f0; display: flex; justify-content: space-between; align-items: center; color: #0284c7; font-weight: 700; font-size: 1.05rem;">
+                <span>(=) ${secData.latestDate || ''} (out standing)</span>
+                <span style="font-size: 1.15rem; color: ${(Number(secData.netOutstanding) || 0) > 0 ? 'var(--danger)' : 'var(--success)'};">₹${(Number(secData.netOutstanding) || 0).toLocaleString('en-IN')}</span>
               </div>
             </div>
-
-            <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 2px dashed #e2e8f0; display: flex; justify-content: space-between; align-items: center; color: #0284c7; font-weight: 700; font-size: 1.05rem;">
-              <span>(=) ${secData.latestDate} (out standing)</span>
-              <span style="font-size: 1.15rem; color: ${secData.netOutstanding > 0 ? 'var(--danger)' : 'var(--success)'};">₹${secData.netOutstanding.toLocaleString('en-IN')}</span>
-            </div>
-          </div>
-        `;
-      }).join('');
+          `;
+        }).join('');
+      }
+    } catch (err) {
+      console.error("updateMetrics error:", err);
     }
   },
 
