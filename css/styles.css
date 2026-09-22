@@ -138,10 +138,19 @@ body.employee-mode .admin-only,
   height: 8px;
   border-radius: 50%;
   background: var(--success);
+  display: inline-block;
 }
 
+.status-dot.cloud,
+.status-dot.online,
 .status-dot.local {
-  background: var(--warning);
+  background: var(--success);
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+}
+
+.status-dot.offline {
+  background: var(--danger);
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
 }
 
 .header-actions {

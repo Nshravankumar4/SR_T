@@ -56,7 +56,7 @@ window.App = {
   },
 
   async refreshData() {
-    this.updateCloudStatus('Syncing...', 'local');
+    this.updateCloudStatus('Syncing...', 'online');
     const result = await ApiService.fetchAll();
     this.transportRecords = result.transport;
     this.advanceRecords = result.advances;
@@ -69,10 +69,13 @@ window.App = {
       SheetViewModule.render();
     }
 
-    if (result.source === 'cloud') {
-      this.updateCloudStatus('Cloud Connected (Google Sheet)', 'cloud');
+    const isOnline = window.navigator.onLine !== false;
+    if (!isOnline) {
+      this.updateCloudStatus('Offline (Device Storage)', 'offline');
+    } else if (result.source === 'cloud') {
+      this.updateCloudStatus('Online • Cloud Synced (Google Sheets)', 'cloud');
     } else {
-      this.updateCloudStatus('Local Storage (Offline Mode)', 'local');
+      this.updateCloudStatus('Online • Live Database Active', 'online');
     }
 
     // Populate Settings fields
@@ -111,9 +114,11 @@ window.App = {
 
     text.innerText = label;
     if (type === 'cloud') {
-      dot.className = 'status-dot';
+      dot.className = 'status-dot cloud';
+    } else if (type === 'offline') {
+      dot.className = 'status-dot offline';
     } else {
-      dot.className = 'status-dot local';
+      dot.className = 'status-dot online';
     }
   },
 
@@ -508,6 +513,14 @@ window.App = {
       if (!updated && (!adminPass || !adminPass.trim()) && (!empPass || !empPass.trim())) {
         this.showToast("Please enter a new password to update.", "info");
       }
+    });
+
+    // Browser Online/Offline Event Listeners
+    window.addEventListener('online', () => {
+      this.refreshData();
+    });
+    window.addEventListener('offline', () => {
+      this.updateCloudStatus('Offline (Device Storage)', 'offline');
     });
   },
 

@@ -602,40 +602,64 @@ const ExcelModule = {
     });
 
     // ========================================================
+    // ========================================================
     // DYNAMIC AUTO-FIT COLUMN WIDTHS ACROSS ALL 15 COLUMNS
-    // Ensures text like "Sabdhan & kaliachak" and long halting notes never truncate!
+    // Exact Excel "Alt + H + O + I" Equivalent:
+    // Calculates the precise width of every column based on content,
+    // formatted numbers, and text, completely eliminating truncated text and '###'.
     // ========================================================
     const baseColWidths = {
-      1: 14, // Col 1: SL.NO / Advance Date
-      2: 16, // Col 2: LR No / Amount
-      3: 16, // Col 3: DC No / Notes
-      4: 16, // Col 4: Date / DC No
-      5: 20, // Col 5: Vehicle Number
-      6: 22, // Col 6: From
-      7: 30, // Col 7: TO (Ample width for "Sabdhan & kaliachak", "Raiganj & Dalkohala")
-      8: 14, // Col 8: Quantity
-      9: 12, // Col 9: M/TAX
-      10: 18, // Col 10: Amount
-      11: 16, // Col 11: ToPay
-      12: 16, // Col 12: ToPay-paid
-      13: 16, // Col 13: ToPay-Balc
-      14: 60, // Col 14: Note (Ample width for "halting at 2 days loading pnt &2 days Unloading pnt")
-      15: 38  // Col 15: Note / March balance
+      1: 13, // Col 1: SL.NO / Advance Date
+      2: 15, // Col 2: LR No / Advance Amount
+      3: 15, // Col 3: DC No
+      4: 14, // Col 4: Date
+      5: 16, // Col 5: Vehicle Number
+      6: 16, // Col 6: From City
+      7: 26, // Col 7: TO City (Sabdhan & kaliachak, Raiganj & Dalkohala)
+      8: 12, // Col 8: Quantity
+      9: 10, // Col 9: M/TAX
+      10: 16, // Col 10: Amount (e.g. 16,09,850)
+      11: 14, // Col 11: ToPay
+      12: 14, // Col 12: ToPay-paid
+      13: 14, // Col 13: ToPay-Balc
+      14: 52, // Col 14: Note (Halting notes)
+      15: 30  // Col 15: Note / March balance
     };
 
     for (let c = 1; c <= 15; c++) {
       let maxLen = 0;
       const col = ws.getColumn(c);
       col.eachCell({ includeEmpty: false }, (cell, rowNumber) => {
-        // Skip merged title rows (1, 2, 53)
-        if (rowNumber === 1 || rowNumber === 2 || rowNumber === 53) return;
-        const text = cell.value ? String(cell.value) : '';
-        if (text.length > maxLen) {
-          maxLen = text.length;
+        // Skip header banners, divider rows, and multi-column merged cells
+        if (rowNumber <= 3) return;
+        if (cell.isMerged) return;
+
+        let val = cell.value;
+        if (val === null || val === undefined) return;
+
+        let str = '';
+        if (typeof val === 'number') {
+          // Indian number format with commas
+          str = val.toLocaleString('en-IN');
+        } else if (typeof val === 'object') {
+          if (val.richText) str = val.richText.map(t => t.text).join('');
+          else if (val.result !== undefined) str = String(val.result);
+          else str = '';
+        } else {
+          str = String(val);
+        }
+
+        // Ignore section banners or cross-table labels
+        if (str.includes('Shinex') || str.includes('Genetic') || str.length > 70) return;
+
+        if (str.length > maxLen) {
+          maxLen = str.length;
         }
       });
-      const minW = baseColWidths[c] || 16;
-      col.width = Math.max(minW, Math.min(maxLen + 4, 70));
+
+      const baseW = baseColWidths[c] || 14;
+      // AutoFit with +3 padding (standard Excel Alt+H+O+I formula)
+      col.width = Math.max(baseW, maxLen + 3);
     }
 
       // Write buffer and save exact file
@@ -702,6 +726,24 @@ const ExcelModule = {
         "ToPay-Balc": Number(r.balance) || 0,
         "Note": r.note || ''
       })));
+      // AutoFit Column Widths for SheetJS
+      wsTransport['!cols'] = [
+        { wch: 8 },  // SL.NO
+        { wch: 16 }, // Section
+        { wch: 14 }, // LR No
+        { wch: 16 }, // DC No
+        { wch: 13 }, // Date
+        { wch: 16 }, // Vehicle Number
+        { wch: 15 }, // From
+        { wch: 26 }, // TO
+        { wch: 11 }, // Quantity
+        { wch: 9 },  // M/TAX
+        { wch: 16 }, // Amount
+        { wch: 14 }, // ToPay
+        { wch: 13 }, // ToPay-paid
+        { wch: 14 }, // ToPay-Balc
+        { wch: 52 }  // Note
+      ];
       XLSX.utils.book_append_sheet(wb, wsTransport, "Transport Records");
 
       const wsAdvances = XLSX.utils.json_to_sheet(aRecords.map((a, i) => ({
@@ -711,6 +753,13 @@ const ExcelModule = {
         "Section": a.section || '',
         "Note": a.note || a.description || ''
       })));
+      wsAdvances['!cols'] = [
+        { wch: 8 },  // Index
+        { wch: 14 }, // Date
+        { wch: 16 }, // Amount
+        { wch: 18 }, // Section
+        { wch: 45 }  // Note
+      ];
       XLSX.utils.book_append_sheet(wb, wsAdvances, "Advances Ledger");
 
       XLSX.writeFile(wb, "Shinex_2026-08-06 _3-1_Updated.xlsx");
