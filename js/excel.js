@@ -399,7 +399,7 @@ const ExcelModule = {
 
       // 2. Yellow note row (Before [Date] [Old Balance])
       const noteRow = curStartRow + 4;
-      ws.getCell(`N${noteRow}`).value = `Before ${oldBalDate || '14-08-2026'} ${oldBal.toLocaleString('en-IN')}`;
+      ws.getCell(`N${noteRow}`).value = `Before ${oldBalDate || '14-08-2026'} ${(Number(oldBal) || 0).toLocaleString('en-IN')}`;
       ws.getCell(`N${noteRow}`).fill = yellowFill;
       ws.getCell(`N${noteRow}`).font = { name: 'Calibri', size: 10, bold: false };
       ws.getCell(`N${noteRow}`).alignment = { horizontal: 'center', vertical: 'middle' };
@@ -632,7 +632,7 @@ const ExcelModule = {
       col.eachCell({ includeEmpty: false }, (cell, rowNumber) => {
         // Skip header banners, divider rows, and multi-column merged cells
         if (rowNumber <= 3) return;
-        if (cell.isMerged) return;
+        if (cell.isMerged || (cell.master && cell.master !== cell)) return;
 
         let val = cell.value;
         if (val === null || val === undefined) return;
@@ -676,6 +676,14 @@ const ExcelModule = {
   },
 
   saveBlob(blob, filename) {
+    if (typeof window.saveAs === 'function') {
+      window.saveAs(blob, filename);
+      return;
+    }
+    if (typeof saveAs === 'function') {
+      saveAs(blob, filename);
+      return;
+    }
     try {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -692,11 +700,7 @@ const ExcelModule = {
       }, 2000);
       return;
     } catch (err) {
-      console.warn("Direct anchor download error, attempting saveAs fallback:", err);
-      if (typeof saveAs === 'function') {
-        saveAs(blob, filename);
-        return;
-      }
+      console.warn("Direct anchor download error:", err);
       throw err;
     }
   },

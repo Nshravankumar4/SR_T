@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Transport Management & Ledger System</title>
-  <link rel="stylesheet" href="css/styles.css?v=4.3">
+  <link rel="stylesheet" href="css/styles.css?v=4.4">
   <!-- High-Performance Spreadsheet Engines (Local for 100% Offline & Private Repo Support) -->
   <script src="libs/exceljs.min.js?v=3.0"></script>
   <script src="libs/FileSaver.min.js?v=3.0"></script>
@@ -335,7 +335,7 @@
             </div>
 
             <button id="btnToggleFullscreen" class="btn btn-secondary" onclick="SheetViewModule.toggleFullscreen()" style="font-weight: 600; background: #e0f2fe; color: #0369a1; border-color: #bae6fd;">⛶ Full Screen</button>
-            <button id="btnDownloadSheetView" class="btn btn-primary" onclick="downloadShinexExcel(this)">💾 Download Excel (.xlsx)</button>
+            <button id="btnDownloadSheetView" class="btn btn-primary" onclick="window.downloadShinexExcel(this)">💾 Download Excel (.xlsx)</button>
             <button class="btn btn-secondary" onclick="window.print()">🖨️ Print</button>
           </div>
         </div>
@@ -636,13 +636,13 @@
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Application Scripts with Cache Busters -->
-  <script src="js/auth.js?v=4.3"></script>
-  <script src="js/api.js?v=4.3"></script>
-  <script src="js/transport.js?v=4.3"></script>
-  <script src="js/advances.js?v=4.3"></script>
-  <script src="js/excel.js?v=4.3"></script>
-  <script src="js/sheetview.js?v=4.3"></script>
-  <script src="js/app.js?v=4.3"></script>
+  <script src="js/auth.js?v=4.4"></script>
+  <script src="js/api.js?v=4.4"></script>
+  <script src="js/transport.js?v=4.4"></script>
+  <script src="js/advances.js?v=4.4"></script>
+  <script src="js/excel.js?v=4.4"></script>
+  <script src="js/sheetview.js?v=4.4"></script>
+  <script src="js/app.js?v=4.4"></script>
 </body>
 </html>
 

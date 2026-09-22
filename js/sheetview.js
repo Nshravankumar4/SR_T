@@ -177,7 +177,7 @@ const SheetViewModule = {
     sections.forEach(s => {
       const isAct = !s.isArchive;
       const viewKey = s.name.toUpperCase().replace(/\s+/g, '_');
-      const isSelected = this.activeView === viewKey || (this.activeView === 'SECTION_2' && s.name === 'Section 2');
+      const isSelected = this.activeView === viewKey;
       const btnClass = isSelected ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
       const icon = isAct ? '🟢' : '📁';
       html += `<button class="${btnClass}" onclick="SheetViewModule.setView('${viewKey}')">${icon} ${s.name} ${isAct ? '(Active)' : '(Archive)'}</button>`;
@@ -216,7 +216,7 @@ const SheetViewModule = {
 
   // Renders any Section >= 2 with exact Shinex structure, advances on left, and reconciliation on right
   renderGenericSectionView(secData, isFullView = false) {
-    const { section, trips, advances, totalAmount, oldBal, oldBalDate, totalPayable, advSum, netOutstanding, latestDate } = secData;
+    const { section, trips, advances, totalAmount, oldBal, oldBalDate, totalPayable, advSum, netOutstanding, latestDate, toPayBal = 0 } = secData;
 
     let rowsHtml = '';
     trips.forEach((r, idx) => {
