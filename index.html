@@ -73,7 +73,12 @@
       <section id="tab-transport" class="tab-content active">
         <div class="toolbar">
           <div class="filter-group">
-            <input type="text" id="searchInput" class="form-control" placeholder="Search LR, Vehicle, City..." style="width: 240px;">
+            <select id="sectionFilter" class="form-control" style="font-weight: 600; background: #eff6ff; color: #1e40af; border-color: #93c5fd;">
+              <option value="SECTION_2" selected>🟢 Section 2: Active (August 2026 onwards)</option>
+              <option value="SECTION_1">📁 Section 1: Closed Archive (April to August 2026)</option>
+              <option value="ALL">📋 All Sections (Complete 2026-2027)</option>
+            </select>
+            <input type="text" id="searchInput" class="form-control" placeholder="Search LR, Vehicle, City..." style="width: 220px;">
             <select id="statusFilter" class="form-control">
               <option value="ALL">All Statuses</option>
               <option value="Paid">Paid</option>
@@ -81,7 +86,7 @@
               <option value="Pending">Pending</option>
             </select>
             <select id="monthFilter" class="form-control">
-              <option value="ALL">All Months (Continuous)</option>
+              <option value="ALL">All Months</option>
               <option value="2026-04">April 2026</option>
               <option value="2026-05">May 2026</option>
               <option value="2026-06">June 2026</option>
@@ -101,11 +106,11 @@
 
         <!-- Compact Transport Stats Bar -->
         <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; background: #fff; padding: 0.75rem 1.25rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 1rem; font-size: 0.88rem;">
-          <div><span style="color: var(--text-muted);">Total Trips:</span> <strong id="tripCount" style="color: var(--text-main);">0</strong></div>
-          <div><span style="color: var(--text-muted);">Total Freight Billed:</span> <strong id="tripTotalFreight" style="color: var(--text-main);">₹0</strong></div>
-          <div><span style="color: var(--text-muted);">Total ToPay:</span> <strong id="tripTotalToPay" style="color: var(--primary);">₹0</strong></div>
-          <div><span style="color: var(--text-muted);">Direct Paid on Trips:</span> <strong id="tripTotalPaid" style="color: var(--success);">₹0</strong></div>
-          <div><span style="color: var(--text-muted);">Unpaid Balance:</span> <strong id="tripTotalBal" style="color: var(--danger);">₹0</strong></div>
+          <div><span style="color: var(--text-muted);">Trips in View:</span> <strong id="tripCount" style="color: var(--text-main);">0</strong></div>
+          <div><span style="color: var(--text-muted);">Section 2 Billed:</span> <strong id="s2BilledStat" style="color: var(--primary);">₹9,03,750</strong></div>
+          <div><span style="color: var(--text-muted);">S1 Old Balance:</span> <strong style="color: #b45309;">₹10,000</strong></div>
+          <div><span style="color: var(--text-muted);">Section 2 Advances:</span> <strong id="s2AdvStat" style="color: var(--success);">₹4,50,000</strong></div>
+          <div><span style="color: var(--text-muted);">Current Outstanding:</span> <strong id="s2OutStat" style="color: var(--danger); font-size: 1rem;">₹4,63,750</strong></div>
         </div>
 
         <div class="table-responsive">
@@ -113,6 +118,7 @@
             <thead>
               <tr>
                 <th>SL</th>
+                <th>Section</th>
                 <th>LR No</th>
                 <th>DC No</th>
                 <th>Date</th>
@@ -176,58 +182,84 @@
         <!-- Financial Metrics Summary Grid (Displayed only on Financials tab) -->
         <div class="metrics-grid">
           <div class="metric-card highlight">
-            <div class="metric-title">Total Freight Billed</div>
+            <div class="metric-title">Total Freight Billed (Amount)</div>
             <div id="metricTotalAmount" class="metric-value">₹0</div>
           </div>
-          <div class="metric-card highlight">
-            <div class="metric-title">Total ToPay (Payable)</div>
-            <div id="metricTotalToPay" class="metric-value">₹0</div>
-          </div>
-          <div class="metric-card success">
-            <div class="metric-title">Direct Paid on Transport</div>
-            <div id="metricTotalPaid" class="metric-value">₹0</div>
-          </div>
           <div class="metric-card">
-            <div class="metric-title">Transport Balance</div>
+            <div class="metric-title">ToPay Balance Remaining</div>
             <div id="metricTransportBal" class="metric-value">₹0</div>
           </div>
           <div class="metric-card highlight">
+            <div class="metric-title">Total Payable Debt</div>
+            <div id="metricTotalDebt" class="metric-value">₹0</div>
+          </div>
+          <div class="metric-card success">
             <div class="metric-title">Total Company Advances</div>
             <div id="metricTotalAdvances" class="metric-value">₹0</div>
           </div>
           <div class="metric-card">
-            <div class="metric-title">Opening Balance</div>
-            <div id="metricOpeningBal" class="metric-value">₹0</div>
+            <div class="metric-title">14-08-2026 Old Balance (S1)</div>
+            <div id="metricS1Outstanding" class="metric-value">₹10,000</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-title">Section 2 Advances</div>
+            <div id="metricS2Advances" class="metric-value">₹4,50,000</div>
           </div>
           <div class="metric-card danger">
-            <div class="metric-title">Net Current Outstanding</div>
+            <div class="metric-title">16-09-2026 Net Outstanding</div>
             <div id="metricNetOutstanding" class="metric-value">₹0</div>
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
           <div style="background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem;">
-            <h4 style="margin-bottom: 1rem; color: var(--primary);">Accounting Formula Breakdown</h4>
-            <div style="line-height: 2; font-size: 0.95rem;">
-              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.4rem 0;">
-                <span>Opening Balance (March 2026)</span>
-                <strong id="summaryOpeningBal">₹1,20,000</strong>
+            <h4 style="margin-bottom: 1rem; color: var(--primary);">Section 1 Reconciliation (April – August 2026)</h4>
+            <div style="line-height: 1.8; font-size: 0.92rem;">
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.35rem 0;">
+                <span>To Billed (Amount)</span>
+                <strong id="s1Billed">₹16,09,850</strong>
               </div>
-              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.4rem 0;">
-                <span>(+) Total Transport ToPay</span>
-                <strong id="summaryToPay">₹0</strong>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.35rem 0;">
+                <span>(+) ToPay bal</span>
+                <strong id="s1ToPayBal">₹2,83,500</strong>
               </div>
-              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.4rem 0; color: var(--success);">
-                <span>(-) Direct Paid on Trips</span>
-                <strong id="summaryPaid">₹0</strong>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.35rem 0; color: var(--primary);">
+                <span>(=) Total Payable</span>
+                <strong id="s1TotalPayable">₹18,93,350</strong>
               </div>
-              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.4rem 0; color: var(--warning);">
-                <span>(-) Total Company Advances</span>
-                <strong id="summaryAdvances">₹0</strong>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.35rem 0; color: var(--warning);">
+                <span>(-) less adv</span>
+                <strong id="s1LessAdv">₹18,83,350</strong>
               </div>
-              <div style="display: flex; justify-content: space-between; padding: 0.8rem 0; font-size: 1.1rem; color: var(--danger); font-weight: 700;">
-                <span>(=) Current Net Outstanding</span>
-                <strong id="summaryOutstanding">₹0</strong>
+              <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; color: #0284c7; font-weight: 700;">
+                <span>(=) 14-08-2026 (out standing)</span>
+                <strong id="s1OutStanding">₹10,000</strong>
+              </div>
+            </div>
+
+            <hr style="border: 0; border-top: 1px dashed var(--border); margin: 1rem 0;">
+
+            <h4 style="margin-bottom: 1rem; color: var(--primary);">Section 2 Reconciliation (NEW August – September 2026)</h4>
+            <div style="line-height: 1.8; font-size: 0.92rem;">
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.35rem 0;">
+                <span>To Billed (Amount)</span>
+                <strong id="s2Billed">₹9,03,750</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.35rem 0;">
+                <span>(+) 14-08-2026 Old Balance</span>
+                <strong id="s2OldBal">₹10,000</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.35rem 0; color: var(--primary);">
+                <span>(=) Total Payable</span>
+                <strong id="s2TotalPayable">₹9,13,750</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 0.35rem 0; color: var(--warning);">
+                <span>(-) less adv</span>
+                <strong id="s2LessAdv">₹4,50,000</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; color: #0284c7; font-weight: 700; font-size: 1.05rem;">
+                <span>(=) 16-09-2026 (out standing)</span>
+                <strong id="s2OutStanding">₹4,63,750</strong>
               </div>
             </div>
           </div>
@@ -324,9 +356,14 @@
         <div class="modal-body">
           <input type="hidden" id="transportId">
 
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 0.6rem 0.9rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>📌</span>
+            <div><strong>Section 2 (Active):</strong> This trip will be saved in Section 2 (August 2026 onwards) sequentially (SL.NO 7, 8, 9...).</div>
+          </div>
+
           <div class="form-grid">
             <div class="form-group">
-              <label for="transportSlNo">SL. NO</label>
+              <label for="transportSlNo">SL. NO (Auto)</label>
               <input type="number" id="transportSlNo" class="form-control" required>
             </div>
             <div class="form-group">
@@ -338,18 +375,18 @@
           <div class="form-grid" style="margin-top: 0.85rem;">
             <div class="form-group">
               <label for="transportLrNo">LR No</label>
-              <input type="text" id="transportLrNo" class="form-control" placeholder="e.g. 162" required>
+              <input type="text" id="transportLrNo" class="form-control" placeholder="e.g. 195" required>
             </div>
             <div class="form-group">
               <label for="transportDcNo">DC No</label>
-              <input type="text" id="transportDcNo" class="form-control" placeholder="e.g. 894/1124">
+              <input type="text" id="transportDcNo" class="form-control" placeholder="e.g. 1420">
             </div>
           </div>
 
           <div class="form-grid" style="margin-top: 0.85rem;">
             <div class="form-group">
               <label for="transportVehicle">Vehicle Number</label>
-              <input type="text" id="transportVehicle" class="form-control" placeholder="e.g. UP25FT5066" required>
+              <input type="text" id="transportVehicle" class="form-control" placeholder="e.g. TS08UB1234" required>
             </div>
             <div class="form-group">
               <label for="transportQuantity">Quantity</label>
@@ -371,7 +408,7 @@
           <div class="form-grid" style="margin-top: 0.85rem;">
             <div class="form-group">
               <label for="transportAmount">Freight Amount (₹)</label>
-              <input type="number" id="transportAmount" class="form-control" placeholder="149500">
+              <input type="number" id="transportAmount" class="form-control" placeholder="e.g. 150000">
             </div>
             <div class="form-group">
               <label for="transportMTax">M/TAX</label>
@@ -388,8 +425,8 @@
 
             <div class="form-grid">
               <div class="form-group">
-                <label for="transportToPay">ToPay Amount (₹)</label>
-                <input type="number" id="transportToPay" class="form-control" placeholder="87000" required>
+                <label for="transportToPay">ToPay Amount (₹) [Optional]</label>
+                <input type="number" id="transportToPay" class="form-control" placeholder="0 if Freight Billed">
               </div>
               <div class="form-group">
                 <label for="transportPaid">Paid Amount (₹)</label>

@@ -82,70 +82,86 @@ window.App = {
   },
 
   updateMetrics() {
-    const totalAmount = this.transportRecords.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-    const totalToPay = this.transportRecords.reduce((sum, r) => sum + (Number(r.toPay) || 0), 0);
-    const totalPaid = this.transportRecords.reduce((sum, r) => sum + (Number(r.paid) || 0), 0);
-    const transportBalance = this.transportRecords.reduce((sum, r) => sum + (Number(r.balance) || 0), 0);
-    const totalAdvances = this.advanceRecords.reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+    // Separate Section 1 and Section 2 trips using strict helpers
+    const s1Trips = this.transportRecords.filter(r => window.isSection1Trip(r));
+    const s2Trips = this.transportRecords.filter(r => window.isSection2Trip(r));
+
+    // Separate Section 1 and Section 2 advances
+    const s1Advances = this.advanceRecords.filter(a => window.isSection1Advance(a));
+    const s2Advances = this.advanceRecords.filter(a => window.isSection2Advance(a));
+
+    // Section 1 Math (Exact Shinex Excel Rows 5 to 50)
+    const s1Amount = s1Trips.reduce((sum, r) => sum + (Number(r.amount) || 0), 0); // 16,09,850
+    const s1ToPayBal = s1Trips.reduce((sum, r) => sum + (Number(r.balance) || 0), 0); // 2,83,500
+    const s1TotalPayable = s1Amount + s1ToPayBal; // 18,93,350
+    const s1AdvSum = s1Advances.reduce((sum, a) => sum + (Number(a.amount) || 0), 0); // 18,83,350
+    const s1Outstanding = s1TotalPayable - s1AdvSum; // 10,000
+
+    // Section 2 Math (Exact Shinex Excel Rows 57 to 75)
+    const s2Amount = s2Trips.reduce((sum, r) => sum + (Number(r.amount) || 0), 0); // 9,03,750
+    const s2OldBal = s1Outstanding; // 10,000
+    const s2TotalPayable = s2Amount + s2OldBal; // 9,13,750
+    const s2AdvSum = s2Advances.reduce((sum, a) => sum + (Number(a.amount) || 0), 0); // 4,50,000
+    const netOutstanding = s2TotalPayable - s2AdvSum; // 4,63,750
+
+    // Overall Totals
+    const totalFreightBilled = s1Amount + s2Amount; // 25,13,600
+    const totalCompanyAdvances = s1AdvSum + s2AdvSum; // 23,33,350
+    const totalPayableDebt = totalFreightBilled + s1ToPayBal; // 27,97,100
 
     // Populate compact transport stats bar (on Transport tab)
     const tripCountEl = document.getElementById('tripCount');
-    if (tripCountEl) tripCountEl.innerText = this.transportRecords.length;
-    const tripFreightEl = document.getElementById('tripTotalFreight');
-    if (tripFreightEl) tripFreightEl.innerText = '₹' + totalAmount.toLocaleString('en-IN');
-    const tripToPayEl = document.getElementById('tripTotalToPay');
-    if (tripToPayEl) tripToPayEl.innerText = '₹' + totalToPay.toLocaleString('en-IN');
-    const tripPaidEl = document.getElementById('tripTotalPaid');
-    if (tripPaidEl) tripPaidEl.innerText = '₹' + totalPaid.toLocaleString('en-IN');
-    const tripBalEl = document.getElementById('tripTotalBal');
-    if (tripBalEl) tripBalEl.innerText = '₹' + transportBalance.toLocaleString('en-IN');
+    if (tripCountEl) tripCountEl.innerText = TransportModule.filteredRecords ? TransportModule.filteredRecords.length : this.transportRecords.length;
+    const s2BilledStat = document.getElementById('s2BilledStat');
+    if (s2BilledStat) s2BilledStat.innerText = '₹' + s2Amount.toLocaleString('en-IN');
+    const s2AdvStat = document.getElementById('s2AdvStat');
+    if (s2AdvStat) s2AdvStat.innerText = '₹' + s2AdvSum.toLocaleString('en-IN');
+    const s2OutStat = document.getElementById('s2OutStat');
+    if (s2OutStat) s2OutStat.innerText = '₹' + netOutstanding.toLocaleString('en-IN');
 
-    // Financial Reconciliation Formula:
-    // Total Debt = Opening Balance + Total ToPay
-    // Total Payments Received/Settled = Direct Paid + Total Advances
-    // Net Outstanding = Total Debt - Total Payments
-    const totalDebt = this.openingBalance + totalToPay;
-    const totalSettled = totalPaid + totalAdvances;
-    const netOutstanding = totalDebt - totalSettled;
-
-    // Financial Summary Cards
+    // Populate Top Financial Summary Cards (Tab 3)
     const mAmount = document.getElementById('metricTotalAmount');
-    if (mAmount) mAmount.innerText = '₹' + totalAmount.toLocaleString('en-IN');
-    const mToPay = document.getElementById('metricTotalToPay');
-    if (mToPay) mToPay.innerText = '₹' + totalToPay.toLocaleString('en-IN');
-    const mPaid = document.getElementById('metricTotalPaid');
-    if (mPaid) mPaid.innerText = '₹' + totalPaid.toLocaleString('en-IN');
+    if (mAmount) mAmount.innerText = '₹' + totalFreightBilled.toLocaleString('en-IN');
     const mBal = document.getElementById('metricTransportBal');
-    if (mBal) mBal.innerText = '₹' + transportBalance.toLocaleString('en-IN');
+    if (mBal) mBal.innerText = '₹' + s1ToPayBal.toLocaleString('en-IN');
+    const mDebt = document.getElementById('metricTotalDebt');
+    if (mDebt) mDebt.innerText = '₹' + totalPayableDebt.toLocaleString('en-IN');
     const mAdv = document.getElementById('metricTotalAdvances');
-    if (mAdv) mAdv.innerText = '₹' + totalAdvances.toLocaleString('en-IN');
-    const mOpen = document.getElementById('metricOpeningBal');
-    if (mOpen) mOpen.innerText = '₹' + this.openingBalance.toLocaleString('en-IN');
-    
+    if (mAdv) mAdv.innerText = '₹' + totalCompanyAdvances.toLocaleString('en-IN');
+    const mS1 = document.getElementById('metricS1Outstanding');
+    if (mS1) mS1.innerText = '₹' + s1Outstanding.toLocaleString('en-IN');
+    const mS2 = document.getElementById('metricS2Advances');
+    if (mS2) mS2.innerText = '₹' + s2AdvSum.toLocaleString('en-IN');
+
     const outEl = document.getElementById('metricNetOutstanding');
     if (outEl) {
-      outEl.innerText = (netOutstanding < 0 ? '-₹' + Math.abs(netOutstanding).toLocaleString('en-IN') : '₹' + netOutstanding.toLocaleString('en-IN'));
-      if (netOutstanding > 0) {
-        outEl.parentElement.className = 'metric-card danger';
-      } else {
-        outEl.parentElement.className = 'metric-card success';
-      }
+      outEl.innerText = '₹' + netOutstanding.toLocaleString('en-IN');
+      outEl.parentElement.className = netOutstanding > 0 ? 'metric-card danger' : 'metric-card success';
     }
 
-    // Breakdown list in Tab 3
-    const sOpen = document.getElementById('summaryOpeningBal');
-    if (sOpen) sOpen.innerText = '₹' + this.openingBalance.toLocaleString('en-IN');
-    const sToPay = document.getElementById('summaryToPay');
-    if (sToPay) sToPay.innerText = '₹' + totalToPay.toLocaleString('en-IN');
-    const sPaid = document.getElementById('summaryPaid');
-    if (sPaid) sPaid.innerText = '₹' + totalPaid.toLocaleString('en-IN');
-    const sAdv = document.getElementById('summaryAdvances');
-    if (sAdv) sAdv.innerText = '₹' + totalAdvances.toLocaleString('en-IN');
-    const sOut = document.getElementById('summaryOutstanding');
-    if (sOut) {
-      sOut.innerText = (netOutstanding < 0 ? '-₹' + Math.abs(netOutstanding).toLocaleString('en-IN') : '₹' + netOutstanding.toLocaleString('en-IN'));
-      sOut.style.color = netOutstanding > 0 ? 'var(--danger)' : 'var(--success)';
-    }
+    // Populate Section 1 Reconciliation breakdown
+    const s1B = document.getElementById('s1Billed');
+    if (s1B) s1B.innerText = '₹' + s1Amount.toLocaleString('en-IN');
+    const s1TP = document.getElementById('s1ToPayBal');
+    if (s1TP) s1TP.innerText = '₹' + s1ToPayBal.toLocaleString('en-IN');
+    const s1TPay = document.getElementById('s1TotalPayable');
+    if (s1TPay) s1TPay.innerText = '₹' + s1TotalPayable.toLocaleString('en-IN');
+    const s1LA = document.getElementById('s1LessAdv');
+    if (s1LA) s1LA.innerText = '₹' + s1AdvSum.toLocaleString('en-IN');
+    const s1Out = document.getElementById('s1OutStanding');
+    if (s1Out) s1Out.innerText = '₹' + s1Outstanding.toLocaleString('en-IN');
+
+    // Populate Section 2 Reconciliation breakdown
+    const s2B = document.getElementById('s2Billed');
+    if (s2B) s2B.innerText = '₹' + s2Amount.toLocaleString('en-IN');
+    const s2OB = document.getElementById('s2OldBal');
+    if (s2OB) s2OB.innerText = '₹' + s2OldBal.toLocaleString('en-IN');
+    const s2TPay = document.getElementById('s2TotalPayable');
+    if (s2TPay) s2TPay.innerText = '₹' + s2TotalPayable.toLocaleString('en-IN');
+    const s2LA = document.getElementById('s2LessAdv');
+    if (s2LA) s2LA.innerText = '₹' + s2AdvSum.toLocaleString('en-IN');
+    const s2Out = document.getElementById('s2OutStanding');
+    if (s2Out) s2Out.innerText = '₹' + netOutstanding.toLocaleString('en-IN');
   },
 
   setupEventListeners() {
@@ -196,6 +212,7 @@ window.App = {
     document.getElementById('searchInput')?.addEventListener('input', () => TransportModule.applyFilters());
     document.getElementById('statusFilter')?.addEventListener('change', () => TransportModule.applyFilters());
     document.getElementById('monthFilter')?.addEventListener('change', () => TransportModule.applyFilters());
+    document.getElementById('sectionFilter')?.addEventListener('change', () => TransportModule.applyFilters());
 
     // Transport Form submit
     document.getElementById('transportForm')?.addEventListener('submit', (e) => TransportModule.handleFormSubmit(e));

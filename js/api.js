@@ -711,17 +711,43 @@ const REAL_SHINEX_ADVANCES = [
 
 
 
-// Ensure opening balance row amount is set
+// Row ADV-S1-37 is an informational March 2026 note in Excel, amount is 0
 if (REAL_SHINEX_ADVANCES.length > 0 && REAL_SHINEX_ADVANCES[0].id === 'ADV-S1-37') {
-  REAL_SHINEX_ADVANCES[0].amount = 120000;
-  REAL_SHINEX_ADVANCES[0].description = "March 2026 balance";
+  REAL_SHINEX_ADVANCES[0].amount = 0;
+  REAL_SHINEX_ADVANCES[0].description = "March 2026 balance note";
 }
+
+// Global section helpers
+window.isSection1Trip = function(r) {
+  if (!r) return false;
+  if (r.section && r.section.includes("April")) return true;
+  if (r.section && (r.section.includes("NEW") || r.section.includes("August") || r.section.includes("September"))) return false;
+  if (String(r.id).includes("S2")) return false;
+  if (/^TR-([1-9]|1[0-9]|2[0-7])$/.test(String(r.id))) return true;
+  return false;
+};
+
+window.isSection2Trip = function(r) {
+  return !window.isSection1Trip(r);
+};
+
+window.isSection1Advance = function(a) {
+  if (!a) return false;
+  if (a.section === "Section 2" || String(a.id).includes("S2")) return false;
+  if (a.section === "Section 1") return true;
+  if (a.date && (a.date.startsWith("29-08-2026") || a.date.startsWith("10-09-2026"))) return false;
+  return true;
+};
+
+window.isSection2Advance = function(a) {
+  return !window.isSection1Advance(a);
+};
 
 const API_CONFIG = {
   webAppUrl: localStorage.getItem('transport_api_url') || '',
-  storageKeyTransport: 'transport_records_shinex_v2',
-  storageKeyAdvances: 'transport_advances_shinex_v2',
-  storageKeyOpeningBal: 'transport_opening_bal_shinex_v2'
+  storageKeyTransport: 'transport_records_shinex_v7',
+  storageKeyAdvances: 'transport_advances_shinex_v7',
+  storageKeyOpeningBal: 'transport_opening_bal_shinex_v7'
 };
 
 const ApiService = {
@@ -808,9 +834,14 @@ const ApiService = {
     if (balance <= 0 && toPay > 0) status = 'Paid';
     else if (paid > 0 && balance > 0) status = 'Partially Paid';
 
+    // Ensure new records are always Section 2 with S2 ID
+    const section = record.section || 'NEW August to September 2026';
+    const id = record.id || ('TR-S2-' + Date.now());
+
     const cleanRecord = {
       ...record,
-      id: record.id || ('TR-' + Date.now().toString().slice(-6)),
+      id,
+      section,
       toPay,
       paid,
       balance,
@@ -819,14 +850,14 @@ const ApiService = {
       createdAt: record.createdAt || new Date().toISOString()
     };
 
-    // Save locally first
+    // Save locally
     const list = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyTransport) || '[]');
     if (isEdit) {
       const idx = list.findIndex(item => item.id === cleanRecord.id);
       if (idx !== -1) list[idx] = cleanRecord;
-      else list.unshift(cleanRecord);
+      else list.push(cleanRecord);
     } else {
-      list.unshift(cleanRecord);
+      list.push(cleanRecord); // Append after existing Section 2 records (after 6 comes 7, 8, etc.)
     }
     localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(list));
 

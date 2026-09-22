@@ -15,8 +15,13 @@ const TransportModule = {
     const searchVal = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
     const statusVal = document.getElementById('statusFilter')?.value || 'ALL';
     const monthVal = document.getElementById('monthFilter')?.value || 'ALL';
+    const sectionVal = document.getElementById('sectionFilter')?.value || 'SECTION_2';
 
     this.filteredRecords = this.records.filter(item => {
+      // Section filter
+      if (sectionVal === 'SECTION_1' && !window.isSection1Trip(item)) return false;
+      if (sectionVal === 'SECTION_2' && !window.isSection2Trip(item)) return false;
+
       // Search matches LR, Vehicle, From, To, DC
       const matchesSearch = !searchVal || 
         (item.lrNo && String(item.lrNo).toLowerCase().includes(searchVal)) ||
@@ -37,6 +42,15 @@ const TransportModule = {
       return matchesSearch && matchesStatus && matchesMonth;
     });
 
+    // Sort order: Section 1 first (by slNo), then Section 2 (by slNo)
+    this.filteredRecords.sort((a, b) => {
+      const aS1 = window.isSection1Trip(a);
+      const bS1 = window.isSection1Trip(b);
+      if (aS1 && !bS1) return -1;
+      if (!aS1 && bS1) return 1;
+      return (Number(a.slNo) || 0) - (Number(b.slNo) || 0);
+    });
+
     this.renderTable();
   },
 
@@ -45,13 +59,14 @@ const TransportModule = {
     if (!tbody) return;
 
     if (this.filteredRecords.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; padding: 2rem; color: var(--text-muted);">No transport records found.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="16" style="text-align: center; padding: 2rem; color: var(--text-muted);">No transport records found for this section.</td></tr>`;
       return;
     }
 
     const isAdmin = AuthService.isAdmin();
 
     tbody.innerHTML = this.filteredRecords.map((r, index) => {
+      const isS2 = window.isSection2Trip(r);
       const badgeClass = r.status === 'Paid' ? 'badge-success' : (r.status === 'Partially Paid' ? 'badge-warning' : 'badge-danger');
       const formattedAmount = (Number(r.amount) || 0).toLocaleString('en-IN');
       const formattedToPay = (Number(r.toPay) || 0).toLocaleString('en-IN');
@@ -60,7 +75,8 @@ const TransportModule = {
 
       return `
         <tr>
-          <td>${r.slNo || (index + 1)}</td>
+          <td><strong>${r.slNo || (index + 1)}</strong></td>
+          <td><span class="badge" style="background: ${isS2 ? '#dbeafe' : '#f1f5f9'}; color: ${isS2 ? '#1e40af' : '#475569'}; font-size: 0.72rem; font-weight: 600;">${isS2 ? 'Sec 2 (Active)' : 'Sec 1 (Closed)'}</span></td>
           <td><strong>${r.lrNo || '-'}</strong></td>
           <td>${r.dcNo || '-'}</td>
           <td>${r.date || '-'}</td>
@@ -98,13 +114,15 @@ const TransportModule = {
   openAddModal() {
     document.getElementById('transportForm').reset();
     document.getElementById('transportId').value = '';
-    document.getElementById('transportModalTitle').innerText = 'Add Transport Record';
+    document.getElementById('transportModalTitle').innerText = 'Add Transport Record (Section 2 - Active)';
     document.getElementById('transportDate').value = new Date().toISOString().split('T')[0];
     
-    // Auto-calculate default SL NO
-    const nextSlNo = (this.records.length > 0) 
-      ? Math.max(...this.records.map(r => Number(r.slNo) || 0)) + 1 
-      : 1;
+    // Auto-calculate default SL NO for the active section (Section 2)
+    // Section 2 starts with 1..6, so next is 7, then 8, 9, etc.
+    const s2Records = this.records.filter(r => window.isSection2Trip(r));
+    const nextSlNo = s2Records.length > 0 
+      ? Math.max(...s2Records.map(r => Number(r.slNo) || 0)) + 1 
+      : 7;
     document.getElementById('transportSlNo').value = nextSlNo;
     
     document.getElementById('transportModal').classList.add('active');
@@ -173,6 +191,10 @@ const TransportModule = {
     if (balance <= 0 && toPay > 0) status = 'Paid';
     else if (paid > 0 && balance > 0) status = 'Partially Paid';
 
+    // Check if editing existing record to preserve section
+    const existing = id ? this.records.find(r => r.id === id) : null;
+    const section = existing ? (existing.section || 'NEW August to September 2026') : 'NEW August to September 2026';
+
     const record = {
       id: id || undefined,
       slNo: Number(document.getElementById('transportSlNo').value) || 1,
@@ -190,6 +212,7 @@ const TransportModule = {
       balance,
       status,
       note: document.getElementById('transportNote').value.trim(),
+      section: section,
       createdBy: user ? user.role : 'User'
     };
 
