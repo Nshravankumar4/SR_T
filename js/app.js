@@ -185,13 +185,15 @@ window.App = {
 
       const isOnline = window.navigator.onLine !== false;
       const banner = document.getElementById('cloudSyncAlertBanner');
+      const isAdmin = typeof AuthService !== 'undefined' && AuthService.isAdmin();
+
       if (!isOnline) {
         this.updateCloudStatus('Offline (Device Storage)', 'offline');
         if (banner) banner.style.display = 'none';
       } else if (result.source === 'cloud') {
         this.updateCloudStatus('Online • Cloud Synced (Google Sheets)', 'cloud');
         if (banner) banner.style.display = 'none';
-      } else if (this.cloudSyncWarning) {
+      } else if (this.cloudSyncWarning && isAdmin) {
         this.updateCloudStatus(this.cloudSyncWarning, 'offline');
         if (banner) banner.style.display = 'block';
       } else {
