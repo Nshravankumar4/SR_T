@@ -51,9 +51,10 @@ The login screen features an intuitive **1-Click Left / Right User Selector** wi
 
 ## 🛡️ Unified Operational Access & Roles
 
-Both **Admin** and **Rudra** have operational access to manage day-to-day transport operations, advance disbursements, custom sections, live Excel sheets, and settings. 
+Both **Admin** and **Rudra** have operational access to manage day-to-day transport operations, advance disbursements, custom sections, and live Excel sheets.
 
 The **key restrictions** are:
+* **⚙️ System Settings & Google Sheet API is strictly Admin Only:** The **Settings & API** tab is completely hidden from Rudra's sidebar navigation and locked against non-admin access to safeguard API configurations and master settings.
 * **🗑️ Record & Section Deletion is strictly Admin Only:** Only **👑 Admin** can delete transport trips, advance disbursements, and custom sections. Delete buttons are hidden for Rudra.
 * **🔑 Password Administration is strictly Admin Only:** **👑 Admin** can update passwords for both `Admin` and `Rudra`. **👤 Rudra** can change Rudra's own password.
 
@@ -76,26 +77,32 @@ The **key restrictions** are:
 | **Live Excel Sheet View** | ✅ | ✅ | 1:1 Shinex Excel replica with click-to-edit row and zoom scaling |
 | **Selective Excel Export** | ✅ | ✅ | Exports active section selection (Section 1, Section 2, or Full Sheet) |
 | **Excel Import / Backup** | ✅ | ✅ | Upload historical spreadsheets or restore cloud backup |
-| **Opening Balance Control** | ✅ | ✅ | Set initial opening debt balance for Section 1 |
-| **Settings & Cloud API** | ✅ | ✅ | Configure Google Apps Script Web App URL and test connection |
+| **Opening Balance Control** | ✅ | ❌ | **Admin Only**: Set initial opening debt balance from Settings tab |
+| **Settings & Cloud API** | ✅ | ❌ | **Admin Only**: Hidden & blocked for Rudra to protect database configuration |
 | **Change Own Password** | ✅ | ✅ | Self-service password change from user profile card |
-| **Change Other User's Password** | ✅ | ❌ | **Admin Only**: Admin can update Admin & Rudra passwords |
+| **Change Other User's Password** | ✅ | ❌ | **Admin Only**: Admin can update Admin & Rudra passwords live |
 | **Secure Logout** | ✅ | ✅ | Clear local session and return to 1-Click Login Screen |
 
 ---
 
-## 🔑 Where & How to Update Passwords
+## 🔑 Where & How to Update Passwords (100% Live Sync)
 
 ### Method 1: Self-Service Password Change (Both Admin & Rudra)
 1. In the upper-left sidebar, look at your **User Profile Card**.
 2. Click the **`🔑 Change`** button next to your role badge.
 3. Enter your **Current Password**, enter your **New Password** (minimum 6 characters), confirm it, and click **Save New Password**.
-4. The new password takes effect immediately for subsequent logins.
+4. The new password is saved locally and pushed live to the cloud backend.
 
 ### Method 2: Administrator Settings (Admin Only)
-1. Sign in as `Admin` and open the **⚙️ Settings & API** tab in the sidebar.
+1. Sign in as `Admin` and open the **⚙️ Settings & API** tab in the sidebar (hidden for Rudra).
 2. Scroll down to the **🔐 Update Account Passwords** section.
 3. Enter a new password for `Admin` or `Rudra` (or both) and click **💾 Update Passwords Securely**.
+
+### ⚡ Live Cross-Device Password Synchronization:
+* When Admin updates Rudra's password, the app immediately dispatches an authenticated cloud request (`action: 'updatePassword'`) to Google Apps Script.
+* Google Apps Script updates `ScriptProperties` in the cloud (`EMP_PASS` or `ADMIN_PASS`).
+* Connected workstations update their credentials via background polling every 3 seconds.
+* When Rudra logs in from **any device (phone, laptop, office workstation)**, the cloud backend instantly verifies the **new password live** and rejects the old password.
 
 ---
 
@@ -233,6 +240,30 @@ When payment changes, the balance is derived dynamically, triggering full sectio
   - Removed duplicate inline form submissions and added an `isSubmitting` debounce flag in both `TransportModule` and `AdvancesModule`.
   - Added trip deduplication guards in `ApiService.saveTransport` and automatic data deduplication.
   - Implemented multi-format regex timestamp sorting in `window.getLatestTripDate` so every newly entered trip or advance immediately and automatically updates the Net Outstanding title (`DD-MM-YYYY Net Outstanding`) and closing balance in real-time.
+
+### 7. Multi-User Cross-Device Data Sync & Google Apps Script Permission Requirement
+* **Root Cause:**
+  - Google Apps Script web apps deployed with `"Who has access: Only myself"` return HTTP 302 redirects to `accounts.google.com/ServiceLogin`. Browsers block cross-origin authentication redirects via CORS, causing silent fallback to browser `localStorage` and split-brain data (Admin saw 6 trips, Rudra saw a separate 7th test trip).
+* **Fix Applied:**
+  - Updated Google Apps Script deployment requirement to **"Who has access: Anyone"**.
+  - Added an in-app **"⚡ Test Cloud Connection & Live Sync"** diagnostic tool in Settings.
+  - Added a prominent top alert banner that notifies users if the Google Apps Script deployment requires permission adjustments.
+  - Auto-seeded the master Google Sheet with the exact 34 Shinex trips and 15 advances on first connection.
+
+### 8. Strict Admin-Only Security for Settings & Google Sheet API
+* **Root Cause:**
+  - Non-admin users (Rudra) could access the Settings & API tab, exposing sensitive Google Sheet Web App URLs and credential reset panels.
+* **Fix Applied:**
+  - Added `.admin-only` security classes and JavaScript route guards to hide and block the **⚙️ Settings & API** tab for Rudra.
+  - Unauthorized direct attempts to open Settings redirect automatically to the Dashboard.
+
+### 9. Automatic Sequential SL Numbering & Elimination of Undefined Status Badges
+* **Root Cause:**
+  - Trips without ToPay obligations displayed `undefined` status badges.
+  - Re-submitting or adding new records without entering an SL number caused duplicate SL numbers in the same section.
+* **Fix Applied:**
+  - Sanitized status assignment in `normalizeTransportRecord` and `transport.js` to automatically badge freight trips with ₹0 ToPay as **`Billed`** (never `undefined`).
+  - Added an auto-incrementing sequential SL generator (`max(SL in section) + 1`) in `saveTransport` to guarantee strictly unique SL numbers.
 
 ---
 
