@@ -896,10 +896,10 @@ const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbzlk-8ip9CNPjRp
 
 const API_CONFIG = {
   webAppUrl: localStorage.getItem('transport_api_url') || DEFAULT_API_URL,
-  storageKeyTransport: 'transport_records_shinex_v7',
-  storageKeyAdvances: 'transport_advances_shinex_v7',
-  storageKeyOpeningBal: 'transport_opening_bal_shinex_v7',
-  storageKeySections: 'transport_sections_shinex_v1'
+  storageKeyTransport: 'transport_records_shinex_v8',
+  storageKeyAdvances: 'transport_advances_shinex_v8',
+  storageKeyOpeningBal: 'transport_opening_bal_shinex_v8',
+  storageKeySections: 'transport_sections_shinex_v8'
 };
 
 const ApiService = {
