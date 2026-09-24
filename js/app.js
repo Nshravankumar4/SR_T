@@ -303,7 +303,7 @@ window.App = {
       const mS1Title = document.getElementById('metricS1Title');
       if (mS1Title) mS1Title.innerText = `${s1.latestDate || '14-08-2026'} Old Balance (S1)`;
       const mNetOutTitle = document.getElementById('metricNetOutTitle');
-      if (mNetOutTitle) mNetOutTitle.innerText = `${activeSec.latestDate || '16-09-2026'} Net Outstanding (${activeName})`;
+      if (mNetOutTitle) mNetOutTitle.innerText = `${activeSec.latestDate || '23-09-2026'} Net Outstanding (${activeName})`;
 
       // Dynamically render all Section Reconciliation Cards in #financialSectionReconGrid
       const reconGrid = document.getElementById('financialSectionReconGrid');

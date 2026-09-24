@@ -182,8 +182,8 @@
               <div id="metricActiveAdvances" class="metric-value">₹4,50,000</div>
             </div>
             <div class="metric-card danger">
-              <div id="metricNetOutTitle" class="metric-title">16-09-2026 Net Outstanding</div>
-              <div id="metricNetOutstanding" class="metric-value">₹0</div>
+              <div id="metricNetOutTitle" class="metric-title">23-09-2026 Net Outstanding</div>
+              <div id="metricNetOutstanding" class="metric-value">₹6,18,750</div>
             </div>
           </div>
 
@@ -245,10 +245,10 @@
           <!-- Compact Transport Stats Bar -->
           <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; background: #fff; padding: 0.75rem 1.25rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 1rem; font-size: 0.88rem;">
             <div><span style="color: var(--text-muted);">Trips in View:</span> <strong id="tripCount" style="color: var(--text-main);">0</strong></div>
-            <div><span style="color: var(--text-muted);">Section 2 Billed:</span> <strong id="s2BilledStat" style="color: var(--primary);">₹9,03,750</strong></div>
+            <div><span style="color: var(--text-muted);">Section 2 Billed:</span> <strong id="s2BilledStat" style="color: var(--primary);">₹10,58,750</strong></div>
             <div><span style="color: var(--text-muted);">S1 Old Balance:</span> <strong style="color: #b45309;">₹10,000</strong></div>
             <div><span style="color: var(--text-muted);">Section 2 Advances:</span> <strong id="s2AdvStat" style="color: var(--success);">₹4,50,000</strong></div>
-            <div><span style="color: var(--text-muted);">Current Outstanding:</span> <strong id="s2OutStat" style="color: var(--danger); font-size: 1rem;">₹4,63,750</strong></div>
+            <div><span style="color: var(--text-muted);">Current Outstanding:</span> <strong id="s2OutStat" style="color: var(--danger); font-size: 1rem;">₹6,18,750</strong></div>
           </div>
 
           <div class="table-responsive">
@@ -452,7 +452,7 @@
         <h3 id="transportModalTitle">Add Transport Record</h3>
         <button class="modal-close" onclick="TransportModule.closeModal()">✕</button>
       </div>
-      <form id="transportForm" onsubmit="window.TransportModule ? window.TransportModule.handleFormSubmit(event) : TransportModule.handleFormSubmit(event); return false;">
+      <form id="transportForm">
         <div class="modal-body">
           <input type="hidden" id="transportId">
 
@@ -566,7 +566,7 @@
         <h3 id="advanceModalTitle">Record Advance Payment</h3>
         <button class="modal-close" onclick="AdvancesModule.closeModal()">✕</button>
       </div>
-      <form id="advanceForm" onsubmit="window.AdvancesModule ? window.AdvancesModule.handleFormSubmit(event) : AdvancesModule.handleFormSubmit(event); return false;">
+      <form id="advanceForm">
         <div class="modal-body">
           <input type="hidden" id="advanceId">
 
@@ -696,13 +696,13 @@
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Application Scripts with Cache Busters -->
-  <script src="js/auth.js?v=5.5"></script>
-  <script src="js/api.js?v=5.5"></script>
-  <script src="js/transport.js?v=5.5"></script>
-  <script src="js/advances.js?v=5.5"></script>
-  <script src="js/excel.js?v=5.5"></script>
-  <script src="js/sheetview.js?v=5.5"></script>
-  <script src="js/app.js?v=5.5"></script>
+  <script src="js/auth.js?v=5.8"></script>
+  <script src="js/api.js?v=5.8"></script>
+  <script src="js/transport.js?v=5.8"></script>
+  <script src="js/advances.js?v=5.8"></script>
+  <script src="js/excel.js?v=5.8"></script>
+  <script src="js/sheetview.js?v=5.8"></script>
+  <script src="js/app.js?v=5.8"></script>
 </body>
 </html>
 

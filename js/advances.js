@@ -189,34 +189,38 @@ const AdvancesModule = {
     document.getElementById('advanceModal').classList.remove('active');
   },
 
+  isSubmitting: false,
   async handleFormSubmit(e) {
-    e.preventDefault();
-    const user = AuthService.getCurrentUser();
-    const id = document.getElementById('advanceId').value;
-    const amount = Number(document.getElementById('advanceAmount').value) || 0;
-    if (amount <= 0) {
-      alert("Please enter a valid advance amount");
-      return;
-    }
-
-    const secSelect = document.getElementById('advanceSection');
-    const existing = id ? this.advances.find(a => a.id === id) : null;
-    const chosenSection = secSelect ? secSelect.value : (existing ? (existing.section || 'Section 2') : 'Section 2');
-    const dateVal = document.getElementById('advanceDate').value;
-    const formattedDate = window.formatDateForDisplay(dateVal);
-
-    const advance = {
-      id: id || undefined,
-      date: formattedDate,
-      amount: amount,
-      description: document.getElementById('advanceDescription').value.trim(),
-      note: document.getElementById('advanceDescription').value.trim(),
-      reference: document.getElementById('advanceReference').value.trim(),
-      section: chosenSection,
-      createdBy: existing?.createdBy || (user ? user.role : 'Admin')
-    };
+    if (e && e.preventDefault) e.preventDefault();
+    if (this.isSubmitting) return;
+    this.isSubmitting = true;
 
     try {
+      const user = AuthService.getCurrentUser();
+      const id = document.getElementById('advanceId').value;
+      const amount = Number(document.getElementById('advanceAmount').value) || 0;
+      if (amount <= 0) {
+        alert("Please enter a valid advance amount");
+        return;
+      }
+
+      const secSelect = document.getElementById('advanceSection');
+      const existing = id ? this.advances.find(a => a.id === id) : null;
+      const chosenSection = secSelect ? secSelect.value : (existing ? (existing.section || 'Section 2') : 'Section 2');
+      const dateVal = document.getElementById('advanceDate').value;
+      const formattedDate = window.formatDateForDisplay(dateVal);
+
+      const advance = {
+        id: id || undefined,
+        date: formattedDate,
+        amount: amount,
+        description: document.getElementById('advanceDescription').value.trim(),
+        note: document.getElementById('advanceDescription').value.trim(),
+        reference: document.getElementById('advanceReference').value.trim(),
+        section: chosenSection,
+        createdBy: existing?.createdBy || (user ? user.role : 'Admin')
+      };
+
       await ApiService.saveAdvance(advance);
       this.closeModal();
       window.App.showToast(id ? "Advance updated successfully!" : "Advance added successfully!", "success");
@@ -224,6 +228,8 @@ const AdvancesModule = {
     } catch (err) {
       console.error(err);
       window.App.showToast("Failed to save advance record.", "error");
+    } finally {
+      this.isSubmitting = false;
     }
   },
 

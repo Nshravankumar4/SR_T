@@ -94,7 +94,12 @@ const TransportModule = {
       const badgeBg = isS1 ? '#f1f5f9' : (isS2 ? '#dbeafe' : '#fef3c7');
       const badgeColor = isS1 ? '#475569' : (isS2 ? '#1e40af' : '#92400e');
 
-      const badgeClass = r.status === 'Paid' ? 'badge-success' : (r.status === 'Partially Paid' ? 'badge-warning' : 'badge-danger');
+      const status = r.status || (
+        (Number(r.toPay) > 0 && Number(r.balance) <= 0) ? 'Paid' :
+        (Number(r.paid) > 0 && Number(r.balance) > 0) ? 'Partially Paid' :
+        (Number(r.amount) > 0 && Number(r.toPay) === 0) ? 'Billed' : 'Pending'
+      );
+      const badgeClass = status === 'Paid' ? 'badge-success' : (status === 'Partially Paid' ? 'badge-warning' : (status === 'Billed' ? 'badge-primary' : 'badge-danger'));
       const formattedAmount = (Number(r.amount) || 0).toLocaleString('en-IN');
       const formattedToPay = (Number(r.toPay) || 0).toLocaleString('en-IN');
       const formattedPaid = (Number(r.paid) || 0).toLocaleString('en-IN');
@@ -116,7 +121,7 @@ const TransportModule = {
           <td><strong>₹${formattedToPay}</strong></td>
           <td style="color: var(--success);">₹${formattedPaid}</td>
           <td style="color: ${r.balance > 0 ? 'var(--danger)' : 'var(--text-muted)'}; font-weight: bold;">₹${formattedBalance}</td>
-          <td><span class="badge ${badgeClass}">${r.status}</span></td>
+          <td><span class="badge ${badgeClass}">${status}</span></td>
           <td>
             ${r.note ? (
               r.note.toLowerCase().includes('shortage') 
@@ -249,52 +254,58 @@ const TransportModule = {
     document.getElementById('transportBalance').value = 0;
   },
 
+  isSubmitting: false,
   async handleFormSubmit(e) {
-    e.preventDefault();
-    const user = AuthService.getCurrentUser();
-    const id = document.getElementById('transportId').value;
-    const toPay = Number(document.getElementById('transportToPay').value) || 0;
-    const paidInputVal = Number(document.getElementById('transportPaid').value) || 0;
-    const balance = Math.max(0, toPay - paidInputVal);
-
-    let status = 'Pending';
-    let paid = paidInputVal;
-    if (toPay > 0 && balance <= 0) {
-      status = 'Paid';
-      paid = 'Paid';
-    } else if (paid > 0 && balance > 0) {
-      status = 'Partially Paid';
-    }
-
-    // Get section from section dropdown
-    const secSelect = document.getElementById('transportSection');
-    const existing = id ? this.records.find(r => r.id === id) : null;
-    const chosenSection = secSelect ? secSelect.value : (existing ? (existing.section || 'Section 2') : 'Section 2');
-    const dateVal = document.getElementById('transportDate').value;
-    const formattedDate = window.formatDateForDisplay(dateVal);
-
-    const record = {
-      id: id || undefined,
-      slNo: Number(document.getElementById('transportSlNo').value) || 1,
-      lrNo: document.getElementById('transportLrNo').value.trim(),
-      dcNo: document.getElementById('transportDcNo').value.trim(),
-      date: formattedDate,
-      vehicleNumber: document.getElementById('transportVehicle').value.trim().toUpperCase(),
-      fromCity: document.getElementById('transportFrom').value.trim(),
-      toCity: document.getElementById('transportTo').value.trim(),
-      quantity: document.getElementById('transportQuantity').value.trim(),
-      mTax: document.getElementById('transportMTax').value.trim(),
-      amount: Number(document.getElementById('transportAmount').value) || 0,
-      toPay,
-      paid,
-      balance,
-      status,
-      note: document.getElementById('transportNote').value.trim(),
-      section: chosenSection,
-      createdBy: existing?.createdBy || (user ? user.role : 'User')
-    };
+    if (e && e.preventDefault) e.preventDefault();
+    if (this.isSubmitting) return;
+    this.isSubmitting = true;
 
     try {
+      const user = AuthService.getCurrentUser();
+      const id = document.getElementById('transportId').value;
+      const toPay = Number(document.getElementById('transportToPay').value) || 0;
+      const paidInputVal = Number(document.getElementById('transportPaid').value) || 0;
+      const balance = Math.max(0, toPay - paidInputVal);
+
+      let status = 'Pending';
+      let paid = paidInputVal;
+      if (toPay > 0 && balance <= 0) {
+        status = 'Paid';
+        paid = 'Paid';
+      } else if (paid > 0 && balance > 0) {
+        status = 'Partially Paid';
+      } else if (toPay === 0 && Number(document.getElementById('transportAmount').value) > 0) {
+        status = 'Billed';
+      }
+
+      // Get section from section dropdown
+      const secSelect = document.getElementById('transportSection');
+      const existing = id ? this.records.find(r => r.id === id) : null;
+      const chosenSection = secSelect ? secSelect.value : (existing ? (existing.section || 'Section 2') : 'Section 2');
+      const dateVal = document.getElementById('transportDate').value;
+      const formattedDate = window.formatDateForDisplay(dateVal);
+
+      const record = {
+        id: id || undefined,
+        slNo: Number(document.getElementById('transportSlNo').value) || 1,
+        lrNo: document.getElementById('transportLrNo').value.trim(),
+        dcNo: document.getElementById('transportDcNo').value.trim(),
+        date: formattedDate,
+        vehicleNumber: document.getElementById('transportVehicle').value.trim().toUpperCase(),
+        fromCity: document.getElementById('transportFrom').value.trim(),
+        toCity: document.getElementById('transportTo').value.trim(),
+        quantity: document.getElementById('transportQuantity').value.trim(),
+        mTax: document.getElementById('transportMTax').value.trim(),
+        amount: Number(document.getElementById('transportAmount').value) || 0,
+        toPay,
+        paid,
+        balance,
+        status,
+        note: document.getElementById('transportNote').value.trim(),
+        section: chosenSection,
+        createdBy: existing?.createdBy || (user ? user.role : 'User')
+      };
+
       await ApiService.saveTransport(record);
       this.closeModal();
       window.App.showToast("Transport record saved successfully!", "success");
@@ -302,6 +313,8 @@ const TransportModule = {
     } catch (err) {
       console.error(err);
       window.App.showToast("Error saving record.", "error");
+    } finally {
+      this.isSubmitting = false;
     }
   },
 

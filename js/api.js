@@ -506,6 +506,7 @@ const REAL_SHINEX_TRANSPORT = [
         "toPay":  0,
         "paid":  "",
         "balance":  0,
+        "status": "Billed",
         "note":  "one days halting at Unloading point",
         "section":  "NEW August to September 2026"
     },
@@ -524,6 +525,7 @@ const REAL_SHINEX_TRANSPORT = [
         "toPay":  0,
         "paid":  "",
         "balance":  0,
+        "status": "Billed",
         "note":  "one days halting at Unloading point",
         "section":  "NEW August to September 2026"
     },
@@ -542,6 +544,7 @@ const REAL_SHINEX_TRANSPORT = [
         "toPay":  0,
         "paid":  "",
         "balance":  0,
+        "status": "Billed",
         "note":  "halting at 2 days loading pnt \u00262 days  Unloading pnt",
         "section":  "NEW August to September 2026"
     },
@@ -560,6 +563,7 @@ const REAL_SHINEX_TRANSPORT = [
         "toPay":  0,
         "paid":  "",
         "balance":  0,
+        "status": "Billed",
         "note":  "",
         "section":  "NEW August to September 2026"
     },
@@ -578,6 +582,7 @@ const REAL_SHINEX_TRANSPORT = [
         "toPay":  0,
         "paid":  "",
         "balance":  0,
+        "status": "Billed",
         "note":  "one days halting at loading point",
         "section":  "NEW August to September 2026"
     },
@@ -596,6 +601,26 @@ const REAL_SHINEX_TRANSPORT = [
         "toPay":  0,
         "paid":  "",
         "balance":  0,
+        "status": "Billed",
+        "note":  "",
+        "section":  "NEW August to September 2026"
+    },
+    {
+        "id":  "TR-S2-7",
+        "slNo":  7,
+        "lrNo":  "210/211",
+        "dcNo":  "1418/1419",
+        "date":  "23-09-2026",
+        "vehicleNumber":  "TS15UE1122",
+        "fromCity":  "Medchal",
+        "toCity":  "Araria & Purnia",
+        "quantity":  "30MT",
+        "mTax":  "",
+        "amount":  "155000",
+        "toPay":  0,
+        "paid":  "",
+        "balance":  0,
+        "status":  "Pending",
         "note":  "",
         "section":  "NEW August to September 2026"
     }
@@ -1115,12 +1140,38 @@ const ApiService = {
     if (!transport || !Array.isArray(transport) || transport.length === 0) {
       transport = REAL_SHINEX_TRANSPORT;
       localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(REAL_SHINEX_TRANSPORT));
+    } else {
+      const deduped = this.deduplicateTransportRecords(transport);
+      if (deduped.length !== transport.length) {
+        transport = deduped;
+        localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(transport));
+      }
     }
     if (!advances || !Array.isArray(advances) || advances.length === 0) {
       advances = REAL_SHINEX_ADVANCES;
       localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(REAL_SHINEX_ADVANCES));
     }
     return { transport, advances, source: 'local' };
+  },
+
+  deduplicateTransportRecords(trips) {
+    if (!Array.isArray(trips)) return [];
+    const seen = new Set();
+    return trips.filter(t => {
+      const sec = window.getTripSection ? window.getTripSection(t) : (t.section || '');
+      const lr = String(t.lrNo || '').trim();
+      const dc = String(t.dcNo || '').trim();
+      const veh = String(t.vehicleNumber || '').trim().toUpperCase();
+      const dt = String(t.date || '').trim();
+      const amt = Number(t.amount) || 0;
+      const key = `${sec}::${t.slNo}::${lr}::${dc}::${veh}::${dt}::${amt}`;
+      if (seen.has(key)) {
+        console.warn("Removing duplicate trip record:", t);
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
   },
 
   // Save or update transport record
@@ -1135,6 +1186,7 @@ const ApiService = {
     let status = record.status || 'Pending';
     if (balance <= 0 && toPay > 0) status = 'Paid';
     else if (paid > 0 && balance > 0) status = 'Partially Paid';
+    else if (toPay === 0 && Number(record.amount) > 0) status = 'Billed';
 
     const section = window.normalizeSection(record.section || 'Section 2');
     const id = record.id || ('TR-' + Date.now());
@@ -1159,6 +1211,18 @@ const ApiService = {
       if (idx !== -1) list[idx] = cleanRecord;
       else list.push(cleanRecord);
     } else {
+      // Duplicate prevention: check if an identical trip already exists in this section
+      const isDupe = list.some(item => 
+        window.getTripSection(item) === cleanRecord.section &&
+        String(item.slNo) === String(cleanRecord.slNo) &&
+        String(item.vehicleNumber).toUpperCase() === String(cleanRecord.vehicleNumber).toUpperCase() &&
+        Number(item.amount) === Number(cleanRecord.amount) &&
+        item.date === cleanRecord.date
+      );
+      if (isDupe) {
+        console.warn("Blocked duplicate trip submission:", cleanRecord);
+        return cleanRecord;
+      }
       list.push(cleanRecord);
     }
     localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(list));
@@ -1229,6 +1293,16 @@ const ApiService = {
       if (idx !== -1) list[idx] = cleanAdv;
       else list.unshift(cleanAdv);
     } else {
+      const isDupe = list.some(item =>
+        window.getAdvanceSection(item) === cleanAdv.section &&
+        item.date === cleanAdv.date &&
+        Number(item.amount) === Number(cleanAdv.amount) &&
+        (item.reference || '') === (cleanAdv.reference || '')
+      );
+      if (isDupe) {
+        console.warn("Blocked duplicate advance submission:", cleanAdv);
+        return cleanAdv;
+      }
       list.unshift(cleanAdv);
     }
     localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(list));

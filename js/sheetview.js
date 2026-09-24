@@ -155,7 +155,7 @@ const SheetViewModule = {
         totalPayable = totalAmount + oldBal + toPayBal;
         netOutstanding = totalPayable - advSum;
         const allItems = [...secTrips, ...secAdvs];
-        const defaultDate = (sec.name === 'Section 2') ? '16-09-2026' : (prevOutDate || new Date().toISOString().split('T')[0]);
+        const defaultDate = (sec.name === 'Section 2') ? '23-09-2026' : (prevOutDate || new Date().toISOString().split('T')[0]);
         latestDate = window.getLatestTripDate(allItems, defaultDate);
       }
 
