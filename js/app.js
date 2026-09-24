@@ -9,7 +9,120 @@ window.App = {
 
   async init() {
     this.setupEventListeners();
+    this.initRealtimeSync();
     this.checkAuth();
+  },
+
+  initRealtimeSync() {
+    // 1. BroadcastChannel across all open tabs/windows
+    if (window.shinexSyncChannel) {
+      window.shinexSyncChannel.onmessage = async (event) => {
+        const type = event.data?.type || 'Data updated';
+        console.log("⚡ Real-time broadcast event received:", type);
+        await this.refreshData(true);
+        if (type !== 'sync_ping') {
+          this.showToast(`⚡ Live update: ${type.replace(/_/g, ' ')}`, 'info');
+        }
+      };
+    }
+
+    // 2. Storage event listener fallback (for multi-tab / incognito)
+    window.addEventListener('storage', async (e) => {
+      if (e.key && (e.key.startsWith('transport_') || e.key.includes('auth_'))) {
+        await this.refreshData(true);
+      }
+    });
+
+    // 3. Tab focus auto-sync (when user switches back to this tab)
+    window.addEventListener('focus', () => {
+      this.refreshData(true);
+    });
+
+    // 4. Background cloud polling every 3 seconds if connected (ensures instant visibility)
+    setInterval(() => {
+      if (typeof ApiService !== 'undefined' && ApiService.isCloudConnected() && window.navigator.onLine) {
+        this.refreshData(true);
+      }
+    }, 3000);
+  },
+
+  selectLoginUser(username) {
+    const input = document.getElementById('loginSelectedUser');
+    if (input) input.value = username;
+
+    const btnAdmin = document.getElementById('userBtnAdmin');
+    const btnSarika = document.getElementById('userBtnSarika');
+    const pwdInput = document.getElementById('loginPassword');
+    const hint = document.getElementById('loginPasswordHint');
+
+    if (username.toLowerCase() === 'sarika') {
+      btnAdmin?.classList.remove('active');
+      btnSarika?.classList.add('active');
+      if (pwdInput) pwdInput.placeholder = 'Enter password for Sarika';
+      if (hint) hint.innerHTML = 'Default: Sarika: <code>EShravan@2</code> (or <code>Sarika@123</code>)';
+    } else {
+      btnSarika?.classList.remove('active');
+      btnAdmin?.classList.add('active');
+      if (pwdInput) pwdInput.placeholder = 'Enter password for Admin';
+      if (hint) hint.innerHTML = 'Default: Admin: <code>Shravan@1</code>';
+    }
+
+    if (pwdInput) {
+      pwdInput.value = '';
+      setTimeout(() => pwdInput.focus(), 100);
+    }
+  },
+
+  async syncNow() {
+    this.showToast("🔄 Syncing latest cloud database...", "info");
+    await this.refreshData();
+    this.showToast("✅ Synced with latest database!", "success");
+  },
+
+  openChangePasswordModal() {
+    const user = AuthService.getCurrentUser();
+    if (!user) return;
+    const form = document.getElementById('changePasswordForm');
+    if (form) form.reset();
+    const userTargetEl = document.getElementById('changePwdTargetUser');
+    if (userTargetEl) userTargetEl.innerText = `${user.name} (${user.role})`;
+    const modal = document.getElementById('changePasswordModal');
+    if (modal) modal.classList.add('active');
+    setTimeout(() => {
+      document.getElementById('currentPasswordInput')?.focus();
+    }, 150);
+  },
+
+  closeChangePasswordModal() {
+    document.getElementById('changePasswordModal')?.classList.remove('active');
+  },
+
+  async handleChangePasswordSubmit(e) {
+    e.preventDefault();
+    const user = AuthService.getCurrentUser();
+    if (!user) return;
+
+    const currentPass = document.getElementById('currentPasswordInput').value;
+    const newPass = document.getElementById('newPasswordInput').value;
+    const confirmPass = document.getElementById('confirmPasswordInput').value;
+
+    if (!newPass || newPass.length < 6) {
+      this.showToast("New password must be at least 6 characters long.", "error");
+      return;
+    }
+
+    if (newPass !== confirmPass) {
+      this.showToast("New passwords do not match!", "error");
+      return;
+    }
+
+    const res = await AuthService.updatePassword(user.name, newPass, currentPass);
+    if (res.success) {
+      this.showToast(`✅ ${res.message}`, "success");
+      this.closeChangePasswordModal();
+    } else {
+      this.showToast(res.message, "error");
+    }
   },
 
   checkAuth() {
@@ -21,11 +134,14 @@ window.App = {
       authWrapper.style.display = 'flex';
       mainApp.style.display = 'none';
       document.body.classList.remove('employee-mode');
+
+      const lastUser = localStorage.getItem('last_logged_in_user') || 'Admin';
+      this.selectLoginUser(lastUser);
     } else {
       authWrapper.style.display = 'none';
       mainApp.style.display = 'flex';
       document.getElementById('currentUserName').innerText = user.name;
-      document.getElementById('currentUserRole').innerText = user.role;
+      document.getElementById('currentUserRole').innerText = user.role.toUpperCase();
       
       const dashGreeting = document.getElementById('dashWelcomeTitle');
       if (dashGreeting) {
@@ -60,8 +176,8 @@ window.App = {
     }
   },
 
-  async refreshData() {
-    this.updateCloudStatus('Syncing...', 'online');
+  async refreshData(isSilent = false) {
+    if (!isSilent) this.updateCloudStatus('Syncing...', 'online');
     try {
       const result = await ApiService.fetchAll();
       this.transportRecords = result.transport || [];
@@ -440,10 +556,12 @@ window.App = {
       pwdInput.type = pwdInput.type === 'password' ? 'text' : 'password';
     });
 
-    // Login submit (Username + Password)
+    // Login submit (Select User / Username + Password)
     document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const username = document.getElementById('loginUsername').value.trim();
+      const userSelect = document.getElementById('loginUserSelect');
+      const usernameInput = document.getElementById('loginUsername');
+      const username = userSelect ? userSelect.value.trim() : (usernameInput ? usernameInput.value.trim() : 'Admin1');
       const password = document.getElementById('loginPassword').value;
       const errorMsg = document.getElementById('loginErrorMsg');
       const submitBtn = document.getElementById('loginSubmitBtn');
@@ -455,6 +573,7 @@ window.App = {
       if (submitBtn) submitBtn.disabled = false;
 
       if (res.success) {
+        localStorage.setItem('last_logged_in_user', username);
         this.checkAuth();
         this.showToast(`Welcome back, ${res.user.name}!`, 'success');
       } else {
@@ -465,6 +584,21 @@ window.App = {
           alert(res.message);
         }
       }
+    });
+
+    // Change Password Trigger (Sidebar User Card)
+    document.getElementById('btnOpenChangePassword')?.addEventListener('click', () => {
+      this.openChangePasswordModal();
+    });
+
+    // Change Password Form Submit
+    document.getElementById('changePasswordForm')?.addEventListener('submit', (e) => {
+      this.handleChangePasswordSubmit(e);
+    });
+
+    // Manual Cloud Sync button
+    document.getElementById('manualSyncBtn')?.addEventListener('click', () => {
+      this.syncNow();
     });
 
     // Logout
@@ -540,16 +674,16 @@ window.App = {
       this.refreshData();
     });
 
-    // Passwords update
+    // Passwords update (Admin only settings panel)
     document.getElementById('savePasswordsBtn')?.addEventListener('click', async () => {
       const adminPass = document.getElementById('settingsAdminPass')?.value;
       const empPass = document.getElementById('settingsEmpPass')?.value;
 
       let updated = false;
       if (adminPass && adminPass.trim()) {
-        const res1 = await AuthService.updatePassword('Admin1', adminPass);
+        const res1 = await AuthService.updatePassword('Admin', adminPass);
         if (res1.success) {
-          this.showToast("Admin1 password updated successfully!", "success");
+          this.showToast("Admin password updated successfully!", "success");
           document.getElementById('settingsAdminPass').value = '';
           updated = true;
         } else {
@@ -558,9 +692,9 @@ window.App = {
       }
 
       if (empPass && empPass.trim()) {
-        const res2 = await AuthService.updatePassword('EAdmin2', empPass);
+        const res2 = await AuthService.updatePassword('Sarika', empPass);
         if (res2.success) {
-          this.showToast("EAdmin2 password updated successfully!", "success");
+          this.showToast("Sarika password updated successfully!", "success");
           document.getElementById('settingsEmpPass').value = '';
           updated = true;
         } else {

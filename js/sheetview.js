@@ -225,7 +225,7 @@ const SheetViewModule = {
       const noteStyle = isHalting ? 'background: #ffff00; font-weight: 500;' : '';
 
       rowsHtml += `
-        <tr>
+        <tr onclick="TransportModule.openEditModal('${r.id}')" style="cursor: pointer;" title="✏️ Click to edit trip (LR: ${r.lrNo || r.id})">
           <td class="excel-cell center excel-row-num">${(section.num * 25) + idx + 1}</td>
           <td class="excel-cell center">${r.slNo || (idx + 1)}</td>
           <td class="excel-cell center"><strong>${r.lrNo || ''}</strong></td>
@@ -329,7 +329,7 @@ const SheetViewModule = {
               </thead>
               <tbody>
                 ${advances.map(a => `
-                  <tr>
+                  <tr onclick="AdvancesModule.openEditModal('${a.id}')" style="cursor: pointer;" title="✏️ Click to edit advance">
                     <td class="excel-cell center">${a.date || ''}</td>
                     <td class="excel-cell right font-mono">${(Number(a.amount) || 0).toLocaleString('en-IN')}</td>
                   </tr>
@@ -409,7 +409,7 @@ const SheetViewModule = {
       else if (r.note && (r.note.toLowerCase().includes('halting') || r.note.toLowerCase().includes('cancel'))) noteStyle = 'background: #ffff00;';
 
       rowsHtml += `
-        <tr>
+        <tr onclick="TransportModule.openEditModal('${r.id}')" style="cursor: pointer;" title="✏️ Click to edit trip (LR: ${r.lrNo || r.id})">
           <td class="excel-cell center excel-row-num">${5 + idx}</td>
           <td class="excel-cell center">${r.slNo || (idx + 1)}</td>
           <td class="excel-cell center"><strong>${r.lrNo || ''}</strong></td>
@@ -492,7 +492,7 @@ const SheetViewModule = {
               </thead>
               <tbody>
                 ${advances.map((a, i) => `
-                  <tr>
+                  <tr onclick="AdvancesModule.openEditModal('${a.id}')" style="cursor: pointer;" title="✏️ Click to edit advance">
                     <td class="excel-cell center">${a.date || ''}</td>
                     <td class="excel-cell right font-mono">${(Number(a.amount) || 0) > 0 ? (Number(a.amount) || 0).toLocaleString('en-IN') : ''}</td>
                   </tr>

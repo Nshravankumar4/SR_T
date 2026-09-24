@@ -5,33 +5,29 @@
  * 1. Open Google Sheets (https://sheets.new) and create a new Spreadsheet.
  * 2. Name the spreadsheet "Transport Management Data".
  * 3. Rename the first sheet to "Transport" and create a second sheet named "Advances".
- * 4. In "Transport" sheet, Row 1 Headers:
- *    [ID, SL_NO, LR_NO, DC_NO, Date, Vehicle_Number, From_City, To_City, Quantity, M_TAX, Amount, ToPay, Paid, Balance, Status, Note, Created_By, Created_At]
- * 5. In "Advances" sheet, Row 1 Headers:
- *    [ID, Date, Amount, Description, Reference, Created_By, Created_At]
- * 6. Click "Extensions" -> "Apps Script".
- * 7. Replace all code with this file content.
- * 8. Click "Deploy" -> "New deployment".
- * 9. Select type: "Web app".
- * 10. Execute as: "Me", Who has access: "Anyone".
- * 11. Click "Deploy" and copy the Web App URL into your js/api.js file!
+ * 4. Click "Extensions" -> "Apps Script".
+ * 5. Replace all code with this file content.
+ * 6. Click "Deploy" -> "New deployment".
+ * 7. Select type: "Web app".
+ * 8. Execute as: "Me", Who has access: "Anyone".
+ * 9. Click "Deploy" and copy the Web App URL into your Settings & API tab!
  */
 
 function doGet(e) {
-  var action = e.parameter.action || 'getAll';
+  var action = (e && e.parameter && e.parameter.action) ? e.parameter.action : 'getAll';
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   
   if (action === 'getAll') {
     var transportSheet = getOrCreateSheet(ss, 'Transport', [
       'ID', 'SL_NO', 'LR_NO', 'DC_NO', 'Date', 'Vehicle_Number', 'From_City', 'To_City',
-      'Quantity', 'M_TAX', 'Amount', 'ToPay', 'Paid', 'Balance', 'Status', 'Note', 'Created_By', 'Created_At'
+      'Quantity', 'M_TAX', 'Amount', 'ToPay', 'Paid', 'Balance', 'Status', 'Note', 'Section', 'Created_By', 'Created_At'
     ]);
     var advanceSheet = getOrCreateSheet(ss, 'Advances', [
-      'ID', 'Date', 'Amount', 'Description', 'Reference', 'Created_By', 'Created_At'
+      'ID', 'Date', 'Amount', 'Description', 'Reference', 'Section', 'Created_By', 'Created_At'
     ]);
     
-    var transportData = getRowsData(transportSheet);
-    var advanceData = getRowsData(advanceSheet);
+    var transportData = getTransportRows(transportSheet);
+    var advanceData = getAdvanceRows(advanceSheet);
     
     return jsonResponse({
       success: true,
@@ -72,9 +68,12 @@ function doPost(e) {
 
     if (action === 'addTransport') {
       var sheet = getOrCreateSheet(ss, 'Transport');
-      var item = body.data;
+      var item = body.data || {};
       var newId = item.id || ('TR-' + Utilities.getUuid().substring(0, 8));
       var now = new Date().toISOString();
+      var toPay = Number(item.toPay) || 0;
+      var paid = (item.paid === 'Paid' || String(item.paid).toLowerCase() === 'paid') ? 'Paid' : (Number(item.paid) || 0);
+      var bal = (paid === 'Paid') ? 0 : Math.max(0, toPay - (Number(paid) || 0));
       
       var row = [
         newId,
@@ -88,11 +87,12 @@ function doPost(e) {
         item.quantity || '',
         item.mTax || '',
         Number(item.amount) || 0,
-        Number(item.toPay) || 0,
-        Number(item.paid) || 0,
-        (Number(item.toPay) || 0) - (Number(item.paid) || 0),
-        item.status || 'Pending',
+        toPay,
+        paid,
+        bal,
+        item.status || (bal <= 0 && toPay > 0 ? 'Paid' : (paid > 0 ? 'Partially Paid' : 'Pending')),
         item.note || '',
+        item.section || 'Section 2',
         item.createdBy || 'Unknown',
         now
       ];
@@ -100,10 +100,53 @@ function doPost(e) {
       sheet.appendRow(row);
       return jsonResponse({ success: true, id: newId });
     }
+
+    if (action === 'updateTransport') {
+      var sheet = getOrCreateSheet(ss, 'Transport');
+      var item = body.data || {};
+      var data = sheet.getDataRange().getValues();
+      var targetRow = -1;
+      
+      for (var i = 1; i < data.length; i++) {
+        if (String(data[i][0]) === String(item.id)) {
+          targetRow = i + 1;
+          break;
+        }
+      }
+      
+      if (targetRow > 0) {
+        var toPay = Number(item.toPay) || 0;
+        var paid = (item.paid === 'Paid' || String(item.paid).toLowerCase() === 'paid') ? 'Paid' : (Number(item.paid) || 0);
+        var bal = (paid === 'Paid') ? 0 : Math.max(0, toPay - (Number(paid) || 0));
+        
+        sheet.getRange(targetRow, 2, 1, 16).setValues([[
+          item.slNo || '',
+          item.lrNo || '',
+          item.dcNo || '',
+          item.date || '',
+          item.vehicleNumber || '',
+          item.fromCity || '',
+          item.toCity || '',
+          item.quantity || '',
+          item.mTax || '',
+          Number(item.amount) || 0,
+          toPay,
+          paid,
+          bal,
+          item.status || (bal <= 0 && toPay > 0 ? 'Paid' : (paid > 0 ? 'Partially Paid' : 'Pending')),
+          item.note || '',
+          item.section || 'Section 2'
+        ]]);
+        return jsonResponse({ success: true, message: 'Updated' });
+      } else {
+        // If not found, append
+        return doPost({ postData: { contents: JSON.stringify({ action: 'addTransport', data: item }) } });
+      }
+    }
     
     if (action === 'addAdvance') {
       var sheet = getOrCreateSheet(ss, 'Advances');
-      var item = body.data;
+      var item = body.data || {};
       var newId = item.id || ('ADV-' + Utilities.getUuid().substring(0, 8));
       var now = new Date().toISOString();
       
@@ -113,6 +156,7 @@ function doPost(e) {
         Number(item.amount) || 0,
         item.description || item.note || '',
         item.reference || '',
+        item.section || 'Section 2',
         item.createdBy || 'Unknown',
         now
       ];
@@ -123,7 +167,7 @@ function doPost(e) {
 
     if (action === 'updateAdvance') {
       var sheet = getOrCreateSheet(ss, 'Advances');
-      var item = body.data;
+      var item = body.data || {};
       var data = sheet.getDataRange().getValues();
       var targetRow = -1;
       
@@ -135,53 +179,17 @@ function doPost(e) {
       }
 
       if (targetRow > 0) {
-        sheet.getRange(targetRow, 2, 1, 4).setValues([[
+        sheet.getRange(targetRow, 2, 1, 5).setValues([[
           item.date || '',
           Number(item.amount) || 0,
           item.description || item.note || '',
-          item.reference || ''
+          item.reference || '',
+          item.section || 'Section 2'
         ]]);
         return jsonResponse({ success: true, message: 'Advance updated' });
+      } else {
+        return doPost({ postData: { contents: JSON.stringify({ action: 'addAdvance', data: item }) } });
       }
-      return jsonResponse({ success: false, message: 'Advance not found' });
-    }
-    
-    if (action === 'updateTransport') {
-      var sheet = getOrCreateSheet(ss, 'Transport');
-      var item = body.data;
-      var data = sheet.getDataRange().getValues();
-      var idCol = 0; // ID is first column
-      var targetRow = -1;
-      
-      for (var i = 1; i < data.length; i++) {
-        if (String(data[i][idCol]) === String(item.id)) {
-          targetRow = i + 1;
-          break;
-        }
-      }
-      
-      if (targetRow > 0) {
-        var bal = (Number(item.toPay) || 0) - (Number(item.paid) || 0);
-        sheet.getRange(targetRow, 2, 1, 15).setValues([[
-          item.slNo || '',
-          item.lrNo || '',
-          item.dcNo || '',
-          item.date || '',
-          item.vehicleNumber || '',
-          item.fromCity || '',
-          item.toCity || '',
-          item.quantity || '',
-          item.mTax || '',
-          Number(item.amount) || 0,
-          Number(item.toPay) || 0,
-          Number(item.paid) || 0,
-          bal,
-          item.status || (bal <= 0 ? 'Paid' : (Number(item.paid) > 0 ? 'Partially Paid' : 'Pending')),
-          item.note || ''
-        ]]);
-        return jsonResponse({ success: true, message: 'Updated' });
-      }
-      return jsonResponse({ success: false, message: 'Record not found' });
     }
     
     if (action === 'deleteRecord') {
@@ -216,18 +224,58 @@ function getOrCreateSheet(ss, name, headers) {
   return sheet;
 }
 
-function getRowsData(sheet) {
+function getTransportRows(sheet) {
   var data = sheet.getDataRange().getValues();
   if (data.length <= 1) return [];
-  var headers = data[0];
   var rows = [];
   
   for (var i = 1; i < data.length; i++) {
-    var row = {};
-    for (var j = 0; j < headers.length; j++) {
-      row[headers[j]] = data[i][j];
-    }
-    rows.push(row);
+    var d = data[i];
+    if (!d[0]) continue;
+    rows.push({
+      id: String(d[0]),
+      slNo: Number(d[1]) || (i),
+      lrNo: String(d[2] || ''),
+      dcNo: String(d[3] || ''),
+      date: String(d[4] || ''),
+      vehicleNumber: String(d[5] || '').toUpperCase(),
+      fromCity: String(d[6] || ''),
+      toCity: String(d[7] || ''),
+      quantity: String(d[8] || ''),
+      mTax: String(d[9] || ''),
+      amount: Number(d[10]) || 0,
+      toPay: Number(d[11]) || 0,
+      paid: d[12] === 'Paid' ? 'Paid' : (Number(d[12]) || 0),
+      balance: Number(d[13]) || 0,
+      status: String(d[14] || 'Pending'),
+      note: String(d[15] || ''),
+      section: String(d[16] || 'Section 2'),
+      createdBy: String(d[17] || 'Unknown'),
+      createdAt: String(d[18] || '')
+    });
+  }
+  return rows;
+}
+
+function getAdvanceRows(sheet) {
+  var data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return [];
+  var rows = [];
+  
+  for (var i = 1; i < data.length; i++) {
+    var d = data[i];
+    if (!d[0]) continue;
+    rows.push({
+      id: String(d[0]),
+      date: String(d[1] || ''),
+      amount: Number(d[2]) || 0,
+      description: String(d[3] || 'Advance Payment'),
+      note: String(d[3] || ''),
+      reference: String(d[4] || ''),
+      section: String(d[5] || 'Section 2'),
+      createdBy: String(d[6] || 'Admin'),
+      createdAt: String(d[7] || '')
+    });
   }
   return rows;
 }

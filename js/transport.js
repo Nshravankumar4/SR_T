@@ -194,7 +194,7 @@ const TransportModule = {
     document.getElementById('transportSlNo').value = record.slNo || '';
     document.getElementById('transportLrNo').value = record.lrNo || '';
     document.getElementById('transportDcNo').value = record.dcNo || '';
-    document.getElementById('transportDate').value = record.date || '';
+    document.getElementById('transportDate').value = window.formatDateForInput(record.date);
     document.getElementById('transportVehicle').value = record.vehicleNumber || '';
     document.getElementById('transportFrom').value = record.fromCity || '';
     document.getElementById('transportTo').value = record.toCity || '';
@@ -202,8 +202,11 @@ const TransportModule = {
     document.getElementById('transportMTax').value = record.mTax || '';
     document.getElementById('transportAmount').value = record.amount || '';
     document.getElementById('transportToPay').value = record.toPay || '';
-    document.getElementById('transportPaid').value = record.paid || 0;
-    document.getElementById('transportBalance').value = record.balance || 0;
+
+    const isPaid = record.paid === 'Paid' || record.status === 'Paid' || (Number(record.toPay) > 0 && Number(record.balance) === 0);
+    const paidVal = isPaid ? (Number(record.toPay) || 0) : (Number(record.paid) || 0);
+    document.getElementById('transportPaid').value = paidVal;
+    document.getElementById('transportBalance').value = isPaid ? 0 : (Number(record.balance) || 0);
     document.getElementById('transportNote').value = record.note || '';
 
     document.getElementById('transportModalTitle').innerText = `✏️ Edit Record (LR: ${record.lrNo || id})`;
@@ -226,7 +229,7 @@ const TransportModule = {
       paidInput.value = toPay;
     }
 
-    const bal = toPay - paidVal;
+    const bal = Math.max(0, toPay - paidVal);
     balanceInput.value = bal;
   },
 
@@ -242,24 +245,31 @@ const TransportModule = {
     const user = AuthService.getCurrentUser();
     const id = document.getElementById('transportId').value;
     const toPay = Number(document.getElementById('transportToPay').value) || 0;
-    const paid = Number(document.getElementById('transportPaid').value) || 0;
-    const balance = toPay - paid;
+    const paidInputVal = Number(document.getElementById('transportPaid').value) || 0;
+    const balance = Math.max(0, toPay - paidInputVal);
 
     let status = 'Pending';
-    if (balance <= 0 && toPay > 0) status = 'Paid';
-    else if (paid > 0 && balance > 0) status = 'Partially Paid';
+    let paid = paidInputVal;
+    if (toPay > 0 && balance <= 0) {
+      status = 'Paid';
+      paid = 'Paid';
+    } else if (paid > 0 && balance > 0) {
+      status = 'Partially Paid';
+    }
 
     // Get section from section dropdown
     const secSelect = document.getElementById('transportSection');
     const existing = id ? this.records.find(r => r.id === id) : null;
     const chosenSection = secSelect ? secSelect.value : (existing ? (existing.section || 'Section 2') : 'Section 2');
+    const dateVal = document.getElementById('transportDate').value;
+    const formattedDate = window.formatDateForDisplay(dateVal);
 
     const record = {
       id: id || undefined,
       slNo: Number(document.getElementById('transportSlNo').value) || 1,
       lrNo: document.getElementById('transportLrNo').value.trim(),
       dcNo: document.getElementById('transportDcNo').value.trim(),
-      date: document.getElementById('transportDate').value,
+      date: formattedDate,
       vehicleNumber: document.getElementById('transportVehicle').value.trim().toUpperCase(),
       fromCity: document.getElementById('transportFrom').value.trim(),
       toCity: document.getElementById('transportTo').value.trim(),
@@ -272,7 +282,7 @@ const TransportModule = {
       status,
       note: document.getElementById('transportNote').value.trim(),
       section: chosenSection,
-      createdBy: user ? user.role : 'User'
+      createdBy: existing?.createdBy || (user ? user.role : 'User')
     };
 
     try {

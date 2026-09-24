@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Transport Management & Ledger System</title>
-  <link rel="stylesheet" href="css/styles.css?v=4.4">
+  <link rel="stylesheet" href="css/styles.css?v=4.5">
   <!-- High-Performance Spreadsheet Engines (Local for 100% Offline & Private Repo Support) -->
   <script src="libs/exceljs.min.js?v=3.0"></script>
   <script src="libs/FileSaver.min.js?v=3.0"></script>
@@ -23,20 +23,40 @@
       <div id="loginErrorMsg" style="display: none; color: #b91c1c; background: #fee2e2; border: 1px solid #fca5a5; padding: 0.6rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem; text-align: center;"></div>
 
       <form id="loginForm">
-        <div class="form-group" style="margin-bottom: 1rem;">
-          <label for="loginUsername">Username</label>
-          <input type="text" id="loginUsername" class="form-control" placeholder="Enter Username" required autocomplete="username" autofocus>
+        <!-- Left / Right User Selector -->
+        <div class="user-switch-container">
+          <label class="user-switch-label">Select User Account</label>
+          <div class="user-switch-group">
+            <button type="button" id="userBtnAdmin" class="user-switch-card active" onclick="App.selectLoginUser('Admin')">
+              <div class="user-switch-badge">👑</div>
+              <div class="user-switch-info">
+                <span class="user-switch-name">Admin</span>
+                <span class="user-switch-role">Administrator</span>
+              </div>
+            </button>
+            <button type="button" id="userBtnSarika" class="user-switch-card" onclick="App.selectLoginUser('Sarika')">
+              <div class="user-switch-badge">👩‍💼</div>
+              <div class="user-switch-info">
+                <span class="user-switch-name">Sarika</span>
+                <span class="user-switch-role">Employee</span>
+              </div>
+            </button>
+          </div>
+          <input type="hidden" id="loginSelectedUser" value="Admin">
         </div>
 
         <div class="form-group" style="margin-bottom: 1.25rem;">
-          <label for="loginPassword">Password</label>
+          <label for="loginPassword" style="font-weight: 600; margin-bottom: 0.4rem;">🔑 Password</label>
           <div style="position: relative;">
-            <input type="password" id="loginPassword" class="form-control" placeholder="Enter Password" required autocomplete="current-password" style="padding-right: 2.5rem;">
+            <input type="password" id="loginPassword" class="form-control" placeholder="Enter password for Admin" required autocomplete="current-password" autofocus style="padding-right: 2.5rem; font-size: 1rem;">
             <button type="button" id="togglePasswordBtn" style="position: absolute; right: 0.6rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 0; line-height: 1;" title="Show/Hide Password">👁️</button>
+          </div>
+          <div id="loginPasswordHint" style="margin-top: 0.45rem; font-size: 0.78rem; color: var(--text-muted);">
+            Default: Admin: <code>Shravan@1</code>
           </div>
         </div>
 
-        <button type="submit" id="loginSubmitBtn" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-weight: 600;">Secure Login</button>
+        <button type="submit" id="loginSubmitBtn" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-weight: 600; font-size: 1rem; border-radius: 8px;">🚀 Secure Login</button>
       </form>
     </div>
   </div>
@@ -60,7 +80,10 @@
         <div class="user-avatar">👤</div>
         <div class="user-details">
           <div id="currentUserName" class="user-name">Admin1</div>
-          <div class="user-role-badge"><span id="currentUserRole">ADMIN</span></div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 2px;">
+            <div class="user-role-badge"><span id="currentUserRole">ADMIN</span></div>
+            <button id="btnOpenChangePassword" class="btn-change-pwd" title="Change your password">🔑 Change</button>
+          </div>
         </div>
       </div>
 
@@ -94,9 +117,12 @@
 
       <!-- Sidebar Bottom: Live Status Indicator & Logout -->
       <div class="sidebar-footer">
-        <div class="status-indicator">
-          <span id="cloudStatusDot" class="status-dot online"></span>
-          <span id="cloudStatusText">Online • Live Database Active</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <div class="status-indicator">
+            <span id="cloudStatusDot" class="status-dot online"></span>
+            <span id="cloudStatusText">Online • Live Database Active</span>
+          </div>
+          <button id="manualSyncBtn" class="btn btn-sm btn-secondary" style="font-size: 0.72rem; padding: 2px 7px; color: #cbd5e1; background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15);" title="Sync database now">🔄 Sync</button>
         </div>
         <button id="logoutBtn" class="sidebar-logout-btn">
           <span>🚪</span> Logout
@@ -399,16 +425,16 @@
 
           <h4 style="margin-bottom: 0.5rem; color: var(--primary);">🔐 Update Account Passwords</h4>
           <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-            Change secure passwords for <strong>Admin1</strong> and <strong>EAdmin2</strong> accounts.
+            Change secure passwords for <strong>Admin</strong> and <strong>Sarika</strong> accounts.
           </p>
           <div class="form-grid" style="margin-bottom: 1rem;">
             <div class="form-group">
-              <label for="settingsAdminPass">New Administrator Password (Admin1)</label>
-              <input type="password" id="settingsAdminPass" class="form-control" placeholder="New password for Admin1 (Min 6 chars)">
+              <label for="settingsAdminPass">New Administrator Password (Admin)</label>
+              <input type="password" id="settingsAdminPass" class="form-control" placeholder="New password for Admin (Min 6 chars)">
             </div>
             <div class="form-group">
-              <label for="settingsEmpPass">New Employee Password (EAdmin2)</label>
-              <input type="password" id="settingsEmpPass" class="form-control" placeholder="New password for EAdmin2 (Min 6 chars)">
+              <label for="settingsEmpPass">New Employee Password (Sarika)</label>
+              <input type="password" id="settingsEmpPass" class="form-control" placeholder="New password for Sarika (Min 6 chars)">
             </div>
           </div>
           <button id="savePasswordsBtn" class="btn btn-secondary">💾 Update Passwords Securely</button>
@@ -632,17 +658,50 @@
     </div>
   </div>
 
+  <!-- MODAL: CHANGE PASSWORD (Accessible to both Admin1 and EAdmin2) -->
+  <div id="changePasswordModal" class="modal-backdrop">
+    <div class="modal" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3>🔐 Change Password</h3>
+        <button class="modal-close" onclick="App.closeChangePasswordModal()">✕</button>
+      </div>
+      <form id="changePasswordForm">
+        <div class="modal-body">
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 0.65rem 0.85rem; font-size: 0.85rem; color: #166534; margin-bottom: 1rem;">
+            Changing password for: <strong id="changePwdTargetUser">Admin1</strong>
+          </div>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="currentPasswordInput">Current Password</label>
+            <input type="password" id="currentPasswordInput" class="form-control" placeholder="Enter your current password" required>
+          </div>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="newPasswordInput">New Password</label>
+            <input type="password" id="newPasswordInput" class="form-control" placeholder="New password (min 6 characters)" required minlength="6">
+          </div>
+          <div class="form-group">
+            <label for="confirmPasswordInput">Confirm New Password</label>
+            <input type="password" id="confirmPasswordInput" class="form-control" placeholder="Re-type new password" required minlength="6">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="App.closeChangePasswordModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save New Password</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Application Scripts with Cache Busters -->
-  <script src="js/auth.js?v=4.4"></script>
-  <script src="js/api.js?v=4.4"></script>
-  <script src="js/transport.js?v=4.4"></script>
-  <script src="js/advances.js?v=4.4"></script>
-  <script src="js/excel.js?v=4.4"></script>
-  <script src="js/sheetview.js?v=4.4"></script>
-  <script src="js/app.js?v=4.4"></script>
+  <script src="js/auth.js?v=4.5"></script>
+  <script src="js/api.js?v=4.5"></script>
+  <script src="js/transport.js?v=4.5"></script>
+  <script src="js/advances.js?v=4.5"></script>
+  <script src="js/excel.js?v=4.5"></script>
+  <script src="js/sheetview.js?v=4.5"></script>
+  <script src="js/app.js?v=4.5"></script>
 </body>
 </html>
 

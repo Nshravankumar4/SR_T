@@ -795,6 +795,52 @@ window.getLatestTripDate = function(trips, defaultDate = '16-09-2026') {
   return latest.str || defaultDate;
 };
 
+window.formatDateForInput = function(dStr) {
+  if (!dStr) return '';
+  const s = String(dStr).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (m) {
+    const day = m[1].padStart(2, '0');
+    const month = m[2].padStart(2, '0');
+    const year = m[3];
+    return `${year}-${month}-${day}`;
+  }
+  return s;
+};
+
+window.formatDateForDisplay = function(dStr) {
+  if (!dStr) return '';
+  const s = String(dStr).trim();
+  const m = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (m) {
+    const year = m[1];
+    const month = m[2].padStart(2, '0');
+    const day = m[3].padStart(2, '0');
+    return `${day}-${month}-${year}`;
+  }
+  return s;
+};
+
+// Cross-Tab Real-Time Sync Channel
+window.shinexSyncChannel = (typeof BroadcastChannel !== 'undefined')
+  ? new BroadcastChannel('shinex_sync_channel')
+  : null;
+
+window.broadcastDataChange = function(type, data = {}) {
+  try {
+    if (window.shinexSyncChannel) {
+      window.shinexSyncChannel.postMessage({
+        type: type,
+        data: data,
+        timestamp: Date.now()
+      });
+    }
+  } catch (e) {
+    console.warn("BroadcastChannel error:", e);
+  }
+};
+
 const API_CONFIG = {
   webAppUrl: localStorage.getItem('transport_api_url') || '',
   storageKeyTransport: 'transport_records_shinex_v7',
@@ -811,6 +857,7 @@ const ApiService = {
   setApiUrl(url) {
     localStorage.setItem('transport_api_url', url.trim());
     API_CONFIG.webAppUrl = url.trim();
+    window.broadcastDataChange('settings_updated');
   },
 
   isCloudConnected() {
@@ -873,6 +920,7 @@ const ApiService = {
     sections.push(newSec);
     sections.sort((a, b) => (Number(a.num) || 0) - (Number(b.num) || 0));
     localStorage.setItem(API_CONFIG.storageKeySections, JSON.stringify(sections));
+    window.broadcastDataChange('sections_updated', { section: newSec });
     return newSec;
   },
 
@@ -914,6 +962,7 @@ const ApiService = {
       });
       localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(advs));
     }
+    window.broadcastDataChange('sections_updated', { section: sections[idx] });
     return sections[idx];
   },
 
@@ -929,6 +978,7 @@ const ApiService = {
     let sections = this.getSections();
     sections = sections.filter(s => s.name.toLowerCase() !== normalized.toLowerCase());
     localStorage.setItem(API_CONFIG.storageKeySections, JSON.stringify(sections));
+    window.broadcastDataChange('sections_updated', { sectionName });
     return true;
   },
 
@@ -955,6 +1005,7 @@ const ApiService = {
       { id: 'section-1', name: 'Section 1', title: 'April 2026 to August 2026', num: 1, isArchive: true },
       { id: 'section-2', name: 'Section 2', title: 'NEW August – September 2026', num: 2, isArchive: false }
     ]));
+    window.broadcastDataChange('data_reset');
   },
 
   getOpeningBalance() {
@@ -963,6 +1014,62 @@ const ApiService = {
 
   setOpeningBalance(amount) {
     localStorage.setItem(API_CONFIG.storageKeyOpeningBal, String(Number(amount) || 0));
+    window.broadcastDataChange('opening_balance_updated', { amount: Number(amount) || 0 });
+  },
+
+  normalizeTransportRecord(t) {
+    if (!t) return null;
+    const toPay = Number(t.toPay !== undefined ? t.toPay : t.ToPay) || 0;
+    const paidRaw = t.paid !== undefined ? t.paid : t.Paid;
+    const paid = (paidRaw === 'Paid' || String(paidRaw).toLowerCase() === 'paid') ? 'Paid' : (Number(paidRaw) || 0);
+    const balance = (paid === 'Paid') ? 0 : (Number(t.balance !== undefined ? t.balance : t.Balance) || Math.max(0, toPay - (Number(paid) || 0)));
+    let status = t.status || t.Status;
+    if (!status) {
+      if (balance <= 0 && toPay > 0) status = 'Paid';
+      else if (paid > 0 && balance > 0) status = 'Partially Paid';
+      else status = 'Pending';
+    }
+    const id = String(t.id || t.ID || ('TR-' + Date.now()));
+    const section = window.normalizeSection(t.section || t.Section || (id.includes('S1') ? 'Section 1' : 'Section 2'));
+
+    return {
+      id,
+      slNo: Number(t.slNo !== undefined ? t.slNo : t.SL_NO) || 1,
+      lrNo: String(t.lrNo !== undefined ? t.lrNo : (t.LR_NO || '')),
+      dcNo: String(t.dcNo !== undefined ? t.dcNo : (t.DC_NO || '')),
+      date: window.formatDateForDisplay(t.date || t.Date || ''),
+      vehicleNumber: String(t.vehicleNumber !== undefined ? t.vehicleNumber : (t.Vehicle_Number || '')).toUpperCase(),
+      fromCity: String(t.fromCity !== undefined ? t.fromCity : (t.From_City || '')),
+      toCity: String(t.toCity !== undefined ? t.toCity : (t.To_City || '')),
+      quantity: String(t.quantity !== undefined ? t.quantity : (t.Quantity || '')),
+      mTax: String(t.mTax !== undefined ? t.mTax : (t.M_TAX || '')),
+      amount: Number(t.amount !== undefined ? t.amount : t.Amount) || 0,
+      toPay,
+      paid,
+      balance,
+      status,
+      note: String(t.note !== undefined ? t.note : (t.Note || '')),
+      section,
+      createdBy: String(t.createdBy || t.Created_By || 'User'),
+      createdAt: t.createdAt || t.Created_At || new Date().toISOString()
+    };
+  },
+
+  normalizeAdvanceRecord(a) {
+    if (!a) return null;
+    const id = String(a.id || a.ID || ('ADV-' + Date.now()));
+    const section = window.normalizeSection(a.section || a.Section || window.getAdvanceSection(a));
+    return {
+      id,
+      date: window.formatDateForDisplay(a.date || a.Date || ''),
+      amount: Number(a.amount !== undefined ? a.amount : a.Amount) || 0,
+      description: String(a.description || a.Description || a.note || a.Note || 'Advance Payment'),
+      note: String(a.note || a.Note || a.description || a.Description || ''),
+      reference: String(a.reference || a.Reference || ''),
+      section,
+      createdBy: String(a.createdBy || a.Created_By || 'Admin'),
+      createdAt: a.createdAt || a.Created_At || new Date().toISOString()
+    };
   },
 
   // Fetch all transport and advance records
@@ -973,14 +1080,20 @@ const ApiService = {
         const response = await fetch(`${url}?action=getAll`, { method: 'GET' });
         const result = await response.json();
         if (result.success && result.data) {
-          // Sync cloud to local cache
-          localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(result.data.transport || []));
-          localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(result.data.advances || []));
-          return {
-            transport: result.data.transport || [],
-            advances: result.data.advances || [],
-            source: 'cloud'
-          };
+          const rawTrips = Array.isArray(result.data.transport) ? result.data.transport : [];
+          const rawAdvs = Array.isArray(result.data.advances) ? result.data.advances : [];
+          const cleanTrips = rawTrips.map(t => this.normalizeTransportRecord(t)).filter(Boolean);
+          const cleanAdvs = rawAdvs.map(a => this.normalizeAdvanceRecord(a)).filter(Boolean);
+
+          if (cleanTrips.length > 0 || cleanAdvs.length > 0) {
+            localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(cleanTrips));
+            localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(cleanAdvs));
+            return {
+              transport: cleanTrips,
+              advances: cleanAdvs,
+              source: 'cloud'
+            };
+          }
         }
       } catch (err) {
         console.warn("Cloud fetch failed, using local storage fallback:", err);
@@ -1001,20 +1114,20 @@ const ApiService = {
 
     // Ensure numeric calculations
     const toPay = Number(record.toPay) || 0;
-    const paid = Number(record.paid) || 0;
-    const balance = toPay - paid;
+    const paid = (record.paid === 'Paid' || String(record.paid).toLowerCase() === 'paid') ? 'Paid' : (Number(record.paid) || 0);
+    const balance = (paid === 'Paid') ? 0 : Math.max(0, toPay - (Number(paid) || 0));
     let status = record.status || 'Pending';
     if (balance <= 0 && toPay > 0) status = 'Paid';
     else if (paid > 0 && balance > 0) status = 'Partially Paid';
 
-    // Ensure new records are always Section 2 with S2 ID
-    const section = record.section || 'NEW August to September 2026';
-    const id = record.id || ('TR-S2-' + Date.now());
+    const section = window.normalizeSection(record.section || 'Section 2');
+    const id = record.id || ('TR-' + Date.now());
 
     const cleanRecord = {
       ...record,
       id,
       section,
+      date: window.formatDateForDisplay(record.date),
       toPay,
       paid,
       balance,
@@ -1030,9 +1143,10 @@ const ApiService = {
       if (idx !== -1) list[idx] = cleanRecord;
       else list.push(cleanRecord);
     } else {
-      list.push(cleanRecord); // Append after existing Section 2 records (after 6 comes 7, 8, etc.)
+      list.push(cleanRecord);
     }
     localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(list));
+    window.broadcastDataChange('transport_saved', { record: cleanRecord });
 
     // Post to Google Apps Script if configured
     if (url) {
@@ -1059,6 +1173,7 @@ const ApiService = {
     const list = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyTransport) || '[]');
     const filtered = list.filter(item => item.id !== id);
     localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(filtered));
+    window.broadcastDataChange('transport_deleted', { id });
 
     const url = this.getApiUrl();
     if (url) {
@@ -1082,6 +1197,8 @@ const ApiService = {
     const cleanAdv = {
       ...advance,
       id: advance.id || ('ADV-' + Date.now().toString().slice(-5)),
+      section: window.normalizeSection(advance.section || 'Section 2'),
+      date: window.formatDateForDisplay(advance.date),
       amount: Number(advance.amount) || 0,
       createdAt: advance.createdAt || new Date().toISOString()
     };
@@ -1095,6 +1212,7 @@ const ApiService = {
       list.unshift(cleanAdv);
     }
     localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(list));
+    window.broadcastDataChange('advance_saved', { advance: cleanAdv });
 
     const url = this.getApiUrl();
     if (url) {
@@ -1117,6 +1235,7 @@ const ApiService = {
     const list = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyAdvances) || '[]');
     const filtered = list.filter(item => item.id !== id);
     localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(filtered));
+    window.broadcastDataChange('advance_deleted', { id });
 
     const url = this.getApiUrl();
     if (url) {

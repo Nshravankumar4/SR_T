@@ -180,7 +180,7 @@ const AdvancesModule = {
     this.populateSectionDropdown(window.getAdvanceSection(adv));
     document.getElementById('advanceId').value = adv.id;
     document.getElementById('advanceModalTitle').innerText = '✏️ Edit Advance Payment';
-    document.getElementById('advanceDate').value = adv.date || '';
+    document.getElementById('advanceDate').value = window.formatDateForInput(adv.date);
     document.getElementById('advanceAmount').value = adv.amount || '';
     document.getElementById('advanceDescription').value = adv.description || adv.note || '';
     document.getElementById('advanceReference').value = adv.reference || '';
@@ -204,10 +204,12 @@ const AdvancesModule = {
     const secSelect = document.getElementById('advanceSection');
     const existing = id ? this.advances.find(a => a.id === id) : null;
     const chosenSection = secSelect ? secSelect.value : (existing ? (existing.section || 'Section 2') : 'Section 2');
+    const dateVal = document.getElementById('advanceDate').value;
+    const formattedDate = window.formatDateForDisplay(dateVal);
 
     const advance = {
       id: id || undefined,
-      date: document.getElementById('advanceDate').value,
+      date: formattedDate,
       amount: amount,
       description: document.getElementById('advanceDescription').value.trim(),
       note: document.getElementById('advanceDescription').value.trim(),
