@@ -94,11 +94,13 @@ const TransportModule = {
       const badgeBg = isS1 ? '#f1f5f9' : (isS2 ? '#dbeafe' : '#fef3c7');
       const badgeColor = isS1 ? '#475569' : (isS2 ? '#1e40af' : '#92400e');
 
-      const status = r.status || (
-        (Number(r.toPay) > 0 && Number(r.balance) <= 0) ? 'Paid' :
-        (Number(r.paid) > 0 && Number(r.balance) > 0) ? 'Partially Paid' :
-        (Number(r.amount) > 0 && Number(r.toPay) === 0) ? 'Billed' : 'Pending'
-      );
+      let status = r.status;
+      if (!status || status === 'undefined' || status === 'null') {
+        if (Number(r.toPay) > 0 && Number(r.balance) <= 0) status = 'Paid';
+        else if (Number(r.paid) > 0 && Number(r.balance) > 0) status = 'Partially Paid';
+        else if (Number(r.amount) > 0 && Number(r.toPay) === 0) status = 'Billed';
+        else status = 'Pending';
+      }
       const badgeClass = status === 'Paid' ? 'badge-success' : (status === 'Partially Paid' ? 'badge-warning' : (status === 'Billed' ? 'badge-primary' : 'badge-danger'));
       const formattedAmount = (Number(r.amount) || 0).toLocaleString('en-IN');
       const formattedToPay = (Number(r.toPay) || 0).toLocaleString('en-IN');

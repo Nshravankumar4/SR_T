@@ -148,11 +148,18 @@ window.App = {
       }
       
       const isAdmin = user.role === 'Admin';
-      // Toggle admin-only elements (e.g. changing Admin password)
+      // Toggle admin-only elements (e.g. changing Admin password, Settings & API tab)
       const adminOnlyElements = document.querySelectorAll('.admin-only');
       adminOnlyElements.forEach(el => {
         el.style.display = isAdmin ? '' : 'none';
       });
+
+      if (!isAdmin) {
+        const currentActive = document.querySelector('.nav-tab.active');
+        if (currentActive && currentActive.getAttribute('data-tab') === 'settings') {
+          document.querySelector('.nav-tab[data-tab="dashboard"]')?.click();
+        }
+      }
 
       this.refreshData();
     }
@@ -177,14 +184,19 @@ window.App = {
       }
 
       const isOnline = window.navigator.onLine !== false;
+      const banner = document.getElementById('cloudSyncAlertBanner');
       if (!isOnline) {
         this.updateCloudStatus('Offline (Device Storage)', 'offline');
+        if (banner) banner.style.display = 'none';
       } else if (result.source === 'cloud') {
         this.updateCloudStatus('Online • Cloud Synced (Google Sheets)', 'cloud');
+        if (banner) banner.style.display = 'none';
       } else if (this.cloudSyncWarning) {
         this.updateCloudStatus(this.cloudSyncWarning, 'offline');
+        if (banner) banner.style.display = 'block';
       } else {
         this.updateCloudStatus('Online • Live Database Active', 'online');
+        if (banner) banner.style.display = 'none';
       }
     } catch (err) {
       console.error("refreshData error:", err);
@@ -196,6 +208,63 @@ window.App = {
     if (apiUrlInput) apiUrlInput.value = ApiService.getApiUrl();
     const openBalInput = document.getElementById('settingsOpeningBal');
     if (openBalInput) openBalInput.value = this.openingBalance;
+  },
+
+  async testCloudConnectionUI() {
+    const url = (document.getElementById('settingsApiUrl')?.value || ApiService.getApiUrl() || '').trim();
+    const resultBox = document.getElementById('apiTestResultBox');
+    if (resultBox) {
+      resultBox.style.display = 'block';
+      resultBox.className = 'api-test-box loading';
+      resultBox.innerHTML = '🔄 Testing connection to Google Apps Script cloud database...';
+    }
+
+    const testRes = await ApiService.testConnection(url);
+    if (resultBox) {
+      if (testRes.success) {
+        resultBox.className = 'api-test-box success';
+        resultBox.innerHTML = `
+          <strong>🟢 Cloud Database Online & Multi-User Sync Active!</strong><br>
+          ${testRes.message}<br>
+          <small style="color: #166534;">Admin and Rudra will see live changes synchronously across devices.</small>
+        `;
+        this.cloudSyncWarning = null;
+        this.updateCloudStatus('Online • Cloud Synced (Google Sheets)', 'cloud');
+        const banner = document.getElementById('cloudSyncAlertBanner');
+        if (banner) banner.style.display = 'none';
+      } else {
+        resultBox.className = 'api-test-box error';
+        resultBox.innerHTML = `
+          <strong style="color: #991b1b;">🔴 Multi-User Cloud Sync Notice (Google Permission):</strong><br>
+          <div style="margin: 0.5rem 0; color: #7f1d1d;">${testRes.message}</div>
+          <div style="background: rgba(255,255,255,0.7); border: 1px solid #fca5a5; padding: 0.75rem; border-radius: 6px; font-size: 0.85rem; line-height: 1.6; color: #450a0a;">
+            <strong>Quick 30-Second Fix in Google Sheets:</strong><br>
+            1. Open your Google Spreadsheet ➔ <strong>Extensions</strong> ➔ <strong>Apps Script</strong>.<br>
+            2. Click the blue <strong>Deploy</strong> button (top right) ➔ <strong>Manage deployments</strong>.<br>
+            3. Click the <strong>Pencil icon ✏️</strong> next to the Web App deployment.<br>
+            4. Under <strong>"Who has access"</strong>, change from <em>"Only myself"</em> to <strong>"Anyone"</strong>.<br>
+            5. Click <strong>Deploy</strong>, then return here and click "Test Cloud Connection" again!
+          </div>
+        `;
+      }
+    }
+  },
+
+  openSettingsTab() {
+    const user = typeof AuthService !== 'undefined' ? AuthService.getCurrentUser() : null;
+    if (!user || user.role !== 'Admin') return;
+
+    const tabs = document.querySelectorAll('.nav-tab');
+    tabs.forEach(t => t.classList.remove('active'));
+    const settingsTab = document.querySelector('.nav-tab[data-tab="settings"]');
+    if (settingsTab) settingsTab.classList.add('active');
+
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('tab-settings')?.classList.add('active');
+    
+    setTimeout(() => {
+      this.testCloudConnectionUI();
+    }, 150);
   },
 
   async restoreExactExcelSheetData() {
@@ -625,6 +694,10 @@ window.App = {
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
         const target = tab.dataset.tab;
+        const user = typeof AuthService !== 'undefined' ? AuthService.getCurrentUser() : null;
+        if (target === 'settings' && user && user.role !== 'Admin') {
+          return;
+        }
 
         tabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
@@ -696,6 +769,11 @@ window.App = {
       ApiService.setOpeningBalance(openBal);
       this.showToast("Settings updated successfully!", "success");
       this.refreshData();
+    });
+
+    // Test Cloud Connection button
+    document.getElementById('btnTestApiConnection')?.addEventListener('click', () => {
+      this.testCloudConnectionUI();
     });
 
     // Passwords update (Admin only settings panel)

@@ -28,12 +28,17 @@ function doGet(e) {
     
     var transportData = getTransportRows(transportSheet);
     var advanceData = getAdvanceRows(advanceSheet);
+    var props = PropertiesService.getScriptProperties();
     
     return jsonResponse({
       success: true,
       data: {
         transport: transportData,
         advances: advanceData
+      },
+      auth: {
+        adminPass: props.getProperty('ADMIN_PASS') || 'Shravan',
+        empPass: props.getProperty('EMP_PASS') || 'RudraSarika@2505'
       }
     });
   }
@@ -70,6 +75,23 @@ function doPost(e) {
       } else {
         return jsonResponse({ success: false, message: 'Invalid Username or Password' });
       }
+    }
+
+    if (action === 'updatePassword') {
+      var username = String(body.username || '').trim().toLowerCase();
+      var newPass = String(body.password || '').trim();
+      var props = PropertiesService.getScriptProperties();
+      if (!newPass || newPass.length < 6) {
+        return jsonResponse({ success: false, message: 'Password must be at least 6 characters.' });
+      }
+      if (username === 'admin' || username === 'admin1') {
+        props.setProperty('ADMIN_PASS', newPass);
+        return jsonResponse({ success: true, message: 'Admin password updated live in cloud.' });
+      } else if (username === 'rudra') {
+        props.setProperty('EMP_PASS', newPass);
+        return jsonResponse({ success: true, message: 'Rudra password updated live in cloud.' });
+      }
+      return jsonResponse({ success: false, message: 'User not found.' });
     }
 
     if (action === 'addTransport') {

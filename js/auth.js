@@ -277,7 +277,57 @@ const AuthService = {
     if (typeof window.broadcastDataChange === 'function') {
       window.broadcastDataChange('password_updated', { username: users[key].username });
     }
-    return { success: true, message: `Password for ${users[key].username} updated successfully!` };
+
+    // Push updated password live to Google Apps Script cloud database
+    const apiUrl = typeof ApiService !== 'undefined' ? ApiService.getApiUrl() : '';
+    if (apiUrl) {
+      try {
+        await fetch(apiUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'updatePassword',
+            username: key,
+            password: newPassword.trim()
+          })
+        });
+        console.log(`☁️ Password for ${users[key].username} pushed live to cloud.`);
+      } catch (cloudErr) {
+        console.warn("Could not sync password to cloud:", cloudErr);
+      }
+    }
+
+    return { success: true, message: `Password for ${users[key].username} updated successfully in live system!` };
+  },
+
+  async syncPasswordsFromCloud(authData) {
+    if (!authData) return;
+    await this.init();
+    const users = this.getUsers();
+    let changed = false;
+
+    if (authData.adminPass && users['admin']) {
+      const h = await this.hash(authData.adminPass);
+      if (users['admin'].passwordHash !== h) {
+        users['admin'].passwordHash = h;
+        if (users['admin1']) users['admin1'].passwordHash = h;
+        changed = true;
+      }
+    }
+
+    if (authData.empPass && users['rudra']) {
+      const h = await this.hash(authData.empPass);
+      if (users['rudra'].passwordHash !== h) {
+        users['rudra'].passwordHash = h;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      localStorage.setItem(this.storageKey, JSON.stringify(users));
+      console.log("⚡ Credentials synchronized live from cloud database.");
+    }
   }
 };
 

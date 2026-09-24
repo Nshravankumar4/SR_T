@@ -1107,11 +1107,11 @@ const ApiService = {
     const toPay = Number(t.toPay !== undefined ? t.toPay : t.ToPay) || 0;
     const paidRaw = t.paid !== undefined ? t.paid : t.Paid;
     const paid = (paidRaw === 'Paid' || String(paidRaw).toLowerCase() === 'paid') ? 'Paid' : (Number(paidRaw) || 0);
-    const balance = (paid === 'Paid') ? 0 : (Number(t.balance !== undefined ? t.balance : t.Balance) || Math.max(0, toPay - (Number(paid) || 0)));
     let status = t.status || t.Status;
-    if (!status) {
+    if (!status || status === 'undefined' || status === 'null') {
       if (balance <= 0 && toPay > 0) status = 'Paid';
       else if (paid > 0 && balance > 0) status = 'Partially Paid';
+      else if (toPay === 0 && (Number(t.amount !== undefined ? t.amount : t.Amount) > 0)) status = 'Billed';
       else status = 'Pending';
     }
     const id = String(t.id || t.ID || ('TR-' + Date.now()));
@@ -1176,6 +1176,9 @@ const ApiService = {
 
         if (result && result.success && result.data) {
           if (window.App) window.App.cloudSyncWarning = null;
+          if (result.auth && typeof AuthService !== 'undefined' && AuthService.syncPasswordsFromCloud) {
+            AuthService.syncPasswordsFromCloud(result.auth);
+          }
           const rawTrips = Array.isArray(result.data.transport) ? result.data.transport : [];
           const rawAdvs = Array.isArray(result.data.advances) ? result.data.advances : [];
           const cleanTrips = rawTrips.map(t => this.normalizeTransportRecord(t)).filter(Boolean);
@@ -1202,6 +1205,9 @@ const ApiService = {
         }
       } catch (err) {
         console.warn("Cloud fetch failed, using local storage fallback:", err);
+        if (window.App) {
+          window.App.cloudSyncWarning = "API Permission: Set to 'Anyone' in Apps Script";
+        }
       }
     }
 
@@ -1227,6 +1233,53 @@ const ApiService = {
       localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(REAL_SHINEX_ADVANCES));
     }
     return { transport, advances, source: 'local' };
+  },
+
+  async testConnection(customUrl) {
+    const url = (customUrl || this.getApiUrl() || '').trim();
+    if (!url) {
+      return { success: false, message: "No Google Apps Script Web App URL provided." };
+    }
+    try {
+      const response = await fetch(`${url}?action=getAll`, { method: 'GET' });
+      const text = await response.text();
+      let data = null;
+      try {
+        data = JSON.parse(text);
+      } catch (jsonErr) {
+        if (text.includes('accounts.google.com') || text.includes('ServiceLogin')) {
+          return {
+            success: false,
+            isAuthRedirect: true,
+            message: "Google Apps Script redirected to Google Account Sign-In because 'Who has access' is set to 'Only myself'. Please change it to 'Anyone' in Manage Deployments."
+          };
+        }
+        return {
+          success: false,
+          message: "Invalid response from server: " + text.substring(0, 100)
+        };
+      }
+
+      if (data && data.success) {
+        return {
+          success: true,
+          count: data.data?.transport?.length || 0,
+          advCount: data.data?.advances?.length || 0,
+          message: `Connected successfully! Cloud database has ${data.data?.transport?.length || 0} trips and ${data.data?.advances?.length || 0} advances.`
+        };
+      } else {
+        return {
+          success: false,
+          message: data?.message || "Cloud database returned an error."
+        };
+      }
+    } catch (networkErr) {
+      return {
+        success: false,
+        isAuthRedirect: true,
+        message: "Google Apps Script requires 'Who has access' set to 'Anyone'. Currently Google redirects requests to account login, which is blocked by browser CORS policy."
+      };
+    }
   },
 
   deduplicateTransportRecords(trips) {
@@ -1258,10 +1311,13 @@ const ApiService = {
     const toPay = Number(record.toPay) || 0;
     const paid = (record.paid === 'Paid' || String(record.paid).toLowerCase() === 'paid') ? 'Paid' : (Number(record.paid) || 0);
     const balance = (paid === 'Paid') ? 0 : Math.max(0, toPay - (Number(paid) || 0));
-    let status = record.status || 'Pending';
-    if (balance <= 0 && toPay > 0) status = 'Paid';
-    else if (paid > 0 && balance > 0) status = 'Partially Paid';
-    else if (toPay === 0 && Number(record.amount) > 0) status = 'Billed';
+    let status = record.status;
+    if (!status || status === 'undefined' || status === 'null') {
+      if (balance <= 0 && toPay > 0) status = 'Paid';
+      else if (paid > 0 && balance > 0) status = 'Partially Paid';
+      else if (toPay === 0 && Number(record.amount) > 0) status = 'Billed';
+      else status = 'Pending';
+    }
 
     const section = window.normalizeSection(record.section || 'Section 2');
     const id = record.id || ('TR-' + Date.now());
@@ -1286,6 +1342,14 @@ const ApiService = {
       if (idx !== -1) list[idx] = cleanRecord;
       else list.push(cleanRecord);
     } else {
+      // Ensure unique sequential SL.NO in this section
+      const secTrips = list.filter(item => window.getTripSection(item) === cleanRecord.section);
+      const slExists = secTrips.some(item => Number(item.slNo) === Number(cleanRecord.slNo));
+      if (slExists || !cleanRecord.slNo) {
+        const maxSl = secTrips.length > 0 ? Math.max(...secTrips.map(item => Number(item.slNo) || 0)) : 0;
+        cleanRecord.slNo = maxSl + 1;
+      }
+
       // Duplicate prevention: check if an identical trip already exists in this section
       const isDupe = list.some(item => 
         window.getTripSection(item) === cleanRecord.section &&

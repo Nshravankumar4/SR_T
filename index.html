@@ -106,7 +106,7 @@
           <span class="nav-tab-icon">📥</span>
           <span class="nav-tab-label">Excel Backup & Import</span>
         </button>
-        <button class="nav-tab" data-tab="settings">
+        <button class="nav-tab admin-only" data-tab="settings">
           <span class="nav-tab-icon">⚙️</span>
           <span class="nav-tab-label">Settings & API</span>
         </button>
@@ -139,6 +139,24 @@
       </div>
 
       <main class="main-content-scroll">
+        <!-- Live Cloud Sync Alert Banner (shown when Google Apps Script requires permission fix) -->
+        <div id="cloudSyncAlertBanner" style="display: none; background: #fffbeb; border: 1px solid #fde68a; border-left: 5px solid #f59e0b; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.5rem;">
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+            <div>
+              <div style="font-weight: 700; color: #92400e; font-size: 0.95rem; margin-bottom: 0.25rem;">
+                ⚠️ Multi-User Live Sync Alert (Google Cloud Database Permission)
+              </div>
+              <div style="color: #78350f; font-size: 0.88rem; line-height: 1.5;">
+                To allow <strong>Admin and Rudra</strong> to share and view each other's live changes in real time, your Google Apps Script Web App must be set to <strong>"Who has access: Anyone"</strong>. Currently, Google is requesting account login, preventing instant cross-browser synchronization.
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-shrink: 0; align-items: center;">
+              <button class="btn btn-secondary btn-sm admin-only" onclick="App.openSettingsTab()" style="background: #fff; color: #92400e; border-color: #fcd34d; font-weight: 700;">⚙️ View 30s Fix</button>
+              <button class="btn btn-primary btn-sm admin-only" onclick="App.testCloudConnectionUI()">🔄 Test Connection</button>
+            </div>
+          </div>
+        </div>
+
         <!-- TAB 1: 📊 DASHBOARD (Active by Default) -->
         <section id="tab-dashboard" class="tab-content active">
           <!-- Welcome Hero Banner -->
@@ -452,8 +470,8 @@
         </div>
       </section>
 
-      <!-- TAB 5: SETTINGS & GOOGLE APPS SCRIPT API -->
-      <section id="tab-settings" class="tab-content">
+      <!-- TAB 5: SETTINGS & GOOGLE APPS SCRIPT API (ADMIN ONLY) -->
+      <section id="tab-settings" class="tab-content admin-only">
         <div style="background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 2rem; max-width: 800px; margin: 0 auto;">
           <h3 style="margin-bottom: 0.5rem; color: var(--primary);">⚙️ System Settings & Google Sheet API</h3>
           <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem;">
@@ -472,7 +490,30 @@
             <small>Carry forward balance from previous financial year.</small>
           </div>
 
-          <button id="saveSettingsBtn" class="btn btn-primary" style="margin-bottom: 2rem;">Save Configuration</button>
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+            <button id="saveSettingsBtn" class="btn btn-primary">Save Configuration</button>
+            <button id="btnTestApiConnection" class="btn btn-secondary" style="background: #f8fafc; border-color: #cbd5e1; font-weight: 600;">⚡ Test Cloud Connection & Live Sync</button>
+          </div>
+
+          <!-- Connection Diagnostic Result Box -->
+          <div id="apiTestResultBox" style="display: none; margin-bottom: 1.5rem;"></div>
+
+          <!-- Quick 30-Second Google Apps Script Setup Guide -->
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.25rem; margin-bottom: 2rem;">
+            <div style="font-weight: 700; color: #1e293b; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+              <span>🌐</span> Multi-User Real-Time Sync Setup (Admin & Rudra)
+            </div>
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.75rem; line-height: 1.5;">
+              For live changes made by Admin to instantly show on Rudra's screen (and vice versa), Google Apps Script must be set to <strong>"Anyone"</strong>:
+            </p>
+            <ol style="font-size: 0.85rem; color: #334155; padding-left: 1.25rem; line-height: 1.7; margin: 0;">
+              <li>Open your Google Spreadsheet ➔ Click <strong>Extensions</strong> ➔ <strong>Apps Script</strong>.</li>
+              <li>Click the blue <strong>Deploy</strong> button (top right) ➔ <strong>Manage deployments</strong>.</li>
+              <li>Click the <strong>Pencil icon ✏️</strong> next to the Web App deployment.</li>
+              <li>Under <strong>"Who has access"</strong>, change from <em>"Only myself"</em> to <strong>"Anyone"</strong>.</li>
+              <li>Click <strong>Deploy</strong>! That's it! Both users will now share the exact same live ledger.</li>
+            </ol>
+          </div>
 
           <hr style="border: 0; border-top: 1px solid var(--border); margin: 1.5rem 0;">
 
@@ -748,14 +789,14 @@
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Application Scripts with Cache Busters -->
-  <script src="js/auth.js?v=7.0"></script>
-  <script src="js/api.js?v=7.0"></script>
-  <script src="js/transport.js?v=7.0"></script>
-  <script src="js/advances.js?v=7.0"></script>
-  <script src="js/excel.js?v=7.0"></script>
-  <script src="js/sheetview.js?v=7.0"></script>
-  <script src="js/backup.js?v=7.0"></script>
-  <script src="js/app.js?v=7.0"></script>
+  <script src="js/auth.js?v=8.1"></script>
+  <script src="js/api.js?v=8.1"></script>
+  <script src="js/transport.js?v=8.1"></script>
+  <script src="js/advances.js?v=8.1"></script>
+  <script src="js/excel.js?v=8.1"></script>
+  <script src="js/sheetview.js?v=8.1"></script>
+  <script src="js/backup.js?v=8.1"></script>
+  <script src="js/app.js?v=8.1"></script>
 </body>
 </html>
 
