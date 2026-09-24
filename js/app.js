@@ -181,6 +181,8 @@ window.App = {
         this.updateCloudStatus('Offline (Device Storage)', 'offline');
       } else if (result.source === 'cloud') {
         this.updateCloudStatus('Online • Cloud Synced (Google Sheets)', 'cloud');
+      } else if (this.cloudSyncWarning) {
+        this.updateCloudStatus(this.cloudSyncWarning, 'offline');
       } else {
         this.updateCloudStatus('Online • Live Database Active', 'online');
       }
@@ -196,11 +198,11 @@ window.App = {
     if (openBalInput) openBalInput.value = this.openingBalance;
   },
 
-  restoreExactExcelSheetData() {
-    if (confirm("Reset data to the exact 33 transport records and 15 advances from your Shinex Excel file?")) {
-      ApiService.resetToExactExcelData();
-      this.refreshData();
-      this.showToast("Exact Shinex Excel dataset loaded!", "success");
+  async restoreExactExcelSheetData() {
+    if (confirm("Reset data to the exact 34 transport records (27 in Section 1 + 7 in Section 2) and 15 advances from your Shinex Excel file?")) {
+      await ApiService.resetToExactExcelData();
+      await this.refreshData();
+      this.showToast("Exact 34 Shinex records synchronized across all devices!", "success");
     }
   },
 

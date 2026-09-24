@@ -1054,8 +1054,8 @@ const ApiService = {
     this.getSections(); // Ensures sections are initialized
   },
 
-  // Reset function to restore the exact 33 Shinex records and 15 advances
-  resetToExactExcelData() {
+  // Reset function to restore the exact 34 Shinex records and 15 advances
+  async resetToExactExcelData() {
     localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(REAL_SHINEX_TRANSPORT));
     localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(REAL_SHINEX_ADVANCES));
     localStorage.setItem(API_CONFIG.storageKeyOpeningBal, '120000');
@@ -1064,6 +1064,33 @@ const ApiService = {
       { id: 'section-2', name: 'Section 2', title: 'NEW August – September 2026', num: 2, isArchive: false }
     ]));
     window.broadcastDataChange('data_reset');
+    await this.seedCloudDatabaseWithMasterBaseline();
+  },
+
+  async seedCloudDatabaseWithMasterBaseline() {
+    const url = this.getApiUrl();
+    if (!url) return;
+    try {
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'restoreFullDataset',
+          data: {
+            transport: REAL_SHINEX_TRANSPORT,
+            advances: REAL_SHINEX_ADVANCES,
+            openingBal: 120000,
+            sections: [
+              { id: 'section-1', name: 'Section 1', title: 'April 2026 to August 2026', num: 1, isArchive: true },
+              { id: 'section-2', name: 'Section 2', title: 'NEW August – September 2026', num: 2, isArchive: false }
+            ]
+          }
+        })
+      });
+      console.log("Master Google Sheet synchronized with exact baseline dataset.");
+    } catch (e) {
+      console.warn("Could not push baseline dataset to Google Sheet:", e);
+    }
   },
 
   getOpeningBalance() {
@@ -1136,8 +1163,19 @@ const ApiService = {
     if (url) {
       try {
         const response = await fetch(`${url}?action=getAll`, { method: 'GET' });
-        const result = await response.json();
-        if (result.success && result.data) {
+        const text = await response.text();
+        let result = null;
+        try {
+          result = JSON.parse(text);
+        } catch (jsonErr) {
+          if (text.includes('accounts.google.com') || text.includes('ServiceLogin')) {
+            console.warn("⚠️ Google Apps Script requires deployment permission set to 'Anyone'.");
+            if (window.App) window.App.cloudSyncWarning = "API Permission: Set to 'Anyone' in Apps Script";
+          }
+        }
+
+        if (result && result.success && result.data) {
+          if (window.App) window.App.cloudSyncWarning = null;
           const rawTrips = Array.isArray(result.data.transport) ? result.data.transport : [];
           const rawAdvs = Array.isArray(result.data.advances) ? result.data.advances : [];
           const cleanTrips = rawTrips.map(t => this.normalizeTransportRecord(t)).filter(Boolean);
@@ -1149,6 +1187,15 @@ const ApiService = {
             return {
               transport: cleanTrips,
               advances: cleanAdvs,
+              source: 'cloud'
+            };
+          } else {
+            // Google Sheet is empty! Automatically push initial 34 Shinex trips and 15 advances!
+            console.log("Empty Google Sheet detected. Auto-seeding initial 34 Shinex trips and 15 advances...");
+            await this.seedCloudDatabaseWithMasterBaseline();
+            return {
+              transport: REAL_SHINEX_TRANSPORT,
+              advances: REAL_SHINEX_ADVANCES,
               source: 'cloud'
             };
           }
