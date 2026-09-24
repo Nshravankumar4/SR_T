@@ -310,6 +310,9 @@ const TransportModule = {
       this.closeModal();
       window.App.showToast("Transport record saved successfully!", "success");
       await window.App.refreshData();
+      if (window.BackupModule) {
+        await window.BackupModule.onRecordMutated(`Save Transport LR: ${record.lrNo || record.id}`);
+      }
     } catch (err) {
       console.error(err);
       window.App.showToast("Error saving record.", "error");
@@ -328,6 +331,9 @@ const TransportModule = {
       await ApiService.deleteTransport(id);
       window.App.showToast("Record deleted.", "info");
       await window.App.refreshData();
+      if (window.BackupModule) {
+        await window.BackupModule.onRecordMutated(`Delete Transport: ${id}`);
+      }
     } catch (err) {
       console.error(err);
       window.App.showToast("Error deleting record.", "error");

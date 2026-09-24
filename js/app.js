@@ -10,6 +10,9 @@ window.App = {
   async init() {
     this.setupEventListeners();
     this.initRealtimeSync();
+    if (window.BackupModule) {
+      window.BackupModule.init();
+    }
     this.checkAuth();
   },
 
@@ -168,6 +171,9 @@ window.App = {
       this.updateMetrics();
       if (typeof SheetViewModule !== 'undefined') {
         SheetViewModule.render();
+      }
+      if (typeof BackupModule !== 'undefined') {
+        BackupModule.renderUI();
       }
 
       const isOnline = window.navigator.onLine !== false;

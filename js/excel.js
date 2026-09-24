@@ -5,7 +5,7 @@
  */
 
 const ExcelModule = {
-  async exportToExcel(transportRecords, advanceRecords, openingBalance, sectionFilter = null) {
+  async exportToExcel(transportRecords, advanceRecords, openingBalance, sectionFilter = null, customFileName = null) {
     // Robust record resolution from parameters, window.App, or default dataset
     const tRecords = (transportRecords && transportRecords.length > 0)
       ? transportRecords
@@ -692,24 +692,32 @@ const ExcelModule = {
     }
 
       // Determine filename and message based on active selection
-      let fileName = "Shinex_Transport_Full_Report.xlsx";
-      let toastMsg = "Full Excel report downloaded successfully!";
-      if (normalizedFilter === 'SECTION_1') {
-        fileName = "Shinex_Transport_Section_1_Report.xlsx";
-        toastMsg = "Section 1 (Archive) Excel report downloaded successfully!";
-      } else if (normalizedFilter.startsWith('SECTION_')) {
-        const secDisplay = normalizedFilter.replace(/_/g, ' ');
-        fileName = `Shinex_Transport_${normalizedFilter}_Report.xlsx`;
-        toastMsg = `${secDisplay} Excel report downloaded successfully!`;
+      let fileName = customFileName || "Shinex_Transport_Full_Report.xlsx";
+      let toastMsg = customFileName ? `Backup file ${customFileName} generated successfully!` : "Full Excel report downloaded successfully!";
+      if (!customFileName) {
+        if (normalizedFilter === 'SECTION_1') {
+          fileName = "Shinex_Transport_Section_1_Report.xlsx";
+          toastMsg = "Section 1 (Archive) Excel report downloaded successfully!";
+        } else if (normalizedFilter.startsWith('SECTION_')) {
+          const secDisplay = normalizedFilter.replace(/_/g, ' ');
+          fileName = `Shinex_Transport_${normalizedFilter}_Report.xlsx`;
+          toastMsg = `${secDisplay} Excel report downloaded successfully!`;
+        }
       }
 
       // Write buffer and save exact file
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      
+      if (customFileName === '__BLOB__') {
+        return blob;
+      }
+
       this.saveBlob(blob, fileName);
       if (window.App?.showToast) {
         window.App.showToast(toastMsg, "success");
       }
+      return blob;
     } catch (err) {
       console.error("ExcelJS export error, falling back to SheetJS engine:", err);
       return this.exportWithSheetJS(tRecords, aRecords, normalizedFilter);

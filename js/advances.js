@@ -225,6 +225,9 @@ const AdvancesModule = {
       this.closeModal();
       window.App.showToast(id ? "Advance updated successfully!" : "Advance added successfully!", "success");
       await window.App.refreshData();
+      if (window.BackupModule) {
+        await window.BackupModule.onRecordMutated(`Save Advance: ₹${amount.toLocaleString('en-IN')}`);
+      }
     } catch (err) {
       console.error(err);
       window.App.showToast("Failed to save advance record.", "error");
@@ -243,6 +246,9 @@ const AdvancesModule = {
       await ApiService.deleteAdvance(id);
       window.App.showToast("Advance record deleted.", "info");
       await window.App.refreshData();
+      if (window.BackupModule) {
+        await window.BackupModule.onRecordMutated(`Delete Advance: ${id}`);
+      }
     } catch (err) {
       console.error(err);
       window.App.showToast("Failed to delete advance.", "error");

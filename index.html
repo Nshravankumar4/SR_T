@@ -351,31 +351,104 @@
         </div>
       </section>
 
-      <!-- TAB 4: EXCEL BACKUP & IMPORT -->
+      <!-- TAB 4: EXCEL BACKUP & POINT-IN-TIME RECOVERY -->
       <section id="tab-excel" class="tab-content">
-        <div style="background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 2rem; max-width: 800px; margin: 0 auto;">
-          <h3 style="margin-bottom: 0.5rem; color: var(--primary);">📥 Excel Synchronizer</h3>
-          <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem;">
-            Generate exact replica Excel spreadsheets with your transport data, advances, and financial reconciliation.
-          </p>
-
-          <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-            <div style="border: 1px dashed var(--accent); padding: 1.5rem; border-radius: 8px; background: #f0f9ff;">
-              <h4>Export to Excel (.xlsx)</h4>
-              <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.5rem 0 1rem 0;">
-                Downloads an Excel workbook containing 3 structured sheets: <strong>Transport Records</strong>, <strong>Advances</strong>, and <strong>Financial Summary</strong>.
-              </p>
-              <button id="exportExcelBtn" class="btn btn-primary">💾 Download Full Excel Report</button>
+        <div style="background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 2rem; max-width: 900px; margin: 0 auto;">
+          
+          <!-- ☁️ Database Backup & Point-in-Time Recovery Hub -->
+          <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 1.5rem; margin-bottom: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+              <div>
+                <h3 style="color: var(--primary); margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+                  <span>☁️</span> Database Backup & Point-in-Time Recovery
+                </h3>
+                <div style="font-size: 0.88rem; color: var(--text-muted);">
+                  Last Backup: <strong id="backupLastTime" style="color: #0f172a;">24-09-2026 10:45:31 PM</strong>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span id="backupStatusBadge" class="badge badge-success">🟢 Backup Available</span>
+                <button id="btnBackupNow" class="btn btn-primary" onclick="BackupModule.createBackup('Manual Backup', true)" style="font-weight: 700; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  💾 BACKUP FULL DATABASE NOW (.xlsx)
+                </button>
+              </div>
             </div>
 
-            <div style="border: 1px dashed var(--border); padding: 1.5rem; border-radius: 8px;">
-              <h4>Import Excel File</h4>
-              <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.5rem 0 1rem 0;">
-                Select your existing <code>Shinex_2026-08-06 _3-1.xlsx</code> file to batch import historical records directly into your database.
-              </p>
-              <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="form-control" style="max-width: 400px;">
+            <!-- Cloud & Vercel Auto-Backup Banner -->
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+              <div style="font-size: 0.85rem; color: #1e40af;">
+                <strong>☁️ Cloud-Native Auto-Backup Active:</strong> Runs 100% online on Vercel & Google Sheets. Every record submit automatically archives a snapshot in Google Drive and in your browser recovery history.
+              </div>
+              <span class="badge badge-success" style="font-size: 0.75rem;">Vercel + Google Cloud</span>
+            </div>
+
+            <!-- Backup Configurations -->
+            <div style="background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem;">
+              <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 0.6rem; color: #1e293b;">Automatic Backup Settings:</div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.75rem; font-size: 0.85rem; color: #334155;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                  <input type="checkbox" id="chkAutoBackup" checked onchange="BackupModule.toggleAutoBackup(this.checked)">
+                  <strong>Automatic snapshot after every submit</strong>
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                  <input type="checkbox" id="chkAutoDownload" onchange="BackupModule.toggleAutoDownload(this.checked)">
+                  <span>Auto-download dated <code>.xlsx</code> on submit</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                  <input type="checkbox" checked disabled>
+                  <span>Include all sections (S1, S2, S3...)</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                  <input type="checkbox" checked disabled>
+                  <span>Include Advances & Opening Balances</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Backup History Table (Point-in-Time Recovery) -->
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <h4 style="color: var(--primary); font-size: 0.95rem; margin: 0;">📜 Backup Snapshots History (Point-in-Time Recovery)</h4>
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Snapshots are stored securely and recoverable with 1 click</span>
+              </div>
+              <div style="overflow-x: auto; background: #fff; border: 1px solid var(--border); border-radius: 8px;">
+                <table class="table" style="margin-bottom: 0; font-size: 0.84rem;">
+                  <thead>
+                    <tr style="background: #f1f5f9;">
+                      <th>Date & Time</th>
+                      <th>File / Trigger</th>
+                      <th>Records</th>
+                      <th>Net Outstanding</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="backupHistoryTableBody">
+                    <!-- Rendered by BackupModule -->
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
+
+          <!-- Standard Export & Import -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+            <div style="border: 1px dashed var(--accent); padding: 1.25rem; border-radius: 8px; background: #f0f9ff;">
+              <h4 style="font-size: 0.95rem;">Export Complete Excel Workbook</h4>
+              <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0.35rem 0 0.85rem 0;">
+                Downloads 1:1 Shinex Excel replica with all chained sections and advances.
+              </p>
+              <button id="exportExcelBtn" class="btn btn-primary btn-sm">💾 Download Full Excel Report</button>
+            </div>
+
+            <div style="border: 1px dashed var(--border); padding: 1.25rem; border-radius: 8px;">
+              <h4 style="font-size: 0.95rem;">Import Excel Backup File</h4>
+              <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0.35rem 0 0.85rem 0;">
+                Select a historical <code>.xlsx</code> file to batch import records.
+              </p>
+              <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="form-control" style="font-size: 0.82rem;">
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -675,13 +748,14 @@
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Application Scripts with Cache Busters -->
-  <script src="js/auth.js?v=5.8"></script>
-  <script src="js/api.js?v=5.8"></script>
-  <script src="js/transport.js?v=5.8"></script>
-  <script src="js/advances.js?v=5.8"></script>
-  <script src="js/excel.js?v=5.8"></script>
-  <script src="js/sheetview.js?v=5.8"></script>
-  <script src="js/app.js?v=5.8"></script>
+  <script src="js/auth.js?v=6.0"></script>
+  <script src="js/api.js?v=6.0"></script>
+  <script src="js/transport.js?v=6.0"></script>
+  <script src="js/advances.js?v=6.0"></script>
+  <script src="js/excel.js?v=6.0"></script>
+  <script src="js/sheetview.js?v=6.0"></script>
+  <script src="js/backup.js?v=6.0"></script>
+  <script src="js/app.js?v=6.0"></script>
 </body>
 </html>
 

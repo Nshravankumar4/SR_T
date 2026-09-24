@@ -250,14 +250,14 @@ When payment changes, the balance is derived dynamically, triggering full sectio
 - **Dynamic Net Outstanding Status Banner:** Prominent live closing ledger card displaying automatically updating cut-off date (`DD-MM-YYYY Net Outstanding`) and live recalculated outstanding amount.
 - **Multi-Section Financial Reconciliation Cards:** Clear, dedicated chained breakdown cards for Section 1, Section 2, and any newly added fiscal sections with active/archive status badges.
 
-### 3. Exact 1:1 Live Excel Spreadsheet Replica (Tab #4)
+### 3. Exact 1:1 Live Excel Spreadsheet Replica (Tab #3)
 - Visual clone of the physical Shinex workbook directly inside the browser.
 - Displays all 15 operational columns: `SL`, `LR No`, `DC No`, `Date`, `Vehicle No`, `From`, `To`, `Qty`, `M.TAX`, `Amount`, `ToPay`, `Paid`, `Balance`, `Status`, `Note`.
 - **Click-to-Edit:** Click any row in the spreadsheet to edit that record and watch the ledger recalculate live.
 - Display controls: Fullscreen presentation mode (`⛶`) and zoom scaling (`80% Fit`, `90%`, `100%`, `115%`).
 - Toolbar Add buttons for quick entry.
 
-### 4. Section-Divided Advances Ledger (Tab #3)
+### 4. Section-Divided Advances Ledger (Tab #4)
 - Dedicated advance tracker with section filters (`All Sections`, `Section 1`, `Section 2`, `Section 3`...).
 - Search by UTR reference, cheque number, or bank details.
 - Real-time advance statistics bar showing total entry count and aggregate advance disbursement.
@@ -270,6 +270,12 @@ When payment changes, the balance is derived dynamically, triggering full sectio
 - Bundled offline engines in `libs/` (`libs/exceljs.min.js`, `libs/FileSaver.min.js`, `libs/xlsx.full.min.js`).
 - Computes exact cell-by-cell character AutoFit widths (**equivalent to Excel shortcut `Alt + H + O + I`**).
 - Zero external CDN dependencies.
+
+### 6. ☁️ Database Backup & Point-in-Time Recovery Hub (Tab #5)
+- **Automatic Cloud Snapshots:** Every time a trip or advance is added, modified, or deleted in the Vercel app, a point-in-time recovery snapshot is archived.
+- **Server-Side Google Drive Auto-Backup:** `backend/Code.gs` creates an automated timestamped backup copy of the master Google Sheet in your Google Drive folder (`Shinex_Backups/`).
+- **1-Click Point-in-Time Restore on Vercel:** Browse snapshot history with timestamps, record counts, and net outstanding totals, and restore the database to any past state with a single click from any device.
+- **Dated Excel Workbooks:** Download `Shinex_Backup_YYYY-MM-DD_HH-mm-ss.xlsx` with all sections and advances anytime.
 
 ---
 
@@ -287,13 +293,14 @@ D:\Repo\SR_T\
 │   ├── advances.js       # Section-divided advances ledger, filters, and modal handler
 │   ├── sheetview.js      # Exact 1:1 Live Excel sheet replica, click-to-edit rows & zoom controls
 │   ├── excel.js          # True 1:1 Excel export engine with Alt+H+O+I AutoFit column widths
+│   ├── backup.js         # Cloud-native snapshot engine & point-in-time recovery module
 │   └── app.js            # Central application orchestrator, realtime sync listeners & reconciliation
 ├── libs\                 # Bundled offline vendor libraries
 │   ├── exceljs.min.js    # Excel workbook generator & cell formatting engine
 │   ├── FileSaver.min.js  # Cross-browser file download handler
 │   └── xlsx.full.min.js  # SheetJS parser and fallback export engine
 ├── backend\
-│   └── Code.gs           # Google Apps Script backend for master Google Sheets cloud synchronization
+│   └── Code.gs           # Google Apps Script master backend with auto Drive backup and restore API
 ├── .github\
 │   └── workflows\
 │       └── pages.yml     # GitHub Pages static deployment workflow

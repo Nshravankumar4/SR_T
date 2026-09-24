@@ -213,6 +213,53 @@ function doPost(e) {
       return jsonResponse({ success: false, message: 'Record not found' });
     }
     
+    if (action === 'createBackup') {
+      var bRes = createCloudBackup(ss, body.reason || 'Manual');
+      return jsonResponse(bRes);
+    }
+
+    if (action === 'restoreFullDataset') {
+      var rData = body.data || {};
+      var tRows = rData.transport || [];
+      var aRows = rData.advances || [];
+
+      // 1. Restore Transport Sheet
+      var tSheet = getOrCreateSheet(ss, 'Transport', [
+        'ID', 'SL_NO', 'LR_NO', 'DC_NO', 'Date', 'Vehicle_Number', 'From_City', 'To_City',
+        'Quantity', 'M_TAX', 'Amount', 'ToPay', 'Paid', 'Balance', 'Status', 'Note', 'Section', 'Created_By', 'Created_At'
+      ]);
+      tSheet.clearContents();
+      tSheet.appendRow([
+        'ID', 'SL_NO', 'LR_NO', 'DC_NO', 'Date', 'Vehicle_Number', 'From_City', 'To_City',
+        'Quantity', 'M_TAX', 'Amount', 'ToPay', 'Paid', 'Balance', 'Status', 'Note', 'Section', 'Created_By', 'Created_At'
+      ]);
+      tRows.forEach(function(r) {
+        tSheet.appendRow([
+          r.id, r.slNo || '', r.lrNo || '', r.dcNo || '', r.date || '', r.vehicleNumber || '',
+          r.fromCity || '', r.toCity || '', r.quantity || '', r.mTax || '', Number(r.amount) || 0,
+          Number(r.toPay) || 0, r.paid || 0, Number(r.balance) || 0, r.status || 'Pending',
+          r.note || '', r.section || 'Section 2', r.createdBy || 'Admin', new Date().toISOString()
+        ]);
+      });
+
+      // 2. Restore Advances Sheet
+      var aSheet = getOrCreateSheet(ss, 'Advances', [
+        'ID', 'Date', 'Amount', 'Description', 'Reference', 'Section', 'Created_By', 'Created_At'
+      ]);
+      aSheet.clearContents();
+      aSheet.appendRow([
+        'ID', 'Date', 'Amount', 'Description', 'Reference', 'Section', 'Created_By', 'Created_At'
+      ]);
+      aRows.forEach(function(a) {
+        aSheet.appendRow([
+          a.id, a.date || '', Number(a.amount) || 0, a.description || a.note || '',
+          a.reference || '', a.section || 'Section 2', a.createdBy || 'Admin', new Date().toISOString()
+        ]);
+      });
+
+      return jsonResponse({ success: true, message: 'Full dataset restored to Google Sheet' });
+    }
+
     return jsonResponse({ success: false, message: 'Unknown action' });
   } catch (err) {
     return jsonResponse({ success: false, error: err.toString() });
@@ -290,3 +337,33 @@ function jsonResponse(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
 }
+
+function createCloudBackup(ss, reason) {
+  try {
+    var now = new Date();
+    var pad = function(n) { return (n < 10 ? '0' : '') + n; };
+    var timeStr = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + '_' +
+                  pad(now.getHours()) + '-' + pad(now.getMinutes()) + '-' + pad(now.getSeconds());
+    var cleanReason = reason ? String(reason).replace(/[^a-zA-Z0-9_-]/g, '_') : 'Manual';
+    var backupName = 'Shinex_Backup_' + timeStr + '_' + cleanReason;
+
+    try {
+      var folders = DriveApp.getFoldersByName('Shinex_Backups');
+      var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder('Shinex_Backups');
+      var file = DriveApp.getFileById(ss.getId());
+      file.makeCopy(backupName, folder);
+      return { success: true, backupName: backupName, timestamp: timeStr };
+    } catch (driveErr) {
+      // Fallback: create snapshot tab inside the spreadsheet
+      var tabName = 'SNAP_' + timeStr.substring(5, 16).replace(/[^a-zA-Z0-9]/g, '_');
+      if (tabName.length > 28) tabName = tabName.substring(0, 28);
+      var snapSheet = ss.insertSheet(tabName);
+      snapSheet.appendRow(['Backup Timestamp', now.toISOString(), 'Reason', reason]);
+      return { success: true, backupName: tabName, inSheet: true, timestamp: timeStr };
+    }
+  } catch (err) {
+    Logger.log('Cloud backup error: ' + err.toString());
+    return { success: false, error: err.toString() };
+  }
+}
+
