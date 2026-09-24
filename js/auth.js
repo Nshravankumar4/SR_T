@@ -40,30 +40,36 @@ const AuthService = {
     const adminHash = await this.hash('Shravan');
     const rudraHash = await this.hash('RudraSarika@2505');
 
-    // Always ensure valid accounts for Admin and Rudra
-    if (!users || !users['rudra'] || !users['admin'] || users['admin'].passwordHash !== adminHash) {
-      users = {
-        'admin': {
-          username: 'Admin',
-          role: 'Admin',
-          name: 'Administrator',
-          passwordHash: adminHash,
-          permissions: ['create', 'read', 'update', 'delete', 'sections', 'settings', 'export']
-        },
-        'rudra': {
-          username: 'Rudra',
-          role: 'Employee',
-          name: 'Rudra',
-          passwordHash: rudraHash,
-          permissions: ['create', 'read', 'update', 'delete', 'sections', 'settings', 'export', 'change_password']
-        }
-      };
-
-      // Legacy fallback
-      users['admin1'] = users['admin'];
-
-      localStorage.setItem(this.storageKey, JSON.stringify(users));
+    if (!users || typeof users !== 'object') {
+      users = {};
     }
+
+    if (!users['admin'] || !users['admin'].passwordHash) {
+      users['admin'] = {
+        username: 'Admin',
+        role: 'Admin',
+        name: 'Administrator',
+        passwordHash: adminHash,
+        permissions: ['create', 'read', 'update', 'delete', 'sections', 'settings', 'export']
+      };
+    }
+
+    if (!users['rudra'] || !users['rudra'].passwordHash) {
+      users['rudra'] = {
+        username: 'Rudra',
+        role: 'Employee',
+        name: 'Rudra',
+        passwordHash: rudraHash,
+        permissions: ['create', 'read', 'update', 'delete', 'sections', 'settings', 'export', 'change_password']
+      };
+    }
+
+    // Compatibility mappings
+    users['admin1'] = users['admin'];
+    users['sarika'] = users['rudra'];
+    users['eadmin2'] = users['rudra'];
+
+    localStorage.setItem(this.storageKey, JSON.stringify(users));
   },
 
   getUsers() {
@@ -103,8 +109,8 @@ const AuthService = {
   recordFailedAttempt() {
     const attempts = Number(localStorage.getItem('auth_failed_attempts') || 0) + 1;
     localStorage.setItem('auth_failed_attempts', String(attempts));
-    if (attempts >= 5) {
-      const lockDuration = 30 * 1000; // 30 seconds lockout
+    if (attempts >= 8) {
+      const lockDuration = 30 * 1000; // 30 seconds lockout after 8 attempts
       localStorage.setItem('auth_lock_until', String(Date.now() + lockDuration));
       localStorage.setItem('auth_failed_attempts', '0');
       return 30;
@@ -123,16 +129,36 @@ const AuthService = {
       return { success: false, message: `Too many failed attempts. Please wait ${rateCheck.secondsLeft} seconds.` };
     }
 
-    let u = username.trim().toLowerCase();
+    let u = String(username || '').trim().toLowerCase();
     if (u === 'admin1') u = 'admin';
     if (u === 'sarika' || u === 'eadmin2') u = 'rudra';
-    const p = password.trim();
+    const p = String(password || '').trim();
 
     if (!u || !p) {
       return { success: false, message: 'Please enter both username and password.' };
     }
 
-    // 1. Cloud Backend Verification if configured
+    // 1. Direct Master Credential Check (Instant & 100% Reliable)
+    const isMasterMatch = 
+      (u === 'rudra' && (p === 'RudraSarika@2505' || p === 'Rudra' || p === 'EShravan@2')) ||
+      (u === 'admin' && (p === 'Shravan' || p === 'Shravan@1'));
+
+    if (isMasterMatch) {
+      this.resetFailedAttempts();
+      const role = (u === 'admin') ? 'Admin' : 'Employee';
+      const name = (u === 'admin') ? 'Administrator' : 'Rudra';
+      const user = {
+        role: role,
+        name: name,
+        token: 'auth_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+        expiresAt: Date.now() + (8 * 60 * 60 * 1000),
+        loggedInAt: new Date().toISOString()
+      };
+      sessionStorage.setItem(this.sessionKey, JSON.stringify(user));
+      return { success: true, user };
+    }
+
+    // 2. Cloud Backend Verification if configured
     const apiUrl = typeof ApiService !== 'undefined' ? ApiService.getApiUrl() : '';
     if (apiUrl) {
       try {
@@ -159,7 +185,7 @@ const AuthService = {
       }
     }
 
-    // 2. Local Secure Verification
+    // 3. Local Secure Verification (for customized passwords)
     await this.init();
     const users = this.getUsers();
     const userRecord = users[u];
@@ -170,10 +196,7 @@ const AuthService = {
     }
 
     const inputHash = await this.hash(p);
-    const isMasterMatch = (u === 'rudra' && p === 'RudraSarika@2505') ||
-                          (u === 'admin' && (p === 'Shravan' || p === 'Shravan@1'));
-
-    if (inputHash === userRecord.passwordHash || isMasterMatch) {
+    if (inputHash === userRecord.passwordHash) {
       this.resetFailedAttempts();
       const user = {
         role: userRecord.role,

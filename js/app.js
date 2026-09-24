@@ -557,14 +557,22 @@ window.App = {
     // Login submit (Select User / Username + Password)
     document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
       e.preventDefault();
+      
+      // Determine username: check active card first, then hidden input
+      let username = 'Admin';
+      const btnRudra = document.getElementById('userBtnRudra');
+      const btnAdmin = document.getElementById('userBtnAdmin');
       const selectedUserInput = document.getElementById('loginSelectedUser');
-      const userSelect = document.getElementById('loginUserSelect');
-      const usernameInput = document.getElementById('loginUsername');
-      const username = (selectedUserInput && selectedUserInput.value.trim()) || 
-                       (userSelect && userSelect.value.trim()) || 
-                       (usernameInput && usernameInput.value.trim()) || 
-                       'Admin';
-      const password = document.getElementById('loginPassword').value;
+      
+      if (btnRudra && btnRudra.classList.contains('active')) {
+        username = 'Rudra';
+      } else if (btnAdmin && btnAdmin.classList.contains('active')) {
+        username = 'Admin';
+      } else if (selectedUserInput && selectedUserInput.value) {
+        username = selectedUserInput.value.trim();
+      }
+
+      const password = (document.getElementById('loginPassword')?.value || '').trim();
       const errorMsg = document.getElementById('loginErrorMsg');
       const submitBtn = document.getElementById('loginSubmitBtn');
 
