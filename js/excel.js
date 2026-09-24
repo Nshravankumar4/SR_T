@@ -5,7 +5,7 @@
  */
 
 const ExcelModule = {
-  async exportToExcel(transportRecords, advanceRecords, openingBalance) {
+  async exportToExcel(transportRecords, advanceRecords, openingBalance, sectionFilter = null) {
     // Robust record resolution from parameters, window.App, or default dataset
     const tRecords = (transportRecords && transportRecords.length > 0)
       ? transportRecords
@@ -19,10 +19,20 @@ const ExcelModule = {
         ? window.App.advanceRecords
         : (typeof REAL_SHINEX_ADVANCES !== 'undefined' ? REAL_SHINEX_ADVANCES : []);
 
+    let normalizedFilter = 'FULL';
+    if (sectionFilter) {
+      const sf = String(sectionFilter).trim().toUpperCase().replace(/\s+/g, '_');
+      if (sf === 'SECTION_1' || sf.startsWith('SECTION_')) {
+        normalizedFilter = sf;
+      } else if (sf === 'FULL' || sf === 'ALL') {
+        normalizedFilter = 'FULL';
+      }
+    }
+
     // If ExcelJS is not ready or failed to load, seamlessly use SheetJS engine
     if (typeof ExcelJS === 'undefined') {
       console.warn("ExcelJS not available, falling back to SheetJS engine.");
-      return this.exportWithSheetJS(tRecords, aRecords);
+      return this.exportWithSheetJS(tRecords, aRecords, normalizedFilter);
     }
 
     try {
@@ -70,9 +80,25 @@ const ExcelModule = {
       const s1Advances = allSectionsData[0]?.advances || aRecords
         .filter(a => (typeof window !== 'undefined' && window.isSection1Advance ? window.isSection1Advance(a) : a.section !== 'Section 2'));
 
-    // ========================================================
-    // ROW 1: COMPANY TITLE BANNER
-    // ========================================================
+      if (normalizedFilter !== 'FULL' && normalizedFilter !== 'SECTION_1') {
+        const targetSecName = normalizedFilter.replace(/_/g, ' ');
+        const secData = allSectionsData.find(s => s.section && s.section.name.toUpperCase() === targetSecName) || {
+          section: { name: targetSecName, num: 2 },
+          trips: tRecords.filter(r => (typeof window !== 'undefined' && window.getTripSection ? window.getTripSection(r) : r.section || '').toUpperCase() === targetSecName),
+          advances: aRecords.filter(a => (typeof window !== 'undefined' && window.getAdvanceSection ? window.getAdvanceSection(a) : a.section || '').toUpperCase() === targetSecName),
+          totalAmount: 0,
+          oldBal: 0,
+          oldBalDate: '',
+          totalPayable: 0,
+          advSum: 0,
+          netOutstanding: 0,
+          latestDate: ''
+        };
+        this.writeSingleGenericSection(ws, secData, yellowFill, cyanDivider, thinBorder, boldBlack11, regular10, navyHeaderFill, headerFontRed, headerFontWhite, peachFill, cyanOutFill);
+      } else {
+        // ========================================================
+        // ROW 1: COMPANY TITLE BANNER
+        // ========================================================
     ws.mergeCells('E1:I1');
     const titleCell = ws.getCell('E1');
     titleCell.value = 'Shinex UQ Genetic Seeds Pvt.Ltd.,';
@@ -383,9 +409,10 @@ const ExcelModule = {
           latestDate: '16-09-2026'
         }];
 
-    let curStartRow = 53;
+    if (normalizedFilter === 'FULL') {
+      let curStartRow = 53;
 
-    laterSections.forEach((secData) => {
+      laterSections.forEach((secData) => {
       const { section, trips, advances, totalAmount, oldBal, oldBalDate, totalPayable, advSum, netOutstanding, latestDate } = secData;
 
       // 1. Blue divider banner (matching Shinex Excel format)
@@ -600,6 +627,8 @@ const ExcelModule = {
 
       curStartRow = Math.max(r6, advTotRowIndex) + 4;
     });
+    }
+    }
 
     // ========================================================
     // ========================================================
@@ -662,17 +691,258 @@ const ExcelModule = {
       col.width = Math.max(baseW, maxLen + 3);
     }
 
+      // Determine filename and message based on active selection
+      let fileName = "Shinex_Transport_Full_Report.xlsx";
+      let toastMsg = "Full Excel report downloaded successfully!";
+      if (normalizedFilter === 'SECTION_1') {
+        fileName = "Shinex_Transport_Section_1_Report.xlsx";
+        toastMsg = "Section 1 (Archive) Excel report downloaded successfully!";
+      } else if (normalizedFilter.startsWith('SECTION_')) {
+        const secDisplay = normalizedFilter.replace(/_/g, ' ');
+        fileName = `Shinex_Transport_${normalizedFilter}_Report.xlsx`;
+        toastMsg = `${secDisplay} Excel report downloaded successfully!`;
+      }
+
       // Write buffer and save exact file
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      this.saveBlob(blob, "Shinex_2026-08-06 _3-1_Updated.xlsx");
+      this.saveBlob(blob, fileName);
       if (window.App?.showToast) {
-        window.App.showToast("Excel spreadsheet downloaded successfully!", "success");
+        window.App.showToast(toastMsg, "success");
       }
     } catch (err) {
       console.error("ExcelJS export error, falling back to SheetJS engine:", err);
-      return this.exportWithSheetJS(tRecords, aRecords);
+      return this.exportWithSheetJS(tRecords, aRecords, normalizedFilter);
     }
+  },
+
+  writeSingleGenericSection(ws, secData, yellowFill, cyanDivider, thinBorder, boldBlack11, regular10, navyHeaderFill, headerFontRed, headerFontWhite, peachFill, cyanOutFill) {
+    const { section, trips, advances, totalAmount, oldBal, oldBalDate, totalPayable, advSum, netOutstanding, latestDate } = secData;
+
+    // 1. Company Banner
+    ws.mergeCells('E1:I1');
+    const titleCell = ws.getCell('E1');
+    titleCell.value = 'Shinex UQ Genetic Seeds Pvt.Ltd.,';
+    titleCell.font = { name: 'Calibri', size: 13, bold: true };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getRow(1).height = 26;
+    for (let c = 5; c <= 9; c++) ws.getCell(1, c).border = thinBorder;
+
+    // 2. Section Period Banner
+    ws.mergeCells('E2:I2');
+    const periodCell = ws.getCell('E2');
+    periodCell.value = `${section.name}: ${section.title || (section.isArchive ? 'Archive' : 'Active Ledger')}`;
+    periodCell.fill = yellowFill;
+    periodCell.font = boldBlack11;
+    periodCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getRow(2).height = 22;
+    for (let c = 5; c <= 9; c++) ws.getCell(2, c).border = thinBorder;
+
+    // 3. Blue divider banner
+    ws.mergeCells('A3:O3');
+    const divCell = ws.getCell('A3');
+    divCell.value = `${section.name}                                                                        NEW`;
+    divCell.fill = cyanDivider;
+    divCell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+    divCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getRow(3).height = 20;
+
+    // 4. Yellow note row (Before [Date] [Old Balance])
+    ws.getCell('N4').value = `Before ${oldBalDate || '14-08-2026'} ${(Number(oldBal) || 0).toLocaleString('en-IN')}`;
+    ws.getCell('N4').fill = yellowFill;
+    ws.getCell('N4').font = { name: 'Calibri', size: 10, bold: false };
+    ws.getCell('N4').alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getCell('N4').border = thinBorder;
+    ws.getRow(4).height = 20;
+
+    // 5. Headers row
+    const hRow = ws.getRow(5);
+    hRow.values = [
+      'SL.NO', 'LR No', 'DC No', 'Date', 'Vehicle Number', 'From', 'TO',
+      'Quantity', 'M/TAX', 'Amount', 'ToPay', 'ToPay-paid', 'ToPay-Balc', 'Note'
+    ];
+    hRow.height = 25;
+    for (let c = 1; c <= 14; c++) {
+      const cell = hRow.getCell(c);
+      cell.border = thinBorder;
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      if (c === 1) {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
+        cell.font = boldBlack11;
+      } else if ([11, 12, 13].includes(c)) {
+        cell.fill = navyHeaderFill;
+        cell.font = headerFontRed;
+      } else {
+        cell.fill = navyHeaderFill;
+        cell.font = headerFontWhite;
+      }
+    }
+
+    // 6. Data rows
+    let curDataRow = 6;
+    trips.forEach((r, idx) => {
+      const row = ws.getRow(curDataRow);
+      row.height = 20;
+      const amt = Number(r.amount) || 0;
+      const toPay = Number(r.toPay) || 0;
+      const bal = Number(r.balance) || 0;
+
+      let paidVal = r.paid;
+      if (typeof paidVal === 'number' && paidVal > 0) {
+        paidVal = (paidVal === toPay) ? 'Paid' : paidVal.toLocaleString('en-IN');
+      }
+
+      row.values = [
+        r.slNo ? Number(r.slNo) : (idx + 1),
+        r.lrNo || '',
+        r.dcNo || '',
+        r.date || '',
+        r.vehicleNumber || '',
+        r.fromCity || '',
+        r.toCity || '',
+        r.quantity || '',
+        r.mTax || '',
+        amt > 0 ? amt : '',
+        toPay > 0 ? toPay : '',
+        paidVal || '',
+        bal > 0 ? bal : '',
+        r.note || ''
+      ];
+
+      for (let c = 1; c <= 14; c++) {
+        const cell = row.getCell(c);
+        cell.border = thinBorder;
+        cell.font = regular10;
+        if (c === 1) cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        else if ([2, 3, 4, 5, 8, 9].includes(c)) cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        else if ([6, 7, 14].includes(c)) cell.alignment = { horizontal: 'left', vertical: 'middle' };
+        else if ([10, 11, 12, 13].includes(c)) {
+          cell.alignment = { horizontal: 'right', vertical: 'middle' };
+          if (typeof cell.value === 'number') cell.numFmt = '#,##,##0';
+        }
+      }
+
+      if (r.note && String(r.note).toLowerCase().includes('halting')) {
+        row.getCell(14).fill = yellowFill;
+      }
+      curDataRow++;
+    });
+
+    // 7. Total Row
+    const totalRowIndex = Math.max(curDataRow, 14);
+    const secTotalRow = ws.getRow(totalRowIndex);
+    secTotalRow.height = 22;
+    secTotalRow.getCell(1).value = 'Total';
+    secTotalRow.getCell(1).fill = yellowFill;
+    secTotalRow.getCell(1).font = boldBlack11;
+    secTotalRow.getCell(1).border = thinBorder;
+    secTotalRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    secTotalRow.getCell(10).value = totalAmount;
+    secTotalRow.getCell(10).fill = yellowFill;
+    secTotalRow.getCell(10).font = boldBlack11;
+    secTotalRow.getCell(10).border = thinBorder;
+    secTotalRow.getCell(10).numFmt = '#,##,##0';
+    secTotalRow.getCell(10).alignment = { horizontal: 'right', vertical: 'middle' };
+
+    // 8. Advances Table on Left & Reconciliation Box on Right
+    const reconRow = totalRowIndex + 3;
+    const advHRow = ws.getRow(reconRow);
+    advHRow.getCell(1).value = 'Advance Date';
+    advHRow.getCell(1).fill = yellowFill;
+    advHRow.getCell(1).font = boldBlack11;
+    advHRow.getCell(1).border = thinBorder;
+    advHRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    advHRow.getCell(2).value = 'Amount';
+    advHRow.getCell(2).fill = yellowFill;
+    advHRow.getCell(2).font = boldBlack11;
+    advHRow.getCell(2).border = thinBorder;
+    advHRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    let advCursor = reconRow + 1;
+    advances.forEach(adv => {
+      const advR = ws.getRow(advCursor);
+      advR.getCell(1).value = adv.date;
+      advR.getCell(1).border = thinBorder;
+      advR.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+
+      advR.getCell(2).value = Number(adv.amount) || 0;
+      advR.getCell(2).border = thinBorder;
+      advR.getCell(2).numFmt = '#,##,##0';
+      advR.getCell(2).alignment = { horizontal: 'right', vertical: 'middle' };
+      advCursor++;
+    });
+
+    // Reconciliation Box
+    ws.getCell(`H${reconRow}`).value = 'To Billed';
+    ws.getCell(`H${reconRow}`).border = thinBorder;
+    ws.getCell(`H${reconRow}`).font = boldBlack11;
+    ws.getCell(`J${reconRow}`).value = totalAmount;
+    ws.getCell(`J${reconRow}`).fill = peachFill;
+    ws.getCell(`J${reconRow}`).font = boldBlack11;
+    ws.getCell(`J${reconRow}`).border = thinBorder;
+    ws.getCell(`J${reconRow}`).numFmt = '#,##,##0';
+    ws.getCell(`J${reconRow}`).alignment = { horizontal: 'right', vertical: 'middle' };
+
+    const r2 = reconRow + 1;
+    ws.getCell(`G${r2}`).value = oldBalDate || '14-08-2026';
+    ws.getCell(`G${r2}`).border = thinBorder;
+    ws.getCell(`G${r2}`).alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getCell(`H${r2}`).value = 'Old Balance';
+    ws.getCell(`H${r2}`).border = thinBorder;
+    ws.getCell(`H${r2}`).font = boldBlack11;
+    ws.getCell(`J${r2}`).value = oldBal;
+    ws.getCell(`J${r2}`).fill = yellowFill;
+    ws.getCell(`J${r2}`).font = boldBlack11;
+    ws.getCell(`J${r2}`).border = thinBorder;
+    ws.getCell(`J${r2}`).numFmt = '#,##,##0';
+    ws.getCell(`J${r2}`).alignment = { horizontal: 'right', vertical: 'middle' };
+
+    const r3 = reconRow + 2;
+    ws.getCell(`J${r3}`).value = totalPayable;
+    ws.getCell(`J${r3}`).fill = peachFill;
+    ws.getCell(`J${r3}`).font = boldBlack11;
+    ws.getCell(`J${r3}`).border = thinBorder;
+    ws.getCell(`J${r3}`).numFmt = '#,##,##0';
+    ws.getCell(`J${r3}`).alignment = { horizontal: 'right', vertical: 'middle' };
+
+    const r4 = reconRow + 3;
+    ws.getCell(`H${r4}`).value = 'less adv';
+    ws.getCell(`H${r4}`).border = thinBorder;
+    ws.getCell(`H${r4}`).font = boldBlack11;
+    ws.getCell(`J${r4}`).value = advSum;
+    ws.getCell(`J${r4}`).fill = yellowFill;
+    ws.getCell(`J${r4}`).font = boldBlack11;
+    ws.getCell(`J${r4}`).border = thinBorder;
+    ws.getCell(`J${r4}`).numFmt = '#,##,##0';
+    ws.getCell(`J${r4}`).alignment = { horizontal: 'right', vertical: 'middle' };
+
+    const r6 = reconRow + 5;
+    ws.getCell(`G${r6}`).value = `${latestDate} (out standing)`;
+    ws.getCell(`G${r6}`).border = thinBorder;
+    ws.getCell(`G${r6}`).font = boldBlack11;
+    ws.getCell(`J${r6}`).value = netOutstanding;
+    ws.getCell(`J${r6}`).fill = cyanOutFill;
+    ws.getCell(`J${r6}`).font = boldBlack11;
+    ws.getCell(`J${r6}`).border = thinBorder;
+    ws.getCell(`J${r6}`).numFmt = '#,##,##0';
+    ws.getCell(`J${r6}`).alignment = { horizontal: 'right', vertical: 'middle' };
+
+    const advTotRowIndex = Math.max(advCursor, reconRow + 6);
+    const secAdvTotRow = ws.getRow(advTotRowIndex);
+    secAdvTotRow.getCell(1).value = 'Total';
+    secAdvTotRow.getCell(1).fill = yellowFill;
+    secAdvTotRow.getCell(1).font = boldBlack11;
+    secAdvTotRow.getCell(1).border = thinBorder;
+    secAdvTotRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    secAdvTotRow.getCell(2).value = advSum;
+    secAdvTotRow.getCell(2).fill = yellowFill;
+    secAdvTotRow.getCell(2).font = boldBlack11;
+    secAdvTotRow.getCell(2).border = thinBorder;
+    secAdvTotRow.getCell(2).numFmt = '#,##,##0';
+    secAdvTotRow.getCell(2).alignment = { horizontal: 'right', vertical: 'middle' };
   },
 
   saveBlob(blob, filename) {
@@ -705,15 +975,36 @@ const ExcelModule = {
     }
   },
 
-  exportWithSheetJS(tRecords, aRecords) {
+  exportWithSheetJS(tRecords, aRecords, sectionFilter = null) {
     if (typeof XLSX === 'undefined') {
       alert("Spreadsheet engines are loading, please try again in a moment.");
       return;
     }
     try {
+      let filteredT = tRecords;
+      let filteredA = aRecords;
+      let fileName = "Shinex_Transport_Full_Report.xlsx";
+      let toastMsg = "Full Excel report downloaded successfully!";
+
+      if (sectionFilter && sectionFilter !== 'FULL') {
+        const norm = String(sectionFilter).trim().toUpperCase().replace(/\s+/g, '_');
+        if (norm === 'SECTION_1') {
+          filteredT = tRecords.filter(r => (typeof window.isSection1Trip === 'function' ? window.isSection1Trip(r) : !r.section?.includes('NEW')));
+          filteredA = aRecords.filter(a => (typeof window.isSection1Advance === 'function' ? window.isSection1Advance(a) : a.section !== 'Section 2'));
+          fileName = "Shinex_Transport_Section_1_Report.xlsx";
+          toastMsg = "Section 1 (Archive) Excel report downloaded successfully!";
+        } else {
+          const targetName = norm.replace(/_/g, ' ');
+          filteredT = tRecords.filter(r => (window.getTripSection ? window.getTripSection(r) : r.section || '').toUpperCase() === targetName);
+          filteredA = aRecords.filter(a => (window.getAdvanceSection ? window.getAdvanceSection(a) : a.section || '').toUpperCase() === targetName);
+          fileName = `Shinex_Transport_${norm}_Report.xlsx`;
+          toastMsg = `${targetName} Excel report downloaded successfully!`;
+        }
+      }
+
       const wb = XLSX.utils.book_new();
 
-      const wsTransport = XLSX.utils.json_to_sheet(tRecords.map(r => ({
+      const wsTransport = XLSX.utils.json_to_sheet(filteredT.map(r => ({
         "SL.NO": r.slNo,
         "Section": r.section || '',
         "LR No": r.lrNo || '',
@@ -750,7 +1041,7 @@ const ExcelModule = {
       ];
       XLSX.utils.book_append_sheet(wb, wsTransport, "Transport Records");
 
-      const wsAdvances = XLSX.utils.json_to_sheet(aRecords.map((a, i) => ({
+      const wsAdvances = XLSX.utils.json_to_sheet(filteredA.map((a, i) => ({
         "Index": i + 1,
         "Date": a.date || '',
         "Amount": Number(a.amount) || 0,
@@ -766,9 +1057,9 @@ const ExcelModule = {
       ];
       XLSX.utils.book_append_sheet(wb, wsAdvances, "Advances Ledger");
 
-      XLSX.writeFile(wb, "Shinex_2026-08-06 _3-1_Updated.xlsx");
+      XLSX.writeFile(wb, fileName);
       if (window.App?.showToast) {
-        window.App.showToast("Excel report downloaded successfully!", "success");
+        window.App.showToast(toastMsg, "success");
       }
     } catch (e) {
       console.error("SheetJS export failed:", e);

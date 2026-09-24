@@ -53,18 +53,14 @@ window.App = {
     const btnAdmin = document.getElementById('userBtnAdmin');
     const btnRudra = document.getElementById('userBtnRudra') || document.getElementById('userBtnSarika');
     const pwdInput = document.getElementById('loginPassword');
-    const hint = document.getElementById('loginPasswordHint');
-
     if (username.toLowerCase() === 'rudra' || username.toLowerCase() === 'sarika') {
       btnAdmin?.classList.remove('active');
       btnRudra?.classList.add('active');
       if (pwdInput) pwdInput.placeholder = 'Enter password for Rudra';
-      if (hint) hint.innerHTML = 'Default: Rudra: <code>RudraSarika@2505</code>';
     } else {
       btnRudra?.classList.remove('active');
       btnAdmin?.classList.add('active');
       if (pwdInput) pwdInput.placeholder = 'Enter password for Admin';
-      if (hint) hint.innerHTML = 'Default: Admin: <code>Shravan</code>';
     }
 
     if (pwdInput) {
@@ -752,7 +748,7 @@ window.App = {
   }
 };
 
-window.downloadShinexExcel = async function(btn) {
+window.downloadShinexExcel = async function(btn, sectionFilter = null) {
   const originalText = btn ? btn.innerText : '';
   if (btn) {
     btn.innerText = '⏳ Generating Excel...';
@@ -762,7 +758,16 @@ window.downloadShinexExcel = async function(btn) {
     const transport = window.App?.transportRecords || [];
     const advances = window.App?.advanceRecords || [];
     const openBal = window.App?.openingBalance || 120000;
-    await ExcelModule.exportToExcel(transport, advances, openBal);
+
+    // Detect sectionFilter if called from Live Excel Sheet View button
+    let filter = sectionFilter;
+    if (!filter && btn && (btn.id === 'btnDownloadSheetView' || (btn.closest && btn.closest('#tab-sheetview')))) {
+      filter = (typeof SheetViewModule !== 'undefined' && SheetViewModule.activeView)
+        ? SheetViewModule.activeView
+        : 'FULL';
+    }
+
+    await ExcelModule.exportToExcel(transport, advances, openBal, filter);
   } catch (err) {
     console.error("Excel download error:", err);
     alert("Excel Export failed: " + err.message);

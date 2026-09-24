@@ -1170,6 +1170,10 @@ const ApiService = {
 
   // Delete transport record
   async deleteTransport(id) {
+    if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) {
+      alert("Permission denied: Only Admin can delete transport records!");
+      return false;
+    }
     const list = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyTransport) || '[]');
     const filtered = list.filter(item => item.id !== id);
     localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(filtered));
@@ -1232,6 +1236,10 @@ const ApiService = {
 
   // Delete advance record
   async deleteAdvance(id) {
+    if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) {
+      alert("Permission denied: Only Admin can delete advances!");
+      return false;
+    }
     const list = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyAdvances) || '[]');
     const filtered = list.filter(item => item.id !== id);
     localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(filtered));

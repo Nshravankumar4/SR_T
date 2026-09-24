@@ -80,6 +80,7 @@ const TransportModule = {
   renderTable() {
     const tbody = document.getElementById('transportTableBody');
     if (!tbody) return;
+    const isAdmin = typeof AuthService !== 'undefined' && AuthService.isAdmin();
 
     if (this.filteredRecords.length === 0) {
       tbody.innerHTML = `<tr><td colspan="16" style="text-align: center; padding: 2rem; color: var(--text-muted);">No transport records found for this section.</td></tr>`;
@@ -131,7 +132,7 @@ const TransportModule = {
           <td>
             <div style="display: flex; gap: 0.35rem;">
               <button class="btn btn-secondary btn-sm" onclick="TransportModule.openEditModal('${r.id}')" title="Edit">✏️</button>
-              <button class="btn btn-danger btn-sm" onclick="TransportModule.confirmDelete('${r.id}')" title="Delete">🗑️</button>
+              ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="TransportModule.confirmDelete('${r.id}')" title="Delete">🗑️</button>` : ''}
             </div>
           </td>
         </tr>
@@ -297,8 +298,8 @@ const TransportModule = {
   },
 
   async confirmDelete(id) {
-    if (!AuthService.canDeleteRecord()) {
-      alert("Please log in to delete records.");
+    if (!AuthService.isAdmin()) {
+      alert("Permission denied: Only Admin can delete transport records!");
       return;
     }
     if (!confirm("Are you sure you want to delete this transport record?")) return;

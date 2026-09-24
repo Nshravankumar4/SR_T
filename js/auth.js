@@ -60,7 +60,7 @@ const AuthService = {
         role: 'Employee',
         name: 'Rudra',
         passwordHash: rudraHash,
-        permissions: ['create', 'read', 'update', 'delete', 'sections', 'settings', 'export', 'change_password']
+        permissions: ['create', 'read', 'update', 'sections', 'settings', 'export', 'change_password']
       };
     }
 
@@ -231,13 +231,13 @@ const AuthService = {
   },
 
   canDeleteSection() {
-    // Both Admin and Rudra can delete custom sections
-    return Boolean(this.getCurrentUser());
+    // Only Admin can delete sections
+    return this.isAdmin();
   },
 
   canDeleteRecord() {
-    // Both Admin and Rudra can delete records
-    return Boolean(this.getCurrentUser());
+    // Only Admin can delete records
+    return this.isAdmin();
   },
 
   async updatePassword(targetUsername, newPassword, currentPassword = null) {
