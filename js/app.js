@@ -557,9 +557,13 @@ window.App = {
     // Login submit (Select User / Username + Password)
     document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const selectedUserInput = document.getElementById('loginSelectedUser');
       const userSelect = document.getElementById('loginUserSelect');
       const usernameInput = document.getElementById('loginUsername');
-      const username = userSelect ? userSelect.value.trim() : (usernameInput ? usernameInput.value.trim() : 'Admin1');
+      const username = (selectedUserInput && selectedUserInput.value.trim()) || 
+                       (userSelect && userSelect.value.trim()) || 
+                       (usernameInput && usernameInput.value.trim()) || 
+                       'Admin';
       const password = document.getElementById('loginPassword').value;
       const errorMsg = document.getElementById('loginErrorMsg');
       const submitBtn = document.getElementById('loginSubmitBtn');

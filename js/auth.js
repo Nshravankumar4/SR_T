@@ -2,8 +2,8 @@
  * auth.js - Cryptographically Secure Authentication Service
  * 
  * Accounts configured:
- * - Admin:    Username: Admin1   | Password: Shravan@1   (Full Access: Edit/Delete everything)
- * - Employee: Username: EAdmin2  | Password: EShravan@2  (Add/View Access)
+ * - Admin: Username: Admin | Password: Shravan
+ * - Rudra: Username: Rudra | Password: RudraSarika@2505
  */
 
 const AuthService = {
@@ -55,7 +55,7 @@ const AuthService = {
           role: 'Employee',
           name: 'Rudra',
           passwordHash: rudraHash,
-          permissions: ['create', 'read', 'update', 'export', 'change_password']
+          permissions: ['create', 'read', 'update', 'delete', 'sections', 'settings', 'export', 'change_password']
         }
       };
 
