@@ -926,8 +926,8 @@ const ApiService = {
 
   updateSection(oldName, newName, newTitle) {
     const user = typeof AuthService !== 'undefined' ? AuthService.getCurrentUser() : null;
-    if (!user || user.role !== 'Admin') {
-      throw new Error('Permission denied: Only Admin can edit sections!');
+    if (!user) {
+      throw new Error('Please log in to edit sections!');
     }
     const cleanOld = window.normalizeSection(oldName);
     const cleanNew = (newName || '').trim();
@@ -984,10 +984,15 @@ const ApiService = {
 
   // Initialize storage with exact real Shinex data
   initLocalData() {
-    if (!localStorage.getItem(API_CONFIG.storageKeyTransport)) {
+    let storedT = null;
+    let storedA = null;
+    try { storedT = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyTransport)); } catch(e) {}
+    try { storedA = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyAdvances)); } catch(e) {}
+
+    if (!storedT || !Array.isArray(storedT) || storedT.length === 0) {
       localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(REAL_SHINEX_TRANSPORT));
     }
-    if (!localStorage.getItem(API_CONFIG.storageKeyAdvances)) {
+    if (!storedA || !Array.isArray(storedA) || storedA.length === 0) {
       localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(REAL_SHINEX_ADVANCES));
     }
     if (!localStorage.getItem(API_CONFIG.storageKeyOpeningBal)) {
@@ -1102,8 +1107,19 @@ const ApiService = {
 
     // Local fallback
     this.initLocalData();
-    const transport = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyTransport) || '[]');
-    const advances = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyAdvances) || '[]');
+    let transport = [];
+    let advances = [];
+    try { transport = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyTransport) || '[]'); } catch(e) {}
+    try { advances = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyAdvances) || '[]'); } catch(e) {}
+
+    if (!transport || !Array.isArray(transport) || transport.length === 0) {
+      transport = REAL_SHINEX_TRANSPORT;
+      localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(REAL_SHINEX_TRANSPORT));
+    }
+    if (!advances || !Array.isArray(advances) || advances.length === 0) {
+      advances = REAL_SHINEX_ADVANCES;
+      localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(REAL_SHINEX_ADVANCES));
+    }
     return { transport, advances, source: 'local' };
   },
 

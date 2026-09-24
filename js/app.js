@@ -432,6 +432,7 @@ window.App = {
     const trips = this.transportRecords || [];
     const advs = this.advanceRecords || [];
 
+    const isAdmin = typeof AuthService !== 'undefined' && AuthService.isAdmin();
     let html = '';
     sections.forEach(s => {
       const isS1 = s.name === 'Section 1';
@@ -453,11 +454,9 @@ window.App = {
           </div>
           <div style="display: flex; gap: 0.4rem;">
             <button class="btn btn-sm btn-secondary" onclick="App.promptEditSection('${s.name}')" title="Edit Section Title">✏️ Edit</button>
-            ${!isCore ? `
+            ${(!isCore && isAdmin) ? `
               <button class="btn btn-sm btn-danger" onclick="App.confirmDeleteSection('${s.name}')" title="Delete Section">🗑️ Delete</button>
-            ` : `
-              <span style="font-size: 0.75rem; color: #94a3b8; padding: 0.25rem 0.5rem;">Protected</span>
-            `}
+            ` : (isCore ? `<span style="font-size: 0.75rem; color: #94a3b8; padding: 0.25rem 0.5rem;">Protected</span>` : '')}
           </div>
         </div>
       `;
@@ -472,8 +471,8 @@ window.App = {
   },
 
   promptEditSection(sectionName) {
-    if (!AuthService.isAdmin()) {
-      alert("Permission denied: Only Admin can edit sections.");
+    if (!AuthService.getCurrentUser()) {
+      alert("Please log in to edit sections.");
       return;
     }
     const sections = ApiService.getSections();

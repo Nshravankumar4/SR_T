@@ -14,6 +14,18 @@ const SheetViewModule = {
     this.activeView = view;
     this.renderTabs();
     this.render();
+
+    const dlBtn = document.getElementById('btnDownloadSheetView');
+    if (dlBtn) {
+      if (view === 'FULL') {
+        dlBtn.innerText = '💾 Download Full Excel (.xlsx)';
+      } else if (view === 'SECTION_1') {
+        dlBtn.innerText = '💾 Download Section 1 (.xlsx)';
+      } else {
+        const secLabel = view.replace(/_/g, ' ');
+        dlBtn.innerText = `💾 Download ${secLabel} (.xlsx)`;
+      }
+    }
   },
 
   setZoom(percent) {

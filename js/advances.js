@@ -172,7 +172,7 @@ const AdvancesModule = {
   },
 
   openEditModal(id) {
-    const adv = this.advances.find(a => a.id === id);
+    const adv = this.advances.find(a => String(a.id) === String(id));
     if (!adv) return;
 
     this.populateSectionDropdown(window.getAdvanceSection(adv));

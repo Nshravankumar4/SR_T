@@ -87,8 +87,6 @@ const TransportModule = {
       return;
     }
 
-    const isAdmin = AuthService.isAdmin();
-
     tbody.innerHTML = this.filteredRecords.map((r, index) => {
       const secName = window.getTripSection(r);
       const isS1 = secName === 'Section 1';
@@ -187,31 +185,41 @@ const TransportModule = {
   },
 
   openEditModal(id) {
-    const record = this.records.find(r => r.id === id);
-    if (!record) return;
+    const record = this.records.find(r => String(r.id) === String(id) || (r.slNo && String(r.slNo) === String(id)));
+    if (!record) {
+      console.warn("Could not find record for id:", id);
+      return;
+    }
 
     this.populateSectionDropdown(window.getTripSection(record));
-    document.getElementById('transportId').value = record.id;
-    document.getElementById('transportSlNo').value = record.slNo || '';
-    document.getElementById('transportLrNo').value = record.lrNo || '';
-    document.getElementById('transportDcNo').value = record.dcNo || '';
-    document.getElementById('transportDate').value = window.formatDateForInput(record.date);
-    document.getElementById('transportVehicle').value = record.vehicleNumber || '';
-    document.getElementById('transportFrom').value = record.fromCity || '';
-    document.getElementById('transportTo').value = record.toCity || '';
-    document.getElementById('transportQuantity').value = record.quantity || '';
-    document.getElementById('transportMTax').value = record.mTax || '';
-    document.getElementById('transportAmount').value = record.amount || '';
-    document.getElementById('transportToPay').value = record.toPay || '';
+    const setVal = (elemId, val) => {
+      const el = document.getElementById(elemId);
+      if (el) el.value = val !== undefined && val !== null ? val : '';
+    };
+
+    setVal('transportId', record.id);
+    setVal('transportSlNo', record.slNo || '');
+    setVal('transportLrNo', record.lrNo || '');
+    setVal('transportDcNo', record.dcNo || '');
+    setVal('transportDate', window.formatDateForInput ? window.formatDateForInput(record.date) : record.date);
+    setVal('transportVehicle', record.vehicleNumber || '');
+    setVal('transportFrom', record.fromCity || '');
+    setVal('transportTo', record.toCity || '');
+    setVal('transportQuantity', record.quantity || '');
+    setVal('transportMTax', record.mTax || '');
+    setVal('transportAmount', record.amount || '');
+    setVal('transportToPay', record.toPay || '');
 
     const isPaid = record.paid === 'Paid' || record.status === 'Paid' || (Number(record.toPay) > 0 && Number(record.balance) === 0);
     const paidVal = isPaid ? (Number(record.toPay) || 0) : (Number(record.paid) || 0);
-    document.getElementById('transportPaid').value = paidVal;
-    document.getElementById('transportBalance').value = isPaid ? 0 : (Number(record.balance) || 0);
-    document.getElementById('transportNote').value = record.note || '';
+    setVal('transportPaid', paidVal);
+    setVal('transportBalance', isPaid ? 0 : (Number(record.balance) || 0));
+    setVal('transportNote', record.note || '');
 
-    document.getElementById('transportModalTitle').innerText = `✏️ Edit Record (LR: ${record.lrNo || id})`;
-    document.getElementById('transportModal').classList.add('active');
+    const titleEl = document.getElementById('transportModalTitle');
+    if (titleEl) titleEl.innerText = `✏️ Edit Record (LR: ${record.lrNo || id})`;
+    const modalEl = document.getElementById('transportModal');
+    if (modalEl) modalEl.classList.add('active');
   },
 
   closeModal() {
