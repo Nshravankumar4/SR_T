@@ -892,8 +892,10 @@ window.broadcastDataChange = function(type, data = {}) {
   }
 };
 
+const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbzlk-8ip9CNPjRpN5VswvWlEG7pRAWd1dK2GvyeQFtnLVVUpOfGSNbZE0GpURT68b8rYA/exec';
+
 const API_CONFIG = {
-  webAppUrl: localStorage.getItem('transport_api_url') || '',
+  webAppUrl: localStorage.getItem('transport_api_url') || DEFAULT_API_URL,
   storageKeyTransport: 'transport_records_shinex_v7',
   storageKeyAdvances: 'transport_advances_shinex_v7',
   storageKeyOpeningBal: 'transport_opening_bal_shinex_v7',
@@ -902,7 +904,7 @@ const API_CONFIG = {
 
 const ApiService = {
   getApiUrl() {
-    return localStorage.getItem('transport_api_url') || '';
+    return localStorage.getItem('transport_api_url') || DEFAULT_API_URL;
   },
 
   setApiUrl(url) {
