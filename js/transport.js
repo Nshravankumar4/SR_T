@@ -131,7 +131,7 @@ const TransportModule = {
           <td>
             <div style="display: flex; gap: 0.35rem;">
               <button class="btn btn-secondary btn-sm" onclick="TransportModule.openEditModal('${r.id}')" title="Edit">✏️</button>
-              ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="TransportModule.confirmDelete('${r.id}')" title="Delete">🗑️</button>` : ''}
+              <button class="btn btn-danger btn-sm" onclick="TransportModule.confirmDelete('${r.id}')" title="Delete">🗑️</button>
             </div>
           </td>
         </tr>
@@ -297,8 +297,8 @@ const TransportModule = {
   },
 
   async confirmDelete(id) {
-    if (!AuthService.isAdmin()) {
-      alert("Permission denied: Only Admin can delete transport records!");
+    if (!AuthService.canDeleteRecord()) {
+      alert("Please log in to delete records.");
       return;
     }
     if (!confirm("Are you sure you want to delete this transport record?")) return;
@@ -312,4 +312,8 @@ const TransportModule = {
     }
   }
 };
+
+// Export TransportModule globally on window
+window.TransportModule = TransportModule;
+window.openAddTransportModal = () => TransportModule.openAddModal();
 

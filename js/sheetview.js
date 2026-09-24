@@ -551,6 +551,8 @@ const SheetViewModule = {
   }
 };
 
+window.SheetViewModule = SheetViewModule;
+
 window.updateSheetViewTabs = function(activeBtnId) {
   // Handled dynamically by SheetViewModule.renderTabs()
 };

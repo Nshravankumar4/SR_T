@@ -51,20 +51,20 @@ window.App = {
     if (input) input.value = username;
 
     const btnAdmin = document.getElementById('userBtnAdmin');
-    const btnSarika = document.getElementById('userBtnSarika');
+    const btnRudra = document.getElementById('userBtnRudra') || document.getElementById('userBtnSarika');
     const pwdInput = document.getElementById('loginPassword');
     const hint = document.getElementById('loginPasswordHint');
 
-    if (username.toLowerCase() === 'sarika') {
+    if (username.toLowerCase() === 'rudra' || username.toLowerCase() === 'sarika') {
       btnAdmin?.classList.remove('active');
-      btnSarika?.classList.add('active');
-      if (pwdInput) pwdInput.placeholder = 'Enter password for Sarika';
-      if (hint) hint.innerHTML = 'Default: Sarika: <code>EShravan@2</code> (or <code>Sarika@123</code>)';
+      btnRudra?.classList.add('active');
+      if (pwdInput) pwdInput.placeholder = 'Enter password for Rudra';
+      if (hint) hint.innerHTML = 'Default: Rudra: <code>RudraSarika@2505</code>';
     } else {
-      btnSarika?.classList.remove('active');
+      btnRudra?.classList.remove('active');
       btnAdmin?.classList.add('active');
       if (pwdInput) pwdInput.placeholder = 'Enter password for Admin';
-      if (hint) hint.innerHTML = 'Default: Admin: <code>Shravan@1</code>';
+      if (hint) hint.innerHTML = 'Default: Admin: <code>Shravan</code>';
     }
 
     if (pwdInput) {
@@ -149,28 +149,11 @@ window.App = {
       }
       
       const isAdmin = user.role === 'Admin';
-      if (isAdmin) {
-        document.body.classList.remove('employee-mode');
-      } else {
-        document.body.classList.add('employee-mode');
-      }
-
-      // Update UI for role permissions
+      // Toggle admin-only elements (e.g. changing Admin password)
       const adminOnlyElements = document.querySelectorAll('.admin-only');
       adminOnlyElements.forEach(el => {
         el.style.display = isAdmin ? '' : 'none';
       });
-
-      // If user is Employee and active tab is settings, switch back to dashboard immediately!
-      if (!isAdmin) {
-        const activeTab = document.querySelector('.nav-tab.active');
-        if (activeTab && activeTab.dataset.tab === 'settings') {
-          document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-          document.querySelector('.nav-tab[data-tab="dashboard"]')?.classList.add('active');
-          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-          document.getElementById('tab-dashboard')?.classList.add('active');
-        }
-      }
 
       this.refreshData();
     }
@@ -230,6 +213,18 @@ window.App = {
 
     if (typeof SheetViewModule !== 'undefined') {
       SheetViewModule.render();
+    }
+  },
+
+  openAddTransportModal() {
+    if (typeof TransportModule !== 'undefined') {
+      TransportModule.openAddModal();
+    }
+  },
+
+  openAddAdvanceModal() {
+    if (typeof AdvancesModule !== 'undefined') {
+      AdvancesModule.openAddModal();
     }
   },
 
@@ -380,9 +375,8 @@ window.App = {
   },
 
   openSectionModal() {
-    const user = AuthService.getCurrentUser();
-    if (!user) {
-      this.showToast('Please log in first.', 'error');
+    if (!AuthService.getCurrentUser()) {
+      alert("Please log in to create new sections.");
       return;
     }
     const sections = ApiService.getSections();
@@ -400,6 +394,10 @@ window.App = {
 
   handleSectionSubmit(e) {
     e.preventDefault();
+    if (!AuthService.getCurrentUser()) {
+      alert("Please log in to create new sections.");
+      return;
+    }
     const name = document.getElementById('newSectionName').value.trim();
     const title = document.getElementById('newSectionTitle').value.trim();
     if (!name) return;
@@ -427,8 +425,8 @@ window.App = {
   },
 
   openManageSectionModal() {
-    if (!AuthService.isAdmin()) {
-      alert("Permission denied: Only Admin can manage sections.");
+    if (!AuthService.getCurrentUser()) {
+      alert("Please log in to manage sections.");
       return;
     }
     const container = document.getElementById('sectionManageList');
@@ -612,9 +610,6 @@ window.App = {
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
         const target = tab.dataset.tab;
-        if (target === 'settings' && !AuthService.isAdmin()) {
-          return; // Strictly block employee from accessing settings
-        }
 
         tabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
@@ -640,6 +635,20 @@ window.App = {
     // Auto balance calculations
     document.getElementById('transportToPay')?.addEventListener('input', () => TransportModule.onPaymentInputChange());
     document.getElementById('transportPaid')?.addEventListener('input', () => TransportModule.onPaymentInputChange());
+
+    // Add Transport Modal Triggers (Dual-guarantee execution)
+    document.getElementById('btnHeroAddTransport')?.addEventListener('click', () => TransportModule.openAddModal());
+    document.getElementById('btnTabAddTransport')?.addEventListener('click', () => TransportModule.openAddModal());
+    document.getElementById('btnSheetAddTransport')?.addEventListener('click', () => TransportModule.openAddModal());
+
+    // Add Advance Modal Triggers (Dual-guarantee execution)
+    document.getElementById('btnHeroAddAdvance')?.addEventListener('click', () => AdvancesModule.openAddModal());
+    document.getElementById('btnTabAddAdvance')?.addEventListener('click', () => AdvancesModule.openAddModal());
+    document.getElementById('btnSheetAddAdvance')?.addEventListener('click', () => AdvancesModule.openAddModal());
+
+    // Add Section Modal Triggers
+    document.getElementById('btnTabAddSection')?.addEventListener('click', () => this.openSectionModal());
+    document.getElementById('btnAddSectionSheet')?.addEventListener('click', () => this.openSectionModal());
 
     // Advance Form submit
     document.getElementById('advanceForm')?.addEventListener('submit', (e) => AdvancesModule.handleFormSubmit(e));
@@ -692,9 +701,9 @@ window.App = {
       }
 
       if (empPass && empPass.trim()) {
-        const res2 = await AuthService.updatePassword('Sarika', empPass);
+        const res2 = await AuthService.updatePassword('Rudra', empPass);
         if (res2.success) {
-          this.showToast("Sarika password updated successfully!", "success");
+          this.showToast("Rudra password updated successfully!", "success");
           document.getElementById('settingsEmpPass').value = '';
           updated = true;
         } else {

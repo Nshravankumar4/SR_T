@@ -968,8 +968,8 @@ const ApiService = {
 
   deleteSection(sectionName) {
     const user = typeof AuthService !== 'undefined' ? AuthService.getCurrentUser() : null;
-    if (!user || user.role !== 'Admin') {
-      throw new Error('Permission denied: Only Admin can delete a section!');
+    if (!user) {
+      throw new Error('Please log in to delete a section.');
     }
     const normalized = window.normalizeSection(sectionName);
     if (normalized === 'Section 1' || normalized === 'Section 2') {
@@ -1253,5 +1253,7 @@ const ApiService = {
     return true;
   }
 };
+
+window.ApiService = ApiService;
 
 

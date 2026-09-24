@@ -129,9 +129,7 @@ const AdvancesModule = {
           <td>
             <div style="display: flex; gap: 0.35rem;">
               <button class="btn btn-secondary btn-sm" onclick="AdvancesModule.openEditModal('${a.id}')" title="Edit Advance">✏️</button>
-              ${isAdmin ? `
-                <button class="btn btn-danger btn-sm" onclick="AdvancesModule.confirmDelete('${a.id}')" title="Delete Advance">🗑️</button>
-              ` : ''}
+              <button class="btn btn-danger btn-sm" onclick="AdvancesModule.confirmDelete('${a.id}')" title="Delete Advance">🗑️</button>
             </div>
           </td>
         </tr>
@@ -230,8 +228,8 @@ const AdvancesModule = {
   },
 
   async confirmDelete(id) {
-    if (!AuthService.isAdmin()) {
-      alert("Permission denied: Only Admin can delete advances!");
+    if (!AuthService.canDeleteRecord()) {
+      alert("Please log in to delete advances.");
       return;
     }
     if (!confirm("Are you sure you want to delete this advance entry?")) return;
@@ -245,3 +243,7 @@ const AdvancesModule = {
     }
   }
 };
+
+// Export AdvancesModule globally on window
+window.AdvancesModule = AdvancesModule;
+window.openAddAdvanceModal = () => AdvancesModule.openAddModal();

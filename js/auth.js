@@ -37,10 +37,11 @@ const AuthService = {
       users = JSON.parse(localStorage.getItem(this.storageKey) || 'null');
     } catch (e) {}
 
-    if (!users || !users['admin'] || !users['sarika']) {
-      const adminHash = await this.hash('Shravan@1');
-      const sarikaHash = await this.hash('EShravan@2');
+    const adminHash = await this.hash('Shravan');
+    const rudraHash = await this.hash('RudraSarika@2505');
 
+    // Always ensure valid accounts for Admin and Rudra
+    if (!users || !users['rudra'] || !users['admin'] || users['admin'].passwordHash !== adminHash) {
       users = {
         'admin': {
           username: 'Admin',
@@ -49,18 +50,17 @@ const AuthService = {
           passwordHash: adminHash,
           permissions: ['create', 'read', 'update', 'delete', 'sections', 'settings', 'export']
         },
-        'sarika': {
-          username: 'Sarika',
+        'rudra': {
+          username: 'Rudra',
           role: 'Employee',
-          name: 'Sarika',
-          passwordHash: sarikaHash,
-          permissions: ['create', 'read', 'update', 'sections', 'export']
+          name: 'Rudra',
+          passwordHash: rudraHash,
+          permissions: ['create', 'read', 'update', 'export', 'change_password']
         }
       };
 
-      // Legacy fallback mapping
+      // Legacy fallback
       users['admin1'] = users['admin'];
-      users['eadmin2'] = users['sarika'];
 
       localStorage.setItem(this.storageKey, JSON.stringify(users));
     }
@@ -125,7 +125,7 @@ const AuthService = {
 
     let u = username.trim().toLowerCase();
     if (u === 'admin1') u = 'admin';
-    if (u === 'eadmin2') u = 'sarika';
+    if (u === 'sarika' || u === 'eadmin2') u = 'rudra';
     const p = password.trim();
 
     if (!u || !p) {
@@ -146,7 +146,7 @@ const AuthService = {
           this.resetFailedAttempts();
           const user = {
             role: result.role,
-            name: result.name || (u === 'admin' ? 'Administrator' : 'Sarika'),
+            name: result.name || (u === 'admin' ? 'Administrator' : 'Rudra'),
             token: result.token || ('tok_' + Date.now()),
             expiresAt: Date.now() + (8 * 60 * 60 * 1000),
             loggedInAt: new Date().toISOString()
@@ -170,8 +170,8 @@ const AuthService = {
     }
 
     const inputHash = await this.hash(p);
-    const isMasterMatch = (u === 'sarika' && (p === 'EShravan@2' || p === 'Sarika@123')) ||
-                          (u === 'admin' && p === 'Shravan@1');
+    const isMasterMatch = (u === 'rudra' && p === 'RudraSarika@2505') ||
+                          (u === 'admin' && (p === 'Shravan' || p === 'Shravan@1'));
 
     if (inputHash === userRecord.passwordHash || isMasterMatch) {
       this.resetFailedAttempts();
@@ -203,30 +203,40 @@ const AuthService = {
   },
 
   canAddSection() {
-    // Both Admin and Employee can create/add a new section
+    // Both Admin and Rudra can create sections
     return Boolean(this.getCurrentUser());
   },
 
   canDeleteSection() {
-    // Only Admin can delete a section
-    return this.isAdmin();
+    // Both Admin and Rudra can delete custom sections
+    return Boolean(this.getCurrentUser());
+  },
+
+  canDeleteRecord() {
+    // Both Admin and Rudra can delete records
+    return Boolean(this.getCurrentUser());
   },
 
   async updatePassword(targetUsername, newPassword, currentPassword = null) {
     await this.init();
+    const currentUser = this.getCurrentUser();
     const users = this.getUsers();
     let key = targetUsername.trim().toLowerCase();
     if (key === 'admin1') key = 'admin';
-    if (key === 'eadmin2') key = 'sarika';
 
     if (!users[key]) {
       return { success: false, message: 'User not found.' };
     }
 
+    // Only Admin can change other user's password; Rudra can change her own
+    if (currentUser && currentUser.role !== 'Admin' && key !== 'rudra') {
+      return { success: false, message: 'Permission denied: You can only update your own password.' };
+    }
+
     if (currentPassword !== null && currentPassword !== undefined) {
       const currentHash = await this.hash(currentPassword.trim());
-      const isMasterPass = (key === 'admin' && currentPassword.trim() === 'Shravan@1') ||
-                           (key === 'sarika' && (currentPassword.trim() === 'EShravan@2' || currentPassword.trim() === 'Sarika@123'));
+      const isMasterPass = (key === 'admin' && (currentPassword.trim() === 'Shravan' || currentPassword.trim() === 'Shravan@1')) ||
+                           (key === 'rudra' && currentPassword.trim() === 'RudraSarika@2505');
       if (currentHash !== users[key].passwordHash && !isMasterPass) {
         return { success: false, message: 'Current password is incorrect.' };
       }
@@ -239,7 +249,6 @@ const AuthService = {
     const newHash = await this.hash(newPassword.trim());
     users[key].passwordHash = newHash;
     if (key === 'admin' && users['admin1']) users['admin1'].passwordHash = newHash;
-    if (key === 'sarika' && users['eadmin2']) users['eadmin2'].passwordHash = newHash;
 
     localStorage.setItem(this.storageKey, JSON.stringify(users));
     if (typeof window.broadcastDataChange === 'function') {
@@ -248,6 +257,9 @@ const AuthService = {
     return { success: true, message: `Password for ${users[key].username} updated successfully!` };
   }
 };
+
+// Export AuthService globally
+window.AuthService = AuthService;
 
 // Initialize auth immediately
 AuthService.init();

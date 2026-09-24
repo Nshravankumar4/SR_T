@@ -30,15 +30,15 @@
             <button type="button" id="userBtnAdmin" class="user-switch-card active" onclick="App.selectLoginUser('Admin')">
               <div class="user-switch-badge">👑</div>
               <div class="user-switch-info">
-                <span class="user-switch-name">Admin</span>
+                <span class="user-switch-name">ADMIN</span>
                 <span class="user-switch-role">Administrator</span>
               </div>
             </button>
-            <button type="button" id="userBtnSarika" class="user-switch-card" onclick="App.selectLoginUser('Sarika')">
-              <div class="user-switch-badge">👩‍💼</div>
+            <button type="button" id="userBtnRudra" class="user-switch-card" onclick="App.selectLoginUser('Rudra')">
+              <div class="user-switch-badge">👤</div>
               <div class="user-switch-info">
-                <span class="user-switch-name">Sarika</span>
-                <span class="user-switch-role">Employee</span>
+                <span class="user-switch-name">RUDRA</span>
+                <span class="user-switch-role">User</span>
               </div>
             </button>
           </div>
@@ -52,7 +52,7 @@
             <button type="button" id="togglePasswordBtn" style="position: absolute; right: 0.6rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 0; line-height: 1;" title="Show/Hide Password">👁️</button>
           </div>
           <div id="loginPasswordHint" style="margin-top: 0.45rem; font-size: 0.78rem; color: var(--text-muted);">
-            Default: Admin: <code>Shravan@1</code>
+            Default: Admin: <code>Shravan</code>
           </div>
         </div>
 
@@ -109,7 +109,7 @@
           <span class="nav-tab-icon">📥</span>
           <span class="nav-tab-label">Excel Backup & Import</span>
         </button>
-        <button class="nav-tab admin-only" data-tab="settings">
+        <button class="nav-tab" data-tab="settings">
           <span class="nav-tab-icon">⚙️</span>
           <span class="nav-tab-label">Settings & API</span>
         </button>
@@ -151,8 +151,8 @@
               <p>Real-time freight billing, continuous section tracking, and 100% transparent reconciliation.</p>
             </div>
             <div class="banner-quick-actions">
-              <button class="btn btn-primary" onclick="TransportModule.openAddModal()">➕ Add Transport Record</button>
-              <button class="btn btn-secondary" onclick="AdvancesModule.openAddModal()" style="background: #f0fdf4; color: #166534; border-color: #bbf7d0; font-weight: 600;">➕ Record Advance</button>
+              <button id="btnHeroAddTransport" class="btn btn-primary" onclick="window.TransportModule ? window.TransportModule.openAddModal() : TransportModule.openAddModal()">➕ Add Transport Record</button>
+              <button id="btnHeroAddAdvance" class="btn btn-secondary" onclick="window.AdvancesModule ? window.AdvancesModule.openAddModal() : AdvancesModule.openAddModal()" style="background: #f0fdf4; color: #166534; border-color: #bbf7d0; font-weight: 600;">➕ Record Advance</button>
               <button class="btn btn-secondary" onclick="App.openSheetView()" style="background: #eff6ff; color: #1e40af; border-color: #bfdbfe; font-weight: 600;">📑 View Excel Sheet</button>
               <button class="btn btn-secondary" onclick="window.downloadShinexExcel(this)">💾 Export Excel</button>
             </div>
@@ -237,11 +237,11 @@
 
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
               <button class="btn btn-secondary" onclick="App.openSectionModal()" style="background: #fef3c7; color: #92400e; border-color: #fde68a; font-weight: 600;">➕ Add Section</button>
-              <button class="btn btn-secondary admin-only" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
+              <button class="btn btn-secondary" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
               <button class="btn btn-secondary" onclick="App.openSheetView()" style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd; font-weight: 600;">📑 View Excel Sheet</button>
               <button class="btn btn-secondary" onclick="window.App.restoreExactExcelSheetData()" title="Reset database to exact Shinex records">📋 Load Exact Excel Data</button>
               <button class="btn btn-secondary" onclick="window.App.refreshData()">🔄 Refresh</button>
-              <button class="btn btn-primary" onclick="TransportModule.openAddModal()">➕ Add Transport Record</button>
+              <button id="btnTabAddTransport" class="btn btn-primary" onclick="window.TransportModule ? window.TransportModule.openAddModal() : TransportModule.openAddModal()">➕ Add Transport Record</button>
             </div>
           </div>
 
@@ -298,9 +298,9 @@
             </div>
 
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button class="btn btn-secondary" onclick="App.openSectionModal()" style="background: #fef3c7; color: #92400e; border-color: #fde68a; font-weight: 600;">➕ Add Section</button>
-              <button class="btn btn-secondary admin-only" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
-              <button class="btn btn-primary" onclick="AdvancesModule.openAddModal()">➕ Record New Advance</button>
+              <button id="btnTabAddSection" class="btn btn-secondary" onclick="window.App ? window.App.openSectionModal() : App.openSectionModal()" style="background: #fef3c7; color: #92400e; border-color: #fde68a; font-weight: 600;">➕ Add Section</button>
+              <button class="btn btn-secondary" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
+              <button id="btnTabAddAdvance" class="btn btn-primary" onclick="window.AdvancesModule ? window.AdvancesModule.openAddModal() : AdvancesModule.openAddModal()">➕ Record New Advance</button>
             </div>
           </div>
 
@@ -348,8 +348,12 @@
               <button id="btnViewFull" class="btn btn-sm btn-secondary" onclick="SheetViewModule.setView('FULL'); updateSheetViewTabs('btnViewFull');">📋 Full Sheet (All)</button>
             </div>
 
-            <button id="btnAddSectionSheet" class="btn btn-sm btn-secondary" onclick="App.openSectionModal()" style="font-weight: 600; background: #fef3c7; color: #92400e; border-color: #fde68a;" title="Create Section 3 or next sequence">➕ Add Section</button>
-            <button id="btnManageSections" class="btn btn-sm btn-secondary admin-only" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
+            <div style="display: flex; gap: 4px; align-items: center;">
+              <button id="btnSheetAddTransport" class="btn btn-sm btn-primary" onclick="window.TransportModule ? window.TransportModule.openAddModal() : TransportModule.openAddModal()">➕ Add Transport</button>
+              <button id="btnSheetAddAdvance" class="btn btn-sm btn-secondary" onclick="window.AdvancesModule ? window.AdvancesModule.openAddModal() : AdvancesModule.openAddModal()" style="background: #f0fdf4; color: #166534; border-color: #bbf7d0; font-weight: 600;">➕ Record Advance</button>
+              <button id="btnAddSectionSheet" class="btn btn-sm btn-secondary" onclick="window.App ? window.App.openSectionModal() : App.openSectionModal()" style="font-weight: 600; background: #fef3c7; color: #92400e; border-color: #fde68a;" title="Create Section 3 or next sequence">➕ Add Section</button>
+              <button id="btnManageSections" class="btn btn-sm btn-secondary" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
+            </div>
 
             <!-- Zoom Controls -->
             <div class="zoom-controls" style="display: flex; align-items: center; background: #e2e8f0; padding: 2px; border-radius: 6px; gap: 2px;">
@@ -400,7 +404,7 @@
       </section>
 
       <!-- TAB 5: SETTINGS & GOOGLE APPS SCRIPT API -->
-      <section id="tab-settings" class="tab-content admin-only">
+      <section id="tab-settings" class="tab-content">
         <div style="background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 2rem; max-width: 800px; margin: 0 auto;">
           <h3 style="margin-bottom: 0.5rem; color: var(--primary);">⚙️ System Settings & Google Sheet API</h3>
           <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem;">
@@ -425,16 +429,16 @@
 
           <h4 style="margin-bottom: 0.5rem; color: var(--primary);">🔐 Update Account Passwords</h4>
           <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-            Change secure passwords for <strong>Admin</strong> and <strong>Sarika</strong> accounts.
+            Update account passwords securely.
           </p>
           <div class="form-grid" style="margin-bottom: 1rem;">
-            <div class="form-group">
+            <div id="settingsAdminPassGroup" class="form-group admin-only">
               <label for="settingsAdminPass">New Administrator Password (Admin)</label>
               <input type="password" id="settingsAdminPass" class="form-control" placeholder="New password for Admin (Min 6 chars)">
             </div>
             <div class="form-group">
-              <label for="settingsEmpPass">New Employee Password (Sarika)</label>
-              <input type="password" id="settingsEmpPass" class="form-control" placeholder="New password for Sarika (Min 6 chars)">
+              <label for="settingsEmpPass">New Password for Rudra</label>
+              <input type="password" id="settingsEmpPass" class="form-control" placeholder="New password for Rudra (Min 6 chars)">
             </div>
           </div>
           <button id="savePasswordsBtn" class="btn btn-secondary">💾 Update Passwords Securely</button>
@@ -451,7 +455,7 @@
         <h3 id="transportModalTitle">Add Transport Record</h3>
         <button class="modal-close" onclick="TransportModule.closeModal()">✕</button>
       </div>
-      <form id="transportForm">
+      <form id="transportForm" onsubmit="window.TransportModule ? window.TransportModule.handleFormSubmit(event) : TransportModule.handleFormSubmit(event); return false;">
         <div class="modal-body">
           <input type="hidden" id="transportId">
 
@@ -565,7 +569,7 @@
         <h3 id="advanceModalTitle">Record Advance Payment</h3>
         <button class="modal-close" onclick="AdvancesModule.closeModal()">✕</button>
       </div>
-      <form id="advanceForm">
+      <form id="advanceForm" onsubmit="window.AdvancesModule ? window.AdvancesModule.handleFormSubmit(event) : AdvancesModule.handleFormSubmit(event); return false;">
         <div class="modal-body">
           <input type="hidden" id="advanceId">
 
@@ -695,13 +699,13 @@
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Application Scripts with Cache Busters -->
-  <script src="js/auth.js?v=4.5"></script>
-  <script src="js/api.js?v=4.5"></script>
-  <script src="js/transport.js?v=4.5"></script>
-  <script src="js/advances.js?v=4.5"></script>
-  <script src="js/excel.js?v=4.5"></script>
-  <script src="js/sheetview.js?v=4.5"></script>
-  <script src="js/app.js?v=4.5"></script>
+  <script src="js/auth.js?v=4.7"></script>
+  <script src="js/api.js?v=4.7"></script>
+  <script src="js/transport.js?v=4.7"></script>
+  <script src="js/advances.js?v=4.7"></script>
+  <script src="js/excel.js?v=4.7"></script>
+  <script src="js/sheetview.js?v=4.7"></script>
+  <script src="js/app.js?v=4.7"></script>
 </body>
 </html>
 

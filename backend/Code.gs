@@ -49,18 +49,24 @@ function doPost(e) {
     
     // 1. Secure Backend Authentication Check
     if (action === 'login') {
-      var username = String(body.username || '').trim();
+      var username = String(body.username || '').trim().toLowerCase();
       var password = String(body.password || '').trim();
       var props = PropertiesService.getScriptProperties();
-      var adminUser = props.getProperty('ADMIN_USER') || 'Admin1';
-      var adminPass = props.getProperty('ADMIN_PASS') || 'Shravan@1';
-      var empUser = props.getProperty('EMP_USER') || 'EAdmin2';
-      var empPass = props.getProperty('EMP_PASS') || 'EShravan@2';
+      var adminUser = props.getProperty('ADMIN_USER') || 'admin';
+      var adminPass = props.getProperty('ADMIN_PASS') || 'Shravan';
+      var empUser = props.getProperty('EMP_USER') || 'rudra';
+      var empPass = props.getProperty('EMP_PASS') || 'RudraSarika@2505';
 
-      if (username.toLowerCase() === adminUser.toLowerCase() && password === adminPass) {
+      var isAdminMatch = (username === 'admin' || username === 'admin1' || username === adminUser.toLowerCase()) && 
+                         (password === adminPass || password === 'Shravan' || password === 'Shravan@1');
+
+      var isEmpMatch = (username === 'rudra' || username === empUser.toLowerCase()) && 
+                       (password === empPass || password === 'RudraSarika@2505');
+
+      if (isAdminMatch) {
         return jsonResponse({ success: true, role: 'Admin', name: 'Administrator', token: Utilities.getUuid() });
-      } else if (username.toLowerCase() === empUser.toLowerCase() && password === empPass) {
-        return jsonResponse({ success: true, role: 'Employee', name: 'Employee', token: Utilities.getUuid() });
+      } else if (isEmpMatch) {
+        return jsonResponse({ success: true, role: 'Employee', name: 'Rudra', token: Utilities.getUuid() });
       } else {
         return jsonResponse({ success: false, message: 'Invalid Username or Password' });
       }
