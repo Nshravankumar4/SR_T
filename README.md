@@ -225,6 +225,15 @@ When payment changes, the balance is derived dynamically, triggering full sectio
   - Removed unnecessary Jekyll and template workflows.
   - Updated [`.github/workflows/pages.yml`](.github/workflows/pages.yml) to `actions/configure-pages@v5` without the unauthorized `enablement: true` flag.
 
+### 6. Dynamic Net Outstanding Date & Duplicate Trip Entry Prevention
+* **Root Cause:**
+  - When submitting a new transport trip or advance, both inline `onsubmit` attributes and JavaScript `addEventListener('submit')` were active concurrently, triggering duplicate API calls and double submissions (e.g., duplicate Trip 7 entries).
+  - Date sorting in `getLatestTripDate` did not reliably parse multi-format dates (`YYYY-MM-DD`, `DD-MM-YYYY`, `DD/MM/YYYY`), causing newly added trips to not update the latest cut-off date.
+* **Fix Applied:**
+  - Removed duplicate inline form submissions and added an `isSubmitting` debounce flag in both `TransportModule` and `AdvancesModule`.
+  - Added trip deduplication guards in `ApiService.saveTransport` and automatic data deduplication.
+  - Implemented multi-format regex timestamp sorting in `window.getLatestTripDate` so every newly entered trip or advance immediately and automatically updates the Net Outstanding title (`DD-MM-YYYY Net Outstanding`) and closing balance in real-time.
+
 ---
 
 ## 🚀 Core Application Modules
@@ -238,8 +247,8 @@ When payment changes, the balance is derived dynamically, triggering full sectio
 ### 2. Personalized Executive Dashboard (Tab #1)
 - Personalized greeting: `👋 Hello, Admin / Rudra! Welcome to Shinex Transport Ledger & Dashboard`.
 - Quick action buttons: `➕ Add Transport Record`, `➕ Record Advance`, `📑 View Excel Sheet`, `💾 Export Excel`.
-- 7 Financial Metric Cards: Total Freight Billed, ToPay Remaining, Total Debt, Total Company Advances, Section 1 Old Balance, Active Section Advances, Net Outstanding.
-- Multi-section financial reconciliation card grid with dynamic badge indicators.
+- **Dynamic Net Outstanding Status Banner:** Prominent live closing ledger card displaying automatically updating cut-off date (`DD-MM-YYYY Net Outstanding`) and live recalculated outstanding amount.
+- **Multi-Section Financial Reconciliation Cards:** Clear, dedicated chained breakdown cards for Section 1, Section 2, and any newly added fiscal sections with active/archive status badges.
 
 ### 3. Exact 1:1 Live Excel Spreadsheet Replica (Tab #4)
 - Visual clone of the physical Shinex workbook directly inside the browser.

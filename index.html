@@ -155,35 +155,14 @@
             </div>
           </div>
 
-          <!-- Financial Metrics Summary Grid -->
-          <div class="metrics-grid">
-            <div class="metric-card highlight">
-              <div class="metric-title">Total Freight Billed (Amount)</div>
-              <div id="metricTotalAmount" class="metric-value">₹0</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-title">ToPay Balance Remaining</div>
-              <div id="metricTransportBal" class="metric-value">₹0</div>
-            </div>
-            <div class="metric-card highlight">
-              <div class="metric-title">Total Payable Debt</div>
-              <div id="metricTotalDebt" class="metric-value">₹0</div>
-            </div>
-            <div class="metric-card success">
-              <div class="metric-title">Total Company Advances</div>
-              <div id="metricTotalAdvances" class="metric-value">₹0</div>
-            </div>
-            <div class="metric-card">
-              <div id="metricS1Title" class="metric-title">14-08-2026 Old Balance (S1)</div>
-              <div id="metricS1Outstanding" class="metric-value">₹10,000</div>
-            </div>
-            <div class="metric-card">
-              <div id="metricActiveAdvTitle" class="metric-title">Active Section Advances</div>
-              <div id="metricActiveAdvances" class="metric-value">₹4,50,000</div>
-            </div>
-            <div class="metric-card danger">
-              <div id="metricNetOutTitle" class="metric-title">23-09-2026 Net Outstanding</div>
-              <div id="metricNetOutstanding" class="metric-value">₹6,18,750</div>
+          <!-- Financial Metrics Summary Banner: Dynamic Net Outstanding Status -->
+          <div class="metrics-grid" style="grid-template-columns: 1fr; margin-bottom: 1.5rem;">
+            <div class="metric-card danger" style="padding: 1.5rem 2rem; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #dc2626; background: #fff;">
+              <div>
+                <div id="metricNetOutTitle" class="metric-title" style="font-size: 1.15rem; font-weight: 700; color: #991b1b; letter-spacing: 0.5px;">23-09-2026 Net Outstanding</div>
+                <div style="font-size: 0.85rem; color: #64748b; margin-top: 4px;">Dynamic Closing Ledger Balance • Auto-calculated on every new trip & advance</div>
+              </div>
+              <div id="metricNetOutstanding" class="metric-value" style="font-size: 2.2rem; font-weight: 800; color: #dc2626;">₹6,18,750</div>
             </div>
           </div>
 

@@ -792,7 +792,7 @@ window.isSection2Advance = function(a) {
   return window.getAdvanceSection(a) === 'Section 2';
 };
 
-window.getLatestTripDate = function(trips, defaultDate = '16-09-2026') {
+window.getLatestTripDate = function(trips, defaultDate = '23-09-2026') {
   if (!trips || trips.length === 0) return defaultDate;
 
   // Filter trips that have a non-empty date
@@ -800,21 +800,40 @@ window.getLatestTripDate = function(trips, defaultDate = '16-09-2026') {
   if (valid.length === 0) return defaultDate;
 
   function parseDateToTs(dStr) {
-    const s = String(dStr).trim();
+    if (!dStr) return { ts: 0, str: '' };
+    let s = String(dStr).trim().replace(/--+/g, '-').replace(/\/\/+/g, '/');
     let day, month, year;
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-      [year, month, day] = s.split('-');
-    } else if (/^\d{2}-\d{2}-\d{4}$/.test(s)) {
-      [day, month, year] = s.split('-');
+
+    const mIso = s.match(/^(\d{4})[-/. ](\d{1,2})[-/. ](\d{1,2})/);
+    const mIn = s.match(/^(\d{1,2})[-/. ](\d{1,2})[-/. ](\d{4})/);
+
+    if (mIso) {
+      year = mIso[1];
+      month = mIso[2].padStart(2, '0');
+      day = mIso[3].padStart(2, '0');
+    } else if (mIn) {
+      day = mIn[1].padStart(2, '0');
+      month = mIn[2].padStart(2, '0');
+      year = mIn[3];
     } else {
+      const parsed = Date.parse(s);
+      if (!isNaN(parsed)) {
+        const dObj = new Date(parsed);
+        day = String(dObj.getDate()).padStart(2, '0');
+        month = String(dObj.getMonth() + 1).padStart(2, '0');
+        year = String(dObj.getFullYear());
+        return { ts: dObj.getTime(), str: `${day}-${month}-${year}` };
+      }
       return { ts: 0, str: s };
     }
-    const d = new Date(`${year}-${month}-${day}`);
-    const ts = isNaN(d.getTime()) ? 0 : d.getTime();
+
+    const dObj = new Date(Number(year), Number(month) - 1, Number(day));
+    const ts = isNaN(dObj.getTime()) ? 0 : dObj.getTime();
     return { ts, str: `${day}-${month}-${year}` };
   }
 
-  const items = valid.map(r => parseDateToTs(r.date));
+  const items = valid.map(r => parseDateToTs(r.date)).filter(item => item.ts > 0);
+  if (items.length === 0) return defaultDate;
   items.sort((a, b) => a.ts - b.ts);
   const latest = items[items.length - 1];
   return latest.str || defaultDate;
@@ -822,9 +841,9 @@ window.getLatestTripDate = function(trips, defaultDate = '16-09-2026') {
 
 window.formatDateForInput = function(dStr) {
   if (!dStr) return '';
-  const s = String(dStr).trim();
+  const s = String(dStr).trim().replace(/--+/g, '-').replace(/\/\/+/g, '/');
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  const m = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  const m = s.match(/^(\d{1,2})[-/. ](\d{1,2})[-/. ](\d{4})$/);
   if (m) {
     const day = m[1].padStart(2, '0');
     const month = m[2].padStart(2, '0');
@@ -836,12 +855,19 @@ window.formatDateForInput = function(dStr) {
 
 window.formatDateForDisplay = function(dStr) {
   if (!dStr) return '';
-  const s = String(dStr).trim();
-  const m = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
-  if (m) {
-    const year = m[1];
-    const month = m[2].padStart(2, '0');
-    const day = m[3].padStart(2, '0');
+  const s = String(dStr).trim().replace(/--+/g, '-').replace(/\/\/+/g, '/');
+  const mIso = s.match(/^(\d{4})[-/. ](\d{1,2})[-/. ](\d{1,2})/);
+  if (mIso) {
+    const year = mIso[1];
+    const month = mIso[2].padStart(2, '0');
+    const day = mIso[3].padStart(2, '0');
+    return `${day}-${month}-${year}`;
+  }
+  const mIn = s.match(/^(\d{1,2})[-/. ](\d{1,2})[-/. ](\d{4})/);
+  if (mIn) {
+    const day = mIn[1].padStart(2, '0');
+    const month = mIn[2].padStart(2, '0');
+    const year = mIn[3];
     return `${day}-${month}-${year}`;
   }
   return s;
