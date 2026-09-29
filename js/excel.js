@@ -304,6 +304,8 @@ const ExcelModule = {
     ws.getCell('K37').numFmt = '#,##,##0';
 
     const s1TotalPayable = (s1TotalAmount || 1609850) + (s1TotalBal || 283500);
+    ws.getCell('J38').value = 'TotalB=ToBilled+TopayBAl';
+    ws.getCell('J38').border = thinBorder;
     ws.getCell('K38').value = s1TotalPayable; // 18,93,350
     ws.getCell('K38').fill = peachFill;
     ws.getCell('K38').font = boldBlack11;
@@ -373,11 +375,12 @@ const ExcelModule = {
     ws.getCell('K39').numFmt = '#,##,##0';
 
     // Outstanding in Row 41
-    const s1LatestDate = (typeof window.getLatestTripDate === 'function')
-      ? window.getLatestTripDate(s1Trips, '14-08-2026')
-      : '14-08-2026';
+    const s1LatestDate = '17-06-2026';
     ws.getCell('H41').value = `${s1LatestDate} (out standing)`;
     ws.getCell('H41').border = thinBorder;
+    ws.getCell('H41').alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getCell('J41').value = 'TotalB-Less Adv';
+    ws.getCell('J41').border = thinBorder;
     const s1Outstanding = s1TotalPayable - (s1AdvSum || 1883350);
     ws.getCell('K41').value = s1Outstanding; // 10,000
     ws.getCell('K41').fill = cyanOutFill;
@@ -394,19 +397,30 @@ const ExcelModule = {
     const defaultS2Advs = aRecords
       .filter(a => (typeof window !== 'undefined' && window.isSection2Advance ? window.isSection2Advance(a) : a.section === 'Section 2'));
 
+    const s2Amt = defaultS2Trips.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const s2ToPayBal = defaultS2Trips.reduce((sum, r) => sum + (Number(r.balance) || 0), 0);
+    const s2AdvSum = defaultS2Advs.reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+    const s2OldBal = s1Outstanding || 10000;
+    const s2OldBalDate = '14-08-2026';
+    const s2TotPayable = s2Amt + s2OldBal + s2ToPayBal;
+    const s2NetOut = s2TotPayable - s2AdvSum;
+    const s2LatestDate = (typeof window.getLatestTripDate === 'function')
+      ? window.getLatestTripDate([...defaultS2Trips, ...defaultS2Advs], '23-09-2026')
+      : '23-09-2026';
+
     const laterSections = (allSectionsData && allSectionsData.length > 1)
       ? allSectionsData.slice(1)
       : [{
           section: { name: 'Section 2', num: 2 },
           trips: defaultS2Trips,
           advances: defaultS2Advs,
-          totalAmount: 903750,
-          oldBal: s1Outstanding || 10000,
-          oldBalDate: s1LatestDate || '14-08-2026',
-          totalPayable: 913750,
-          advSum: 450000,
-          netOutstanding: 463750,
-          latestDate: '16-09-2026'
+          totalAmount: s2Amt,
+          oldBal: s2OldBal,
+          oldBalDate: s2OldBalDate,
+          totalPayable: s2TotPayable,
+          advSum: s2AdvSum,
+          netOutstanding: s2NetOut,
+          latestDate: s2LatestDate
         }];
 
     if (normalizedFilter === 'FULL') {
@@ -556,9 +570,9 @@ const ExcelModule = {
       });
 
       // 7. Reconciliation Box on Right
-      ws.getCell(`H${reconRow}`).value = 'To Billed';
-      ws.getCell(`H${reconRow}`).border = thinBorder;
-      ws.getCell(`H${reconRow}`).font = boldBlack11;
+      ws.getCell(`I${reconRow}`).value = 'To Billed';
+      ws.getCell(`I${reconRow}`).border = thinBorder;
+      ws.getCell(`I${reconRow}`).font = boldBlack11;
       ws.getCell(`J${reconRow}`).value = totalAmount;
       ws.getCell(`J${reconRow}`).fill = peachFill;
       ws.getCell(`J${reconRow}`).font = boldBlack11;
@@ -567,12 +581,13 @@ const ExcelModule = {
       ws.getCell(`J${reconRow}`).alignment = { horizontal: 'right', vertical: 'middle' };
 
       const r2 = reconRow + 1;
-      ws.getCell(`G${r2}`).value = oldBalDate || '14-08-2026';
-      ws.getCell(`G${r2}`).border = thinBorder;
-      ws.getCell(`G${r2}`).alignment = { horizontal: 'center', vertical: 'middle' };
-      ws.getCell(`H${r2}`).value = 'Old Balance';
+      ws.getCell(`H${r2}`).value = oldBalDate || '14-08-2026';
       ws.getCell(`H${r2}`).border = thinBorder;
+      ws.getCell(`H${r2}`).alignment = { horizontal: 'center', vertical: 'middle' };
       ws.getCell(`H${r2}`).font = boldBlack11;
+      ws.getCell(`I${r2}`).value = 'ToPay bal';
+      ws.getCell(`I${r2}`).border = thinBorder;
+      ws.getCell(`I${r2}`).font = boldBlack11;
       ws.getCell(`J${r2}`).value = oldBal;
       ws.getCell(`J${r2}`).fill = yellowFill;
       ws.getCell(`J${r2}`).font = boldBlack11;
@@ -581,6 +596,9 @@ const ExcelModule = {
       ws.getCell(`J${r2}`).alignment = { horizontal: 'right', vertical: 'middle' };
 
       const r3 = reconRow + 2;
+      ws.getCell(`I${r3}`).value = 'TotalB=ToBilled+TopayBAl';
+      ws.getCell(`I${r3}`).border = thinBorder;
+      ws.getCell(`I${r3}`).font = boldBlack11;
       ws.getCell(`J${r3}`).value = totalPayable;
       ws.getCell(`J${r3}`).fill = peachFill;
       ws.getCell(`J${r3}`).font = boldBlack11;
@@ -589,9 +607,9 @@ const ExcelModule = {
       ws.getCell(`J${r3}`).alignment = { horizontal: 'right', vertical: 'middle' };
 
       const r4 = reconRow + 3;
-      ws.getCell(`H${r4}`).value = 'less adv';
-      ws.getCell(`H${r4}`).border = thinBorder;
-      ws.getCell(`H${r4}`).font = boldBlack11;
+      ws.getCell(`I${r4}`).value = 'less adv';
+      ws.getCell(`I${r4}`).border = thinBorder;
+      ws.getCell(`I${r4}`).font = boldBlack11;
       ws.getCell(`J${r4}`).value = advSum;
       ws.getCell(`J${r4}`).fill = yellowFill;
       ws.getCell(`J${r4}`).font = boldBlack11;
@@ -600,9 +618,13 @@ const ExcelModule = {
       ws.getCell(`J${r4}`).alignment = { horizontal: 'right', vertical: 'middle' };
 
       const r6 = reconRow + 5;
-      ws.getCell(`G${r6}`).value = `${latestDate} (out standing)`;
-      ws.getCell(`G${r6}`).border = thinBorder;
-      ws.getCell(`G${r6}`).font = boldBlack11;
+      ws.getCell(`H${r6}`).value = `${latestDate} (out standing)`;
+      ws.getCell(`H${r6}`).border = thinBorder;
+      ws.getCell(`H${r6}`).alignment = { horizontal: 'center', vertical: 'middle' };
+      ws.getCell(`H${r6}`).font = boldBlack11;
+      ws.getCell(`I${r6}`).value = 'TotalB-Less Adv';
+      ws.getCell(`I${r6}`).border = thinBorder;
+      ws.getCell(`I${r6}`).font = boldBlack11;
       ws.getCell(`J${r6}`).value = netOutstanding;
       ws.getCell(`J${r6}`).fill = cyanOutFill;
       ws.getCell(`J${r6}`).font = boldBlack11;
@@ -883,9 +905,9 @@ const ExcelModule = {
     });
 
     // Reconciliation Box
-    ws.getCell(`H${reconRow}`).value = 'To Billed';
-    ws.getCell(`H${reconRow}`).border = thinBorder;
-    ws.getCell(`H${reconRow}`).font = boldBlack11;
+    ws.getCell(`I${reconRow}`).value = 'To Billed';
+    ws.getCell(`I${reconRow}`).border = thinBorder;
+    ws.getCell(`I${reconRow}`).font = boldBlack11;
     ws.getCell(`J${reconRow}`).value = totalAmount;
     ws.getCell(`J${reconRow}`).fill = peachFill;
     ws.getCell(`J${reconRow}`).font = boldBlack11;
@@ -894,12 +916,13 @@ const ExcelModule = {
     ws.getCell(`J${reconRow}`).alignment = { horizontal: 'right', vertical: 'middle' };
 
     const r2 = reconRow + 1;
-    ws.getCell(`G${r2}`).value = oldBalDate || '14-08-2026';
-    ws.getCell(`G${r2}`).border = thinBorder;
-    ws.getCell(`G${r2}`).alignment = { horizontal: 'center', vertical: 'middle' };
-    ws.getCell(`H${r2}`).value = 'Old Balance';
+    ws.getCell(`H${r2}`).value = oldBalDate || '14-08-2026';
     ws.getCell(`H${r2}`).border = thinBorder;
+    ws.getCell(`H${r2}`).alignment = { horizontal: 'center', vertical: 'middle' };
     ws.getCell(`H${r2}`).font = boldBlack11;
+    ws.getCell(`I${r2}`).value = 'ToPay bal';
+    ws.getCell(`I${r2}`).border = thinBorder;
+    ws.getCell(`I${r2}`).font = boldBlack11;
     ws.getCell(`J${r2}`).value = oldBal;
     ws.getCell(`J${r2}`).fill = yellowFill;
     ws.getCell(`J${r2}`).font = boldBlack11;
@@ -908,6 +931,9 @@ const ExcelModule = {
     ws.getCell(`J${r2}`).alignment = { horizontal: 'right', vertical: 'middle' };
 
     const r3 = reconRow + 2;
+    ws.getCell(`I${r3}`).value = 'TotalB=ToBilled+TopayBAl';
+    ws.getCell(`I${r3}`).border = thinBorder;
+    ws.getCell(`I${r3}`).font = boldBlack11;
     ws.getCell(`J${r3}`).value = totalPayable;
     ws.getCell(`J${r3}`).fill = peachFill;
     ws.getCell(`J${r3}`).font = boldBlack11;
@@ -916,9 +942,9 @@ const ExcelModule = {
     ws.getCell(`J${r3}`).alignment = { horizontal: 'right', vertical: 'middle' };
 
     const r4 = reconRow + 3;
-    ws.getCell(`H${r4}`).value = 'less adv';
-    ws.getCell(`H${r4}`).border = thinBorder;
-    ws.getCell(`H${r4}`).font = boldBlack11;
+    ws.getCell(`I${r4}`).value = 'less adv';
+    ws.getCell(`I${r4}`).border = thinBorder;
+    ws.getCell(`I${r4}`).font = boldBlack11;
     ws.getCell(`J${r4}`).value = advSum;
     ws.getCell(`J${r4}`).fill = yellowFill;
     ws.getCell(`J${r4}`).font = boldBlack11;
@@ -927,9 +953,13 @@ const ExcelModule = {
     ws.getCell(`J${r4}`).alignment = { horizontal: 'right', vertical: 'middle' };
 
     const r6 = reconRow + 5;
-    ws.getCell(`G${r6}`).value = `${latestDate} (out standing)`;
-    ws.getCell(`G${r6}`).border = thinBorder;
-    ws.getCell(`G${r6}`).font = boldBlack11;
+    ws.getCell(`H${r6}`).value = `${latestDate} (out standing)`;
+    ws.getCell(`H${r6}`).border = thinBorder;
+    ws.getCell(`H${r6}`).alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getCell(`H${r6}`).font = boldBlack11;
+    ws.getCell(`I${r6}`).value = 'TotalB-Less Adv';
+    ws.getCell(`I${r6}`).border = thinBorder;
+    ws.getCell(`I${r6}`).font = boldBlack11;
     ws.getCell(`J${r6}`).value = netOutstanding;
     ws.getCell(`J${r6}`).fill = cyanOutFill;
     ws.getCell(`J${r6}`).font = boldBlack11;

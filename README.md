@@ -265,6 +265,19 @@ When payment changes, the balance is derived dynamically, triggering full sectio
   - Sanitized status assignment in `normalizeTransportRecord` and `transport.js` to automatically badge freight trips with ₹0 ToPay as **`Billed`** (never `undefined`).
   - Added an auto-incrementing sequential SL generator (`max(SL in section) + 1`) in `saveTransport` to guarantee strictly unique SL numbers.
 
+### 10. 1:1 Authoritative Excel Ledger Calculation & Reconciliation Alignment
+* **Root Cause:**
+  - Section 2 trips had missing LR numbers for Trip 1 & Trip 2, and Trip 6 had `"35"` instead of `"35MT"`.
+  - An extraneous test advance was present in Section 2, inflating advances beyond ₹4,50,000 and skewing net outstanding.
+  - Exported Excel and HTML Sheet View lacked exact intermediate formula labels (`TotalB=ToBilled+TopayBAl` and `TotalB-Less Adv`), producing discrepancies against the authoritative Shinex physical workbook.
+  - Fallback logic in Excel export used outdated hardcoded values instead of dynamically computing the 7 Section 2 trips.
+* **Fix Applied:**
+  - Synchronized baseline in `js/api.js`: Trip 1 LR No set to `207`, Trip 2 LR No set to `208`, Trip 6 quantity set to `35MT`.
+  - Cleaned Section 2 advances to the exact authoritative total of **₹4,50,000** (29-08-2026: ₹50,000 + 10-09-2026: ₹4,00,000).
+  - Aligned all reconciliation table rows and cells in `js/excel.js` and `js/sheetview.js` with exact Excel coordinates and formula labels: `TotalB=ToBilled+TopayBAl` and `TotalB-Less Adv`.
+  - Fully dynamic financial computations: Section 1 Net Outstanding closed at **₹10,000** (`17-06-2026`); Section 2 Freight Billed: **₹10,58,750** + S1 Old Balance: **₹10,000** (`14-08-2026`) = TotalB: **₹10,68,750** - Advances: **₹4,50,000** = Net Outstanding: **₹6,18,750** as of **23-09-2026**.
+  - Upgraded storage version keys to `_v9` and bumped browser script cache busters to `v=9.0`.
+
 ---
 
 ## 🚀 Core Application Modules

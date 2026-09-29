@@ -152,12 +152,11 @@ const SheetViewModule = {
         oldBalDate = 'Before March 2026';
         totalPayable = totalAmount + toPayBal; // 18,93,350
         netOutstanding = totalPayable - advSum; // 10,000
-        // Section 1 cut-off date in Shinex Excel was 14-08-2026
-        latestDate = '14-08-2026';
+        latestDate = '17-06-2026';
       } else {
         // Section 2, Section 3, Section 4... chained from previous section's Net Outstanding!
         oldBal = prevOutBal;
-        oldBalDate = prevOutDate;
+        oldBalDate = (sec.name === 'Section 2') ? '14-08-2026' : prevOutDate;
         totalPayable = totalAmount + oldBal + toPayBal;
         netOutstanding = totalPayable - advSum;
         const allItems = [...secTrips, ...secAdvs];
@@ -376,12 +375,12 @@ const SheetViewModule = {
               <tbody>
                 <tr>
                   <td class="excel-cell" style="width: 110px; border: 1px solid #999;"></td>
-                  <td class="excel-cell bold" style="width: 100px; border: 1px solid #999; background: #fff;">To Billed</td>
+                  <td class="excel-cell bold" style="width: 150px; border: 1px solid #999; background: #fff;">To Billed</td>
                   <td class="excel-cell right font-mono bold" style="width: 110px; border: 1px solid #000; background: #f7c7ac;">${totalAmount.toLocaleString('en-IN')}</td>
                 </tr>
                 <tr>
                   <td class="excel-cell center font-mono" style="border: 1px solid #999;">${oldBalDate || '14-08-2026'}</td>
-                  <td class="excel-cell bold" style="border: 1px solid #999;">Old Balance</td>
+                  <td class="excel-cell bold" style="border: 1px solid #999;">ToPay bal</td>
                   <td class="excel-cell right font-mono bold" style="border: 1px solid #000; background: #ffff00;">${oldBal.toLocaleString('en-IN')}</td>
                 </tr>
                 ${toPayBal > 0 ? `
@@ -393,7 +392,7 @@ const SheetViewModule = {
                 ` : ''}
                 <tr>
                   <td class="excel-cell" style="border: 1px solid #999;"></td>
-                  <td class="excel-cell bold" style="border: 1px solid #999;">(=) Total</td>
+                  <td class="excel-cell bold" style="border: 1px solid #999; font-size: 0.82rem;">TotalB=ToBilled+TopayBAl</td>
                   <td class="excel-cell right font-mono bold" style="border: 1px solid #000; background: #f7c7ac;">${totalPayable.toLocaleString('en-IN')}</td>
                 </tr>
                 <tr>
@@ -403,7 +402,8 @@ const SheetViewModule = {
                 </tr>
                 <tr style="height: 12px;"><td colspan="3" class="excel-cell-blank"></td></tr>
                 <tr>
-                  <td class="excel-cell center bold" colspan="2" style="border: 1px solid #000;">${latestDate} (out standing)</td>
+                  <td class="excel-cell center bold" style="border: 1px solid #000;">${latestDate} (out standing)</td>
+                  <td class="excel-cell bold" style="border: 1px solid #000; font-size: 0.82rem;">TotalB-Less Adv</td>
                   <td class="excel-cell right font-mono bold" style="border: 1px solid #000; background: #94dcf8; font-size: 1.05rem;">${netOutstanding.toLocaleString('en-IN')}</td>
                 </tr>
               </tbody>
@@ -538,7 +538,7 @@ const SheetViewModule = {
                   <td class="excel-cell right font-mono bold" style="border: 1px solid #000; background: #ffff00;">${toPayBal.toLocaleString('en-IN')}</td>
                 </tr>
                 <tr>
-                  <td class="excel-cell" style="border: 1px solid #999;"></td>
+                  <td class="excel-cell bold" style="border: 1px solid #999; font-size: 0.82rem;">TotalB=ToBilled+TopayBAl</td>
                   <td class="excel-cell right font-mono bold" style="border: 1px solid #000; background: #f7c7ac;">${totalPayable.toLocaleString('en-IN')}</td>
                 </tr>
                 <tr>
@@ -548,6 +548,7 @@ const SheetViewModule = {
                 <tr style="height: 12px;"><td colspan="2" class="excel-cell-blank"></td></tr>
                 <tr>
                   <td class="excel-cell center bold" style="border: 1px solid #000;">${s1LatestDate} (out standing)</td>
+                  <td class="excel-cell bold" style="border: 1px solid #000; font-size: 0.82rem;">TotalB-Less Adv</td>
                   <td class="excel-cell right font-mono bold" style="border: 1px solid #000; background: #94dcf8; font-size: 1.05rem;">${outstanding.toLocaleString('en-IN')}</td>
                 </tr>
               </tbody>

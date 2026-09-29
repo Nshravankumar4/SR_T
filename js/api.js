@@ -494,7 +494,7 @@ const REAL_SHINEX_TRANSPORT = [
     {
         "id":  "TR-S2-1",
         "slNo":  1,
-        "lrNo":  "",
+        "lrNo":  "207",
         "dcNo":  "998",
         "date":  "22-08-2026",
         "vehicleNumber":  "AP39UD3564",
@@ -513,7 +513,7 @@ const REAL_SHINEX_TRANSPORT = [
     {
         "id":  "TR-S2-2",
         "slNo":  2,
-        "lrNo":  "",
+        "lrNo":  "208",
         "dcNo":  "540",
         "date":  "03-09-2026",
         "vehicleNumber":  "TG15T6666",
@@ -595,7 +595,7 @@ const REAL_SHINEX_TRANSPORT = [
         "vehicleNumber":  "TS05UF1719",
         "fromCity":  "Medchal",
         "toCity":  "Murshidabad",
-        "quantity":  "35",
+        "quantity":  "35MT",
         "mTax":  "",
         "amount":  "157500",
         "toPay":  0,
@@ -729,13 +729,6 @@ const REAL_SHINEX_ADVANCES = [
         "id":  "ADV-S2-71",
         "date":  "10-09-2026",
         "amount":  "400000",
-        "note":  "",
-        "section":  "Section 2"
-    },
-    {
-        "id":  "ADV-S2-72",
-        "date":  "29-09-2026",
-        "amount":  "100000",
         "note":  "",
         "section":  "Section 2"
     }
@@ -981,10 +974,10 @@ const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbwnxIOGOYUzCfrd
 
 const API_CONFIG = {
   webAppUrl: localStorage.getItem('transport_api_url') || DEFAULT_API_URL,
-  storageKeyTransport: 'transport_records_shinex_v8',
-  storageKeyAdvances: 'transport_advances_shinex_v8',
-  storageKeyOpeningBal: 'transport_opening_bal_shinex_v8',
-  storageKeySections: 'transport_sections_shinex_v8'
+  storageKeyTransport: 'transport_records_shinex_v9',
+  storageKeyAdvances: 'transport_advances_shinex_v9',
+  storageKeyOpeningBal: 'transport_opening_bal_shinex_v9',
+  storageKeySections: 'transport_sections_shinex_v9'
 };
 
 const ApiService = {
