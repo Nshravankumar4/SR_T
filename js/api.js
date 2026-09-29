@@ -731,6 +731,13 @@ const REAL_SHINEX_ADVANCES = [
         "amount":  "400000",
         "note":  "",
         "section":  "Section 2"
+    },
+    {
+        "id":  "ADV-S2-72",
+        "date":  "29-09-2026",
+        "amount":  "100000",
+        "note":  "",
+        "section":  "Section 2"
     }
 ];
 
@@ -854,6 +861,36 @@ window.parseDateToTimestamp = function(dStr) {
   }
   const parsed = Date.parse(s);
   return isNaN(parsed) ? 0 : parsed;
+};
+
+window.getNoteStyle = function(note) {
+  if (!note) return '';
+  const s = String(note).toLowerCase();
+  if (s.includes('halt') || s.includes('cancel')) {
+    return 'background: #ffff00 !important; color: #000000 !important; font-weight: bold; border: 1px solid #eab308;';
+  }
+  if (s.includes('shortage') || s.includes('damage')) {
+    return 'background: #ffc7ce !important; color: #9c0006 !important; font-weight: bold; border: 1px solid #f87171;';
+  }
+  if (s.includes('u&s') || s.includes('truck place')) {
+    return 'background: #44b3e1 !important; color: #ffffff !important; font-weight: bold; border: 1px solid #0284c7;';
+  }
+  return '';
+};
+
+window.getNoteBadgeHtml = function(note) {
+  if (!note) return '-';
+  const s = String(note).toLowerCase();
+  if (s.includes('halt') || s.includes('cancel')) {
+    return `<span style="background: #ffff00; color: #000000; font-weight: bold; border: 1px solid #eab308; padding: 2px 7px; border-radius: 4px; font-size: 0.8rem; display: inline-block;">⏱️ ${note}</span>`;
+  }
+  if (s.includes('shortage') || s.includes('damage')) {
+    return `<span style="background: #ffc7ce; color: #9c0006; font-weight: bold; border: 1px solid #f87171; padding: 2px 7px; border-radius: 4px; font-size: 0.8rem; display: inline-block;">⚠️ ${note}</span>`;
+  }
+  if (s.includes('u&s') || s.includes('truck place')) {
+    return `<span style="background: #e0f2fe; color: #0369a1; font-weight: bold; border: 1px solid #7dd3fc; padding: 2px 7px; border-radius: 4px; font-size: 0.8rem; display: inline-block;">🚛 ${note}</span>`;
+  }
+  return `<span style="color: var(--text-muted); font-size: 0.85rem;">${note}</span>`;
 };
 
 window.formatDateForInput = function(dStr) {
@@ -1093,6 +1130,8 @@ const ApiService = {
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           action: 'restoreFullDataset',
+          user: 'admin',
+          role: 'Admin',
           data: {
             transport: REAL_SHINEX_TRANSPORT,
             advances: REAL_SHINEX_ADVANCES,

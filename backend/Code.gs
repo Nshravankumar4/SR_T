@@ -515,8 +515,23 @@ function executeRestoreFullDataset(ss, rData, user) {
   // 1. Create Safety Backup First!
   createCloudBackup(ss, 'Pre-Restore-Safety-Backup');
 
+  if (typeof rData === 'string') {
+    try { rData = JSON.parse(rData); } catch (e) {}
+  }
   var tRows = rData.transport || [];
+  if (typeof tRows === 'string') {
+    try { tRows = JSON.parse(tRows); } catch (e) {}
+  }
   var aRows = rData.advances || [];
+  if (typeof aRows === 'string') {
+    try { aRows = JSON.parse(aRows); } catch (e) {}
+  }
+  if (!Array.isArray(tRows)) {
+    tRows = Object.keys(tRows).map(function(k) { return tRows[k]; });
+  }
+  if (!Array.isArray(aRows)) {
+    aRows = Object.keys(aRows).map(function(k) { return aRows[k]; });
+  }
   var now = new Date().toISOString();
 
   // 2. Restore Transport Sheet

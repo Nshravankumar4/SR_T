@@ -239,13 +239,7 @@ const SheetViewModule = {
     let rowsHtml = '';
     trips.forEach((r, idx) => {
       const amt = Number(r.amount) || 0;
-      const noteLower = (r.note || '').toLowerCase();
-      let noteStyle = '';
-      if (noteLower.includes('shortage') || noteLower.includes('damage')) {
-        noteStyle = 'background: #ffc7ce; color: #9c0006; font-weight: bold; border: 1px solid #f87171;';
-      } else if (noteLower.includes('halting') || noteLower.includes('cancel') || noteLower.includes('truck cancel')) {
-        noteStyle = 'background: #ffff00; color: #000; font-weight: bold; border: 1px solid #eab308;';
-      }
+      const noteStyle = (typeof window.getNoteStyle === 'function') ? window.getNoteStyle(r.note) : '';
 
       const isPaid = (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid');
       const paidStyle = isPaid ? 'background: #c6efce; color: #006100; font-weight: bold;' : '';
@@ -432,9 +426,8 @@ const SheetViewModule = {
       const bal = Number(r.balance) || 0;
       const paid = r.paid;
 
-      let noteStyle = '';
-      if (r.note && r.note.toLowerCase().includes('shortage')) noteStyle = 'background: #ffc7ce; color: #9c0006; font-weight: bold;';
-      else if (r.note && (r.note.toLowerCase().includes('halting') || r.note.toLowerCase().includes('cancel'))) noteStyle = 'background: #ffff00;';
+      const noteStyle = (typeof window.getNoteStyle === 'function') ? window.getNoteStyle(r.note) : '';
+      const balStyle = bal > 0 ? 'color: #dc2626 !important; font-weight: bold;' : '';
 
       rowsHtml += `
         <tr onclick="TransportModule.openEditModal('${r.id}')" style="cursor: pointer;" title="✏️ Click to edit trip (LR: ${r.lrNo || r.id})">
@@ -451,7 +444,7 @@ const SheetViewModule = {
           <td class="excel-cell right font-mono">${amt > 0 ? amt.toLocaleString('en-IN') : ''}</td>
           <td class="excel-cell right font-mono">${toPay > 0 ? toPay.toLocaleString('en-IN') : ''}</td>
           <td class="excel-cell center" style="${paid === 'Paid' ? 'background: #c6efce; color: #006100; font-weight: bold;' : ''}">${paid || ''}</td>
-          <td class="excel-cell right font-mono">${bal > 0 ? bal.toLocaleString('en-IN') : ''}</td>
+          <td class="excel-cell right font-mono" style="${balStyle}">${bal > 0 ? bal.toLocaleString('en-IN') : ''}</td>
           <td class="excel-cell left" style="${noteStyle}">${r.note || ''}</td>
         </tr>
       `;

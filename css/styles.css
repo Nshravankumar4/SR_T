@@ -943,6 +943,21 @@ tbody tr:hover {
   color: #000000 !important;
 }
 
+.excel-red {
+  background: #ffc7ce !important;
+  color: #9c0006 !important;
+}
+
+.excel-green {
+  background: #c6efce !important;
+  color: #006100 !important;
+}
+
+.excel-blue {
+  background: #44b3e1 !important;
+  color: #ffffff !important;
+}
+
 .excel-total-row td {
   border-top: 1px solid #000 !important;
   border-bottom: 2px solid #000 !important;
@@ -955,7 +970,7 @@ tbody tr:hover {
   z-index: 10;
 }
 
-.excel-table tbody tr:hover td:not(.excel-yellow):not(.excel-peach):not(.excel-cyan):not(.excel-row-num) {
+.excel-table tbody tr:hover td:not(.excel-yellow):not(.excel-peach):not(.excel-cyan):not(.excel-red):not(.excel-green):not(.excel-blue):not(.excel-row-num) {
   background-color: #f0f7ff;
 }
 

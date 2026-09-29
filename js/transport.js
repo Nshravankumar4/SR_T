@@ -125,14 +125,7 @@ const TransportModule = {
           <td style="color: ${r.balance > 0 ? 'var(--danger)' : 'var(--text-muted)'}; font-weight: bold;">₹${formattedBalance}</td>
           <td><span class="badge ${badgeClass}">${status}</span></td>
           <td>
-            ${r.note ? (
-              r.note.toLowerCase().includes('shortage') 
-                ? `<span style="background: #fee2e2; color: #b91c1c; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; font-size: 0.8rem;">⚠️ ${r.note}</span>`
-                : (r.note.toLowerCase().includes('halting') || r.note.toLowerCase().includes('cancel')
-                    ? `<span style="background: #fef3c7; color: #b45309; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">⏱️ ${r.note}</span>`
-                    : `<span style="color: var(--text-muted); font-size: 0.85rem;">${r.note}</span>`
-                  )
-            ) : '-'}
+            ${(typeof window.getNoteBadgeHtml === 'function') ? window.getNoteBadgeHtml(r.note) : (r.note || '-')}
           </td>
           <td>
             <div style="display: flex; gap: 0.35rem;">
@@ -185,7 +178,12 @@ const TransportModule = {
     document.getElementById('transportModalTitle').innerText = '➕ Add Transport Record';
     document.getElementById('transportDate').value = new Date().toISOString().split('T')[0];
     
-    this.populateSectionDropdown(preselectedSection);
+    let sec = preselectedSection;
+    if (!sec && typeof SheetViewModule !== 'undefined' && SheetViewModule.activeView && SheetViewModule.activeView !== 'FULL') {
+      sec = SheetViewModule.activeView.replace(/_/g, ' ');
+    }
+
+    this.populateSectionDropdown(sec);
     this.onSectionChange();
     
     document.getElementById('transportModal').classList.add('active');
