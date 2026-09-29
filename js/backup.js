@@ -183,6 +183,11 @@ const BackupModule = {
    * 1-Click Restore Point-in-Time Database State on Vercel
    */
   async restoreSnapshot(snapshotId) {
+    if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) {
+      alert("Permission denied: Only Administrator can restore backups!");
+      return;
+    }
+
     const snap = this.snapshots.find(s => s.id === snapshotId);
     if (!snap || !snap.data) {
       alert("Snapshot data not found!");
@@ -201,8 +206,9 @@ const BackupModule = {
 
     try {
       const { transport, advances, openingBal, sections } = snap.data;
+      const user = typeof AuthService !== 'undefined' ? AuthService.getCurrentUser() : null;
 
-      // 1. Update localStorage
+      // 1. Update localStorage cache
       if (typeof API_CONFIG !== 'undefined') {
         localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(transport || []));
         localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(advances || []));
@@ -221,11 +227,13 @@ const BackupModule = {
           window.App.showToast("Restoring database to cloud Google Sheets...", "info");
         }
         try {
-          await fetch(apiUrl, {
+          const resp = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({
               action: 'restoreFullDataset',
+              user: user ? user.name : 'Administrator',
+              role: user ? user.role : 'Admin',
               data: {
                 transport: transport,
                 advances: advances,
@@ -234,6 +242,10 @@ const BackupModule = {
               }
             })
           });
+          const res = await resp.json();
+          if (res && res.version && typeof ApiService !== 'undefined') {
+            ApiService.setCurrentVersion(res.version);
+          }
         } catch (cloudErr) {
           console.warn("Cloud restore sync error:", cloudErr);
         }

@@ -1106,11 +1106,15 @@ const ApiService = {
     if (!t) return null;
     const toPay = Number(t.toPay !== undefined ? t.toPay : t.ToPay) || 0;
     const paidRaw = t.paid !== undefined ? t.paid : t.Paid;
-    const paid = (paidRaw === 'Paid' || String(paidRaw).toLowerCase() === 'paid') ? 'Paid' : (Number(paidRaw) || 0);
+    const isPaid = (paidRaw === 'Paid' || String(paidRaw).toLowerCase() === 'paid');
+    const paid = isPaid ? 'Paid' : (Number(paidRaw) || 0);
+    const paidNum = isPaid ? toPay : (Number(paid) || 0);
+    const balance = isPaid ? 0 : Math.max(0, toPay - paidNum);
+
     let status = t.status || t.Status;
     if (!status || status === 'undefined' || status === 'null') {
       if (balance <= 0 && toPay > 0) status = 'Paid';
-      else if (paid > 0 && balance > 0) status = 'Partially Paid';
+      else if (paidNum > 0 && balance > 0) status = 'Partially Paid';
       else if (toPay === 0 && (Number(t.amount !== undefined ? t.amount : t.Amount) > 0)) status = 'Billed';
       else status = 'Pending';
     }
@@ -1176,6 +1180,9 @@ const ApiService = {
 
         if (result && result.success && result.data) {
           if (window.App) window.App.cloudSyncWarning = null;
+          if (result.version) {
+            this.setCurrentVersion(result.version);
+          }
           if (result.auth && typeof AuthService !== 'undefined' && AuthService.syncPasswordsFromCloud) {
             AuthService.syncPasswordsFromCloud(result.auth);
           }
@@ -1190,6 +1197,8 @@ const ApiService = {
             return {
               transport: cleanTrips,
               advances: cleanAdvs,
+              version: result.version,
+              summary: result.data.summary,
               source: 'cloud'
             };
           } else {
@@ -1302,10 +1311,57 @@ const ApiService = {
     });
   },
 
-  // Save or update transport record
+  currentVersion: null,
+
+  getCurrentVersion() {
+    if (this.currentVersion !== null) return this.currentVersion;
+    const v = localStorage.getItem('shinex_data_version');
+    return v ? Number(v) : null;
+  },
+
+  setCurrentVersion(v) {
+    this.currentVersion = Number(v) || null;
+    if (v !== null) {
+      localStorage.setItem('shinex_data_version', String(v));
+    } else {
+      localStorage.removeItem('shinex_data_version');
+    }
+  },
+
+  // Lightweight version check for real-time background polling (3-5s)
+  async getDataVersion() {
+    const url = this.getApiUrl();
+    if (!url) return null;
+    try {
+      const response = await fetch(`${url}?action=getVersion`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!response.ok) return null;
+      const text = await response.text();
+      let data = null;
+      try { data = JSON.parse(text); } catch (_) {}
+      if (data && data.success && data.version !== undefined) {
+        return Number(data.version);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  },
+
+  // Save or update transport record (AUTHORITATIVE CLOUD WRITE FIRST)
   async saveTransport(record) {
     const isEdit = Boolean(record.id);
     const url = this.getApiUrl();
+
+    if (!url) {
+      throw new Error("Cloud database Web App URL is not configured. Please enter the URL in Settings & API.");
+    }
+
+    const user = typeof AuthService !== 'undefined' ? AuthService.getCurrentUser() : null;
+    const username = user ? user.name : 'Unknown';
+    const role = user ? user.role : 'Guest';
 
     // Ensure numeric calculations
     const toPay = Number(record.toPay) || 0;
@@ -1320,174 +1376,241 @@ const ApiService = {
     }
 
     const section = window.normalizeSection(record.section || 'Section 2');
-    const id = record.id || ('TR-' + Date.now());
-
     const cleanRecord = {
       ...record,
-      id,
       section,
       date: window.formatDateForDisplay(record.date),
       toPay,
       paid,
       balance,
       status,
-      amount: Number(record.amount) || 0,
-      createdAt: record.createdAt || new Date().toISOString()
+      amount: Number(record.amount) || 0
     };
 
-    // Save locally
+    const envelope = {
+      action: isEdit ? 'updateTransport' : 'addTransport',
+      user: username,
+      role: role,
+      data: cleanRecord
+    };
+
+    // 1. Authoritative write to Google Sheets via text/plain to avoid CORS preflight
+    let res = null;
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(envelope)
+      });
+      const text = await response.text();
+      res = JSON.parse(text);
+    } catch (netErr) {
+      console.error("[saveTransport] Cloud write failed:", netErr);
+      throw new Error("Cloud connection unavailable. Transport record was NOT saved.");
+    }
+
+    if (!res || !res.success) {
+      throw new Error(res?.message || res?.error || "Google Sheets rejected transport update.");
+    }
+
+    // 2. Authoritative version tracking
+    if (res.version) {
+      this.setCurrentVersion(res.version);
+    }
+
+    cleanRecord.id = res.id || cleanRecord.id;
+    if (res.data && res.data.slNo) {
+      cleanRecord.slNo = res.data.slNo;
+    }
+
+    // 3. Update local cache
     const list = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyTransport) || '[]');
     if (isEdit) {
       const idx = list.findIndex(item => item.id === cleanRecord.id);
       if (idx !== -1) list[idx] = cleanRecord;
       else list.push(cleanRecord);
     } else {
-      // Ensure unique sequential SL.NO in this section
-      const secTrips = list.filter(item => window.getTripSection(item) === cleanRecord.section);
-      const slExists = secTrips.some(item => Number(item.slNo) === Number(cleanRecord.slNo));
-      if (slExists || !cleanRecord.slNo) {
-        const maxSl = secTrips.length > 0 ? Math.max(...secTrips.map(item => Number(item.slNo) || 0)) : 0;
-        cleanRecord.slNo = maxSl + 1;
-      }
-
-      // Duplicate prevention: check if an identical trip already exists in this section
-      const isDupe = list.some(item => 
-        window.getTripSection(item) === cleanRecord.section &&
-        String(item.slNo) === String(cleanRecord.slNo) &&
-        String(item.vehicleNumber).toUpperCase() === String(cleanRecord.vehicleNumber).toUpperCase() &&
-        Number(item.amount) === Number(cleanRecord.amount) &&
-        item.date === cleanRecord.date
-      );
-      if (isDupe) {
-        console.warn("Blocked duplicate trip submission:", cleanRecord);
-        return cleanRecord;
-      }
       list.push(cleanRecord);
     }
     localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(list));
-    window.broadcastDataChange('transport_saved', { record: cleanRecord });
 
-    // Post to Google Apps Script if configured
-    if (url) {
-      try {
-        await fetch(url, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: isEdit ? 'updateTransport' : 'addTransport',
-            data: cleanRecord
-          })
-        });
-      } catch (err) {
-        console.error("Cloud sync error for transport:", err);
-      }
-    }
-
+    // 4. Real-time broadcast
+    window.broadcastDataChange('transport_saved', { record: cleanRecord, version: res.version });
     return cleanRecord;
   },
 
-  // Delete transport record
+  // Delete transport record (STRICT ADMIN PERMISSION & CLOUD DELETION)
   async deleteTransport(id) {
     if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) {
-      alert("Permission denied: Only Admin can delete transport records!");
+      alert("Delete operation not permitted.\n\nRudra can add and edit records but cannot delete them.");
       return false;
     }
+
+    const url = this.getApiUrl();
+    if (!url) {
+      throw new Error("Cloud database Web App URL is not configured.");
+    }
+
+    const user = typeof AuthService !== 'undefined' ? AuthService.getCurrentUser() : null;
+    const username = user ? user.name : 'Administrator';
+    const role = user ? user.role : 'Admin';
+
+    let res = null;
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'deleteRecord',
+          type: 'transport',
+          id: id,
+          user: username,
+          role: role
+        })
+      });
+      const text = await response.text();
+      res = JSON.parse(text);
+    } catch (netErr) {
+      console.error("[deleteTransport] Cloud delete failed:", netErr);
+      throw new Error("Cloud connection unavailable. Record was NOT deleted.");
+    }
+
+    if (!res || !res.success) {
+      throw new Error(res?.message || res?.error || "Google Sheets rejected delete request.");
+    }
+
+    if (res.version) {
+      this.setCurrentVersion(res.version);
+    }
+
     const list = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyTransport) || '[]');
     const filtered = list.filter(item => item.id !== id);
     localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(filtered));
-    window.broadcastDataChange('transport_deleted', { id });
 
-    const url = this.getApiUrl();
-    if (url) {
-      try {
-        await fetch(url, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'deleteRecord', type: 'transport', id })
-        });
-      } catch (err) {
-        console.error("Cloud sync error for delete:", err);
-      }
-    }
+    window.broadcastDataChange('transport_deleted', { id, version: res.version });
     return true;
   },
 
-  // Save advance record
+  // Save or update advance record (AUTHORITATIVE CLOUD WRITE FIRST)
   async saveAdvance(advance) {
     const isEdit = Boolean(advance.id);
+    const url = this.getApiUrl();
+
+    if (!url) {
+      throw new Error("Cloud database Web App URL is not configured. Please enter the URL in Settings & API.");
+    }
+
+    const user = typeof AuthService !== 'undefined' ? AuthService.getCurrentUser() : null;
+    const username = user ? user.name : 'Unknown';
+    const role = user ? user.role : 'Guest';
+
+    const amount = Number(advance.amount) || 0;
+    if (amount <= 0) {
+      throw new Error("Advance Amount must be greater than zero.");
+    }
+
     const cleanAdv = {
       ...advance,
-      id: advance.id || ('ADV-' + Date.now().toString().slice(-5)),
       section: window.normalizeSection(advance.section || 'Section 2'),
       date: window.formatDateForDisplay(advance.date),
-      amount: Number(advance.amount) || 0,
-      createdAt: advance.createdAt || new Date().toISOString()
+      amount: amount
     };
 
+    const envelope = {
+      action: isEdit ? 'updateAdvance' : 'addAdvance',
+      user: username,
+      role: role,
+      data: cleanAdv
+    };
+
+    let res = null;
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(envelope)
+      });
+      const text = await response.text();
+      res = JSON.parse(text);
+    } catch (netErr) {
+      console.error("[saveAdvance] Cloud write failed:", netErr);
+      throw new Error("Cloud connection unavailable. Advance record was NOT saved.");
+    }
+
+    if (!res || !res.success) {
+      throw new Error(res?.message || res?.error || "Google Sheets rejected advance update.");
+    }
+
+    if (res.version) {
+      this.setCurrentVersion(res.version);
+    }
+
+    cleanAdv.id = res.id || cleanAdv.id;
+
+    // Update local cache
     const list = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyAdvances) || '[]');
     if (isEdit) {
       const idx = list.findIndex(a => a.id === cleanAdv.id);
       if (idx !== -1) list[idx] = cleanAdv;
       else list.unshift(cleanAdv);
     } else {
-      const isDupe = list.some(item =>
-        window.getAdvanceSection(item) === cleanAdv.section &&
-        item.date === cleanAdv.date &&
-        Number(item.amount) === Number(cleanAdv.amount) &&
-        (item.reference || '') === (cleanAdv.reference || '')
-      );
-      if (isDupe) {
-        console.warn("Blocked duplicate advance submission:", cleanAdv);
-        return cleanAdv;
-      }
       list.unshift(cleanAdv);
     }
     localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(list));
-    window.broadcastDataChange('advance_saved', { advance: cleanAdv });
 
-    const url = this.getApiUrl();
-    if (url) {
-      try {
-        await fetch(url, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: isEdit ? 'updateAdvance' : 'addAdvance', data: cleanAdv })
-        });
-      } catch (err) {
-        console.error("Cloud sync error for advance:", err);
-      }
-    }
+    window.broadcastDataChange('advance_saved', { advance: cleanAdv, version: res.version });
     return cleanAdv;
   },
 
-  // Delete advance record
+  // Delete advance record (STRICT ADMIN PERMISSION & CLOUD DELETION)
   async deleteAdvance(id) {
     if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) {
-      alert("Permission denied: Only Admin can delete advances!");
+      alert("Delete operation not permitted.\n\nRudra can add and edit records but cannot delete them.");
       return false;
     }
+
+    const url = this.getApiUrl();
+    if (!url) {
+      throw new Error("Cloud database Web App URL is not configured.");
+    }
+
+    const user = typeof AuthService !== 'undefined' ? AuthService.getCurrentUser() : null;
+    const username = user ? user.name : 'Administrator';
+    const role = user ? user.role : 'Admin';
+
+    let res = null;
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'deleteRecord',
+          type: 'advance',
+          id: id,
+          user: username,
+          role: role
+        })
+      });
+      const text = await response.text();
+      res = JSON.parse(text);
+    } catch (netErr) {
+      console.error("[deleteAdvance] Cloud delete failed:", netErr);
+      throw new Error("Cloud connection unavailable. Advance was NOT deleted.");
+    }
+
+    if (!res || !res.success) {
+      throw new Error(res?.message || res?.error || "Google Sheets rejected advance delete request.");
+    }
+
+    if (res.version) {
+      this.setCurrentVersion(res.version);
+    }
+
     const list = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyAdvances) || '[]');
     const filtered = list.filter(item => item.id !== id);
     localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(filtered));
-    window.broadcastDataChange('advance_deleted', { id });
 
-    const url = this.getApiUrl();
-    if (url) {
-      try {
-        await fetch(url, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'deleteRecord', type: 'advance', id })
-        });
-      } catch (err) {
-        console.error("Cloud sync error for delete advance:", err);
-      }
-    }
-    return true;
+    window.broadcastDataChange('advance_deleted', { id, version: res.version });
   }
 };
 

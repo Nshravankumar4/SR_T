@@ -16,6 +16,8 @@ window.App = {
     this.checkAuth();
   },
 
+  isSyncing: false,
+
   initRealtimeSync() {
     // 1. BroadcastChannel across all open tabs/windows
     if (window.shinexSyncChannel) {
@@ -31,22 +33,39 @@ window.App = {
 
     // 2. Storage event listener fallback (for multi-tab / incognito)
     window.addEventListener('storage', async (e) => {
-      if (e.key && (e.key.startsWith('transport_') || e.key.includes('auth_'))) {
+      if (e.key && (e.key.startsWith('transport_') || e.key.includes('auth_') || e.key === 'shinex_data_version')) {
         await this.refreshData(true);
       }
     });
 
     // 3. Tab focus auto-sync (when user switches back to this tab)
     window.addEventListener('focus', () => {
-      this.refreshData(true);
+      this.checkCloudVersionAndSync();
     });
 
-    // 4. Background cloud polling every 3 seconds if connected (ensures instant visibility)
-    setInterval(() => {
+    // 4. Background lightweight DATA_VERSION poller every 3.5 seconds
+    if (this._pollerInterval) clearInterval(this._pollerInterval);
+    this._pollerInterval = setInterval(() => {
       if (typeof ApiService !== 'undefined' && ApiService.isCloudConnected() && window.navigator.onLine) {
-        this.refreshData(true);
+        this.checkCloudVersionAndSync();
       }
-    }, 3000);
+    }, 3500);
+  },
+
+  async checkCloudVersionAndSync() {
+    if (this.isSyncing) return;
+    try {
+      const serverVersion = await ApiService.getDataVersion();
+      if (serverVersion === null || serverVersion === undefined) return;
+
+      const localVersion = ApiService.getCurrentVersion();
+      if (localVersion === null || serverVersion !== localVersion) {
+        console.log(`[Sync] Cloud mutation detected (Local v${localVersion} !== Cloud v${serverVersion}). Syncing full dataset...`);
+        await this.refreshData(true);
+      }
+    } catch (e) {
+      console.warn("[Sync] Version poll note:", e);
+    }
   },
 
   selectLoginUser(username) {
@@ -166,7 +185,10 @@ window.App = {
   },
 
   async refreshData(isSilent = false) {
+    if (this.isSyncing) return;
+    this.isSyncing = true;
     if (!isSilent) this.updateCloudStatus('Syncing...', 'online');
+
     try {
       const result = await ApiService.fetchAll();
       this.transportRecords = result.transport || [];
@@ -186,12 +208,14 @@ window.App = {
       const isOnline = window.navigator.onLine !== false;
       const banner = document.getElementById('cloudSyncAlertBanner');
       const isAdmin = typeof AuthService !== 'undefined' && AuthService.isAdmin();
+      const curVer = ApiService.getCurrentVersion();
 
       if (!isOnline) {
-        this.updateCloudStatus('Offline (Device Storage)', 'offline');
+        this.updateCloudStatus('Offline (Device Cache)', 'offline');
         if (banner) banner.style.display = 'none';
       } else if (result.source === 'cloud') {
-        this.updateCloudStatus('Online • Cloud Synced (Google Sheets)', 'cloud');
+        const verLabel = curVer ? `v${curVer}` : 'Cloud Synced';
+        this.updateCloudStatus(`Online • Google Sheets Active (${verLabel})`, 'cloud');
         if (banner) banner.style.display = 'none';
       } else if (this.cloudSyncWarning && isAdmin) {
         this.updateCloudStatus(this.cloudSyncWarning, 'offline');
@@ -203,6 +227,8 @@ window.App = {
     } catch (err) {
       console.error("refreshData error:", err);
       this.updateCloudStatus('Online • Live Database Active', 'online');
+    } finally {
+      this.isSyncing = false;
     }
 
     // Populate Settings fields

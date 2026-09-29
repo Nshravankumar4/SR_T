@@ -310,14 +310,14 @@ const TransportModule = {
 
       await ApiService.saveTransport(record);
       this.closeModal();
-      window.App.showToast("Transport record saved successfully!", "success");
+      window.App.showToast("✅ Transport record saved to Google Sheets!", "success");
       await window.App.refreshData();
       if (window.BackupModule) {
         await window.BackupModule.onRecordMutated(`Save Transport LR: ${record.lrNo || record.id}`);
       }
     } catch (err) {
       console.error(err);
-      window.App.showToast("Error saving record.", "error");
+      window.App.showToast("Cloud Notice: " + (err.message || "Failed to save transport record."), "error");
     } finally {
       this.isSubmitting = false;
     }
@@ -325,20 +325,20 @@ const TransportModule = {
 
   async confirmDelete(id) {
     if (!AuthService.isAdmin()) {
-      alert("Permission denied: Only Admin can delete transport records!");
+      alert("Delete operation not permitted.\n\nRudra can add and edit records but cannot delete them.");
       return;
     }
-    if (!confirm("Are you sure you want to delete this transport record?")) return;
+    if (!confirm("Are you sure you want to permanently delete this transport record? Google Sheets will recalculate automatically.")) return;
     try {
       await ApiService.deleteTransport(id);
-      window.App.showToast("Record deleted.", "info");
+      window.App.showToast("🗑️ Transport record deleted from Google Sheets.", "info");
       await window.App.refreshData();
       if (window.BackupModule) {
         await window.BackupModule.onRecordMutated(`Delete Transport: ${id}`);
       }
     } catch (err) {
       console.error(err);
-      window.App.showToast("Error deleting record.", "error");
+      window.App.showToast("Cloud Error: " + (err.message || "Failed to delete transport record."), "error");
     }
   }
 };

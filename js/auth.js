@@ -282,17 +282,17 @@ const AuthService = {
     const apiUrl = typeof ApiService !== 'undefined' ? ApiService.getApiUrl() : '';
     if (apiUrl) {
       try {
-        await fetch(apiUrl, {
+        const resp = await fetch(apiUrl, {
           method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({
             action: 'updatePassword',
             username: key,
             password: newPassword.trim()
           })
         });
-        console.log(`☁️ Password for ${users[key].username} pushed live to cloud.`);
+        const res = await resp.json();
+        console.log(`☁️ Password for ${users[key].username} pushed live to cloud:`, res);
       } catch (cloudErr) {
         console.warn("Could not sync password to cloud:", cloudErr);
       }

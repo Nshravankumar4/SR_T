@@ -223,14 +223,14 @@ const AdvancesModule = {
 
       await ApiService.saveAdvance(advance);
       this.closeModal();
-      window.App.showToast(id ? "Advance updated successfully!" : "Advance added successfully!", "success");
+      window.App.showToast(id ? "✅ Advance updated in Google Sheets!" : "✅ Advance saved to Google Sheets!", "success");
       await window.App.refreshData();
       if (window.BackupModule) {
         await window.BackupModule.onRecordMutated(`Save Advance: ₹${amount.toLocaleString('en-IN')}`);
       }
     } catch (err) {
       console.error(err);
-      window.App.showToast("Failed to save advance record.", "error");
+      window.App.showToast("Cloud Notice: " + (err.message || "Failed to save advance record."), "error");
     } finally {
       this.isSubmitting = false;
     }
@@ -238,20 +238,20 @@ const AdvancesModule = {
 
   async confirmDelete(id) {
     if (!AuthService.isAdmin()) {
-      alert("Permission denied: Only Admin can delete advances!");
+      alert("Delete operation not permitted.\n\nRudra can add and edit records but cannot delete them.");
       return;
     }
-    if (!confirm("Are you sure you want to delete this advance entry?")) return;
+    if (!confirm("Are you sure you want to permanently delete this advance entry? Google Sheets will recalculate automatically.")) return;
     try {
       await ApiService.deleteAdvance(id);
-      window.App.showToast("Advance record deleted.", "info");
+      window.App.showToast("🗑️ Advance record deleted from Google Sheets.", "info");
       await window.App.refreshData();
       if (window.BackupModule) {
         await window.BackupModule.onRecordMutated(`Delete Advance: ${id}`);
       }
     } catch (err) {
       console.error(err);
-      window.App.showToast("Failed to delete advance.", "error");
+      window.App.showToast("Cloud Error: " + (err.message || "Failed to delete advance."), "error");
     }
   }
 };
