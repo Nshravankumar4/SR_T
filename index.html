@@ -121,7 +121,7 @@
           </div>
           <button id="manualSyncBtn" class="btn btn-sm btn-secondary" style="font-size: 0.72rem; padding: 2px 7px; color: #cbd5e1; background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15);" title="Sync database now">🔄 Sync</button>
         </div>
-        <button id="logoutBtn" class="sidebar-logout-btn">
+        <button id="logoutBtn" class="sidebar-logout-btn" onclick="window.App ? window.App.logout() : AuthService.logout()">
           <span>🚪</span> Logout
         </button>
       </div>
@@ -135,7 +135,10 @@
           <span style="font-size: 1.3rem;">🚛</span>
           <strong>Shinex Transport Ledger</strong>
         </div>
-        <button class="btn btn-sm btn-secondary" onclick="document.querySelector('.app-sidebar').classList.toggle('open')">☰ Menu</button>
+        <div style="display: flex; gap: 0.4rem; align-items: center;">
+          <button class="btn btn-sm btn-secondary" onclick="document.querySelector('.app-sidebar').classList.toggle('open')">☰ Menu</button>
+          <button class="btn btn-sm btn-secondary" onclick="window.App ? window.App.logout() : AuthService.logout()" style="background: rgba(239,68,68,0.2); color: #fca5a5; border-color: rgba(239,68,68,0.4); font-weight: 600; font-size: 0.78rem; padding: 3px 8px;">🚪 Logout</button>
+        </div>
       </div>
 
       <main class="main-content-scroll">

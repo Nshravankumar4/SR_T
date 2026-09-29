@@ -184,6 +184,18 @@ window.App = {
     }
   },
 
+  logout() {
+    if (typeof AuthService !== 'undefined') {
+      AuthService.logout();
+    } else {
+      sessionStorage.removeItem('transport_user_session_v2');
+      try { sessionStorage.clear(); } catch (e) {}
+    }
+    document.querySelector('.app-sidebar')?.classList.remove('open');
+    this.checkAuth();
+    this.showToast("Logged out successfully.", "info");
+  },
+
   async refreshData(isSilent = false) {
     if (this.isSyncing) return;
     this.isSyncing = true;

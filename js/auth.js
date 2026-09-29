@@ -218,6 +218,11 @@ const AuthService = {
 
   logout() {
     sessionStorage.removeItem(this.sessionKey);
+    try { sessionStorage.clear(); } catch (e) {}
+    document.querySelector('.app-sidebar')?.classList.remove('open');
+    if (typeof window.App !== 'undefined' && typeof window.App.checkAuth === 'function') {
+      window.App.checkAuth();
+    }
   },
 
   isAdmin() {
