@@ -60,14 +60,18 @@ const AdvancesModule = {
       return true;
     });
 
-    // Sort order: Section then by date or index
+    // Sort order: Section then by true chronological date
     this.filteredAdvances.sort((a, b) => {
       const aSec = window.getAdvanceSection(a);
       const bSec = window.getAdvanceSection(b);
       const aNum = Number(aSec.replace(/\D+/g, '')) || 0;
       const bNum = Number(bSec.replace(/\D+/g, '')) || 0;
       if (aNum !== bNum) return aNum - bNum;
-      return (b.date || '').localeCompare(a.date || '');
+
+      const tsA = (typeof window.parseDateToTimestamp === 'function') ? window.parseDateToTimestamp(a.date) : 0;
+      const tsB = (typeof window.parseDateToTimestamp === 'function') ? window.parseDateToTimestamp(b.date) : 0;
+      if (tsA !== tsB) return tsA - tsB;
+      return String(a.id || '').localeCompare(String(b.id || ''));
     });
 
     // Update summary stats
@@ -121,7 +125,7 @@ const AdvancesModule = {
         <tr>
           <td><strong>${index + 1}</strong></td>
           <td><span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; font-size: 0.72rem; font-weight: 600;">${secName}</span></td>
-          <td><strong>${a.date || '-'}</strong></td>
+          <td><strong>${window.formatDateForDisplay(a.date) || '-'}</strong></td>
           <td style="color: var(--primary); font-weight: 700;">₹${formattedAmount}</td>
           <td>${a.description || a.note || 'Advance Payment'}</td>
           <td><code>${a.reference || '-'}</code></td>
@@ -226,7 +230,9 @@ const AdvancesModule = {
       window.App.showToast(id ? "✅ Advance updated in Google Sheets!" : "✅ Advance saved to Google Sheets!", "success");
       await window.App.refreshData();
       if (window.BackupModule) {
-        await window.BackupModule.onRecordMutated(`Save Advance: ₹${amount.toLocaleString('en-IN')}`);
+        setTimeout(() => {
+          window.BackupModule.onRecordMutated(`Save Advance: ₹${amount.toLocaleString('en-IN')}`).catch(console.error);
+        }, 100);
       }
     } catch (err) {
       console.error(err);
@@ -247,7 +253,9 @@ const AdvancesModule = {
       window.App.showToast("🗑️ Advance record deleted from Google Sheets.", "info");
       await window.App.refreshData();
       if (window.BackupModule) {
-        await window.BackupModule.onRecordMutated(`Delete Advance: ${id}`);
+        setTimeout(() => {
+          window.BackupModule.onRecordMutated(`Delete Advance: ${id}`).catch(console.error);
+        }, 100);
       }
     } catch (err) {
       console.error(err);

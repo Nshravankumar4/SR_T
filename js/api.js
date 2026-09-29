@@ -865,38 +865,42 @@ window.parseDateToTimestamp = function(dStr) {
 
 window.getNoteStyle = function(note) {
   if (!note) return '';
-  const s = String(note).toLowerCase();
-  if (s.includes('halt') || s.includes('cancel')) {
-    return 'background: #ffff00 !important; color: #000000 !important; font-weight: bold; border: 1px solid #eab308;';
-  }
+  const s = String(note).toLowerCase().trim();
+  if (!s || s === '-' || s === 'null' || s === 'undefined') return '';
   if (s.includes('shortage') || s.includes('damage')) {
     return 'background: #ffc7ce !important; color: #9c0006 !important; font-weight: bold; border: 1px solid #f87171;';
   }
   if (s.includes('u&s') || s.includes('truck place')) {
     return 'background: #44b3e1 !important; color: #ffffff !important; font-weight: bold; border: 1px solid #0284c7;';
   }
-  return '';
+  // In Shinex Excel, ANY note or remark in Note/Remarks is bright yellow (#ffff00)!
+  return 'background: #ffff00 !important; color: #000000 !important; font-weight: bold; border: 1px solid #eab308;';
 };
 
 window.getNoteBadgeHtml = function(note) {
   if (!note) return '-';
-  const s = String(note).toLowerCase();
-  if (s.includes('halt') || s.includes('cancel')) {
-    return `<span style="background: #ffff00; color: #000000; font-weight: bold; border: 1px solid #eab308; padding: 2px 7px; border-radius: 4px; font-size: 0.8rem; display: inline-block;">⏱️ ${note}</span>`;
-  }
+  const s = String(note).toLowerCase().trim();
+  if (!s || s === '-' || s === 'null' || s === 'undefined') return '-';
   if (s.includes('shortage') || s.includes('damage')) {
     return `<span style="background: #ffc7ce; color: #9c0006; font-weight: bold; border: 1px solid #f87171; padding: 2px 7px; border-radius: 4px; font-size: 0.8rem; display: inline-block;">⚠️ ${note}</span>`;
   }
   if (s.includes('u&s') || s.includes('truck place')) {
     return `<span style="background: #e0f2fe; color: #0369a1; font-weight: bold; border: 1px solid #7dd3fc; padding: 2px 7px; border-radius: 4px; font-size: 0.8rem; display: inline-block;">🚛 ${note}</span>`;
   }
-  return `<span style="color: var(--text-muted); font-size: 0.85rem;">${note}</span>`;
+  return `<span style="background: #ffff00; color: #000000; font-weight: bold; border: 1px solid #eab308; padding: 2px 7px; border-radius: 4px; font-size: 0.8rem; display: inline-block;">⏱️ ${note}</span>`;
 };
 
 window.formatDateForInput = function(dStr) {
   if (!dStr) return '';
+  if (dStr instanceof Date) {
+    const year = dStr.getFullYear();
+    const month = String(dStr.getMonth() + 1).padStart(2, '0');
+    const day = String(dStr.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
   const s = String(dStr).trim().replace(/--+/g, '-').replace(/\/\/+/g, '/');
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
   const m = s.match(/^(\d{1,2})[-/. ](\d{1,2})[-/. ](\d{4})$/);
   if (m) {
     const day = m[1].padStart(2, '0');
@@ -904,19 +908,29 @@ window.formatDateForInput = function(dStr) {
     const year = m[3];
     return `${year}-${month}-${day}`;
   }
-  return s;
+
+  const parsed = new Date(s);
+  if (!isNaN(parsed.getTime())) {
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  return '';
 };
 
 window.formatDateForDisplay = function(dStr) {
   if (!dStr) return '';
-  const s = String(dStr).trim().replace(/--+/g, '-').replace(/\/\/+/g, '/');
-  const mIso = s.match(/^(\d{4})[-/. ](\d{1,2})[-/. ](\d{1,2})/);
-  if (mIso) {
-    const year = mIso[1];
-    const month = mIso[2].padStart(2, '0');
-    const day = mIso[3].padStart(2, '0');
+  if (dStr instanceof Date) {
+    const day = String(dStr.getDate()).padStart(2, '0');
+    const month = String(dStr.getMonth() + 1).padStart(2, '0');
+    const year = dStr.getFullYear();
     return `${day}-${month}-${year}`;
   }
+  const s = String(dStr).trim().replace(/--+/g, '-').replace(/\/\/+/g, '/');
+  if (!s || s === '-' || s === 'null' || s === 'undefined') return '';
+
   const mIn = s.match(/^(\d{1,2})[-/. ](\d{1,2})[-/. ](\d{4})/);
   if (mIn) {
     const day = mIn[1].padStart(2, '0');
@@ -924,6 +938,23 @@ window.formatDateForDisplay = function(dStr) {
     const year = mIn[3];
     return `${day}-${month}-${year}`;
   }
+
+  const mIso = s.match(/^(\d{4})[-/. ](\d{1,2})[-/. ](\d{1,2})/);
+  if (mIso) {
+    const year = mIso[1];
+    const month = mIso[2].padStart(2, '0');
+    const day = mIso[3].padStart(2, '0');
+    return `${day}-${month}-${year}`;
+  }
+
+  const parsed = new Date(s);
+  if (!isNaN(parsed.getTime())) {
+    const day = String(parsed.getDate()).padStart(2, '0');
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const year = parsed.getFullYear();
+    return `${day}-${month}-${year}`;
+  }
+
   return s;
 };
 

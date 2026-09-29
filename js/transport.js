@@ -113,7 +113,7 @@ const TransportModule = {
           <td><span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; font-size: 0.72rem; font-weight: 600;">${secName}</span></td>
           <td><strong>${r.lrNo || '-'}</strong></td>
           <td>${r.dcNo || '-'}</td>
-          <td>${r.date || '-'}</td>
+          <td>${window.formatDateForDisplay(r.date) || '-'}</td>
           <td><code>${r.vehicleNumber || '-'}</code></td>
           <td>${r.fromCity || '-'}</td>
           <td>${r.toCity || '-'}</td>
@@ -311,7 +311,9 @@ const TransportModule = {
       window.App.showToast("✅ Transport record saved to Google Sheets!", "success");
       await window.App.refreshData();
       if (window.BackupModule) {
-        await window.BackupModule.onRecordMutated(`Save Transport LR: ${record.lrNo || record.id}`);
+        setTimeout(() => {
+          window.BackupModule.onRecordMutated(`Save Transport LR: ${record.lrNo || record.id}`).catch(console.error);
+        }, 100);
       }
     } catch (err) {
       console.error(err);
@@ -332,7 +334,9 @@ const TransportModule = {
       window.App.showToast("🗑️ Transport record deleted from Google Sheets.", "info");
       await window.App.refreshData();
       if (window.BackupModule) {
-        await window.BackupModule.onRecordMutated(`Delete Transport: ${id}`);
+        setTimeout(() => {
+          window.BackupModule.onRecordMutated(`Delete Transport: ${id}`).catch(console.error);
+        }, 100);
       }
     } catch (err) {
       console.error(err);
