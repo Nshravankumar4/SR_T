@@ -909,7 +909,7 @@ window.broadcastDataChange = function(type, data = {}) {
   }
 };
 
-const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbzlk-8ip9CNPjRpN5VswvWlEG7pRAWd1dK2GvyeQFtnLVVUpOfGSNbZE0GpURT68b8rYA/exec';
+const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbwnxIOGOYUzCfrdcbsw1kvD1x_bWwHp57Y_KJBnHBJB9pxK9d8SOhjufYwBHh3R0Dro/exec';
 
 const API_CONFIG = {
   webAppUrl: localStorage.getItem('transport_api_url') || DEFAULT_API_URL,
