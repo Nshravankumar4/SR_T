@@ -163,3 +163,4 @@ if ($passedTests -ne $totalTests) {
 } else {
     exit 0
 }
+

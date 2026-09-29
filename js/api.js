@@ -839,6 +839,23 @@ window.getLatestTripDate = function(trips, defaultDate = '23-09-2026') {
   return latest.str || defaultDate;
 };
 
+window.parseDateToTimestamp = function(dStr) {
+  if (!dStr) return 0;
+  const s = String(dStr).trim().replace(/--+/g, '-').replace(/\/\/+/g, '/');
+  const mIso = s.match(/^(\d{4})[-/. ](\d{1,2})[-/. ](\d{1,2})/);
+  if (mIso) {
+    const d = new Date(Number(mIso[1]), Number(mIso[2]) - 1, Number(mIso[3]));
+    return isNaN(d.getTime()) ? 0 : d.getTime();
+  }
+  const mIn = s.match(/^(\d{1,2})[-/. ](\d{1,2})[-/. ](\d{4})/);
+  if (mIn) {
+    const d = new Date(Number(mIn[3]), Number(mIn[2]) - 1, Number(mIn[1]));
+    return isNaN(d.getTime()) ? 0 : d.getTime();
+  }
+  const parsed = Date.parse(s);
+  return isNaN(parsed) ? 0 : parsed;
+};
+
 window.formatDateForInput = function(dStr) {
   if (!dStr) return '';
   const s = String(dStr).trim().replace(/--+/g, '-').replace(/\/\/+/g, '/');

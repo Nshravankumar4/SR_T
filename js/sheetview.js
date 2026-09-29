@@ -128,7 +128,13 @@ const SheetViewModule = {
       const secTrips = transport.filter(r => window.getTripSection(r) === sec.name)
         .sort((a, b) => (Number(a.slNo) || 0) - (Number(b.slNo) || 0));
 
-      const secAdvs = advances.filter(a => window.getAdvanceSection(a) === sec.name);
+      const secAdvs = advances.filter(a => window.getAdvanceSection(a) === sec.name)
+        .sort((a, b) => {
+          const tsA = (typeof window.parseDateToTimestamp === 'function') ? window.parseDateToTimestamp(a.date) : 0;
+          const tsB = (typeof window.parseDateToTimestamp === 'function') ? window.parseDateToTimestamp(b.date) : 0;
+          if (tsA !== tsB) return tsA - tsB;
+          return String(a.id || '').localeCompare(String(b.id || ''));
+        });
 
       const totalAmount = secTrips.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
       const toPayBal = secTrips.reduce((sum, r) => sum + (Number(r.balance) || 0), 0);
@@ -233,8 +239,18 @@ const SheetViewModule = {
     let rowsHtml = '';
     trips.forEach((r, idx) => {
       const amt = Number(r.amount) || 0;
-      const isHalting = r.note && String(r.note).toLowerCase().includes('halting');
-      const noteStyle = isHalting ? 'background: #ffff00; font-weight: 500;' : '';
+      const noteLower = (r.note || '').toLowerCase();
+      let noteStyle = '';
+      if (noteLower.includes('shortage') || noteLower.includes('damage')) {
+        noteStyle = 'background: #ffc7ce; color: #9c0006; font-weight: bold; border: 1px solid #f87171;';
+      } else if (noteLower.includes('halting') || noteLower.includes('cancel') || noteLower.includes('truck cancel')) {
+        noteStyle = 'background: #ffff00; color: #000; font-weight: bold; border: 1px solid #eab308;';
+      }
+
+      const isPaid = (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid');
+      const paidStyle = isPaid ? 'background: #c6efce; color: #006100; font-weight: bold;' : '';
+      const toPayBal = Number(r.balance) || 0;
+      const balStyle = toPayBal > 0 ? 'color: #dc2626; font-weight: bold;' : '';
 
       rowsHtml += `
         <tr onclick="TransportModule.openEditModal('${r.id}')" style="cursor: pointer;" title="✏️ Click to edit trip (LR: ${r.lrNo || r.id})">
@@ -249,9 +265,9 @@ const SheetViewModule = {
           <td class="excel-cell center">${r.quantity || ''}</td>
           <td class="excel-cell center">${r.mTax || ''}</td>
           <td class="excel-cell right font-mono">${amt > 0 ? amt.toLocaleString('en-IN') : ''}</td>
-          <td class="excel-cell center">${r.toPay ? Number(r.toPay).toLocaleString('en-IN') : ''}</td>
-          <td class="excel-cell center">${r.paid || ''}</td>
-          <td class="excel-cell center">${r.balance ? Number(r.balance).toLocaleString('en-IN') : ''}</td>
+          <td class="excel-cell right font-mono">${r.toPay ? Number(r.toPay).toLocaleString('en-IN') : ''}</td>
+          <td class="excel-cell center font-mono" style="${paidStyle}">${r.paid || ''}</td>
+          <td class="excel-cell right font-mono" style="${balStyle}">${toPayBal > 0 ? toPayBal.toLocaleString('en-IN') : ''}</td>
           <td class="excel-cell left" style="${noteStyle}">${r.note || ''}</td>
         </tr>
       `;
