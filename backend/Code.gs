@@ -29,13 +29,26 @@ var ADVANCES_HEADERS = [
 
 var META_HEADERS = ['Key', 'Value', 'Updated_At'];
 
+var SPREADSHEET_ID = '1eZ748Kh9G1yYecjML-Pnc-nnDx9AVpz2o76e2jLckZg';
+
+function getSpreadsheet() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (ss) return ss;
+  } catch (err) {}
+  if (SPREADSHEET_ID && SPREADSHEET_ID.trim() !== '') {
+    return SpreadsheetApp.openById(SPREADSHEET_ID.trim());
+  }
+  throw new Error("Unable to locate active spreadsheet or SPREADSHEET_ID.");
+}
+
 // =========================================================================
 // 1. GET REQUEST HANDLER (LIGHTWEIGHT VERSION POLLING & FULL DATASET RETRIEVAL)
 // =========================================================================
 
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) ? e.parameter.action : 'getAll';
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getSpreadsheet();
 
   try {
     ensureAllSheets(ss);
@@ -116,7 +129,7 @@ function doPost(e) {
     var role = String(envelope.role || 'Guest').trim();
     var payload = envelope.data || envelope;
 
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = getSpreadsheet();
     ensureAllSheets(ss);
 
     // 1. Secure Authentication Verification
