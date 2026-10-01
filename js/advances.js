@@ -147,7 +147,11 @@ const AdvancesModule = {
     const sections = typeof ApiService !== 'undefined' ? ApiService.getSections() : [];
     const activeSections = sections.filter(s => !s.isArchive);
     const defaultSec = activeSections.length > 0 ? activeSections[activeSections.length - 1].name : 'Section 2';
-    const target = selectedSection || defaultSec;
+    let target = selectedSection || defaultSec;
+    // Never keep a stale/deleted section selected — fall back to the active one
+    if (!sections.some(s => s.name.toLowerCase() === String(target).toLowerCase())) {
+      target = defaultSec;
+    }
 
     secSelect.innerHTML = sections.map(s => `
       <option value="${s.name}" ${s.name.toLowerCase() === target.toLowerCase() ? 'selected' : ''}>
@@ -156,11 +160,28 @@ const AdvancesModule = {
     `).join('');
   },
 
+  // Default date for a NEW advance = latest existing entry (advance first, then last trip), else today.
+  setDefaultDate() {
+    const dateEl = document.getElementById('advanceDate');
+    if (!dateEl) return;
+    const combined = [...(this.advances || []), ...(window.App?.transportRecords || [])];
+    const latest = typeof window.getLatestTripDate === 'function' ? window.getLatestTripDate(combined, '') : '';
+    const inputVal = (latest && window.formatDateForInput) ? window.formatDateForInput(latest) : '';
+    dateEl.value = inputVal || new Date().toISOString().split('T')[0];
+  },
+
   openAddModal(preselectedSection = null) {
     document.getElementById('advanceForm').reset();
     document.getElementById('advanceId').value = '';
     document.getElementById('advanceModalTitle').innerText = '➕ Record Advance Payment';
-    document.getElementById('advanceDate').value = new Date().toISOString().split('T')[0];
+    this.setDefaultDate();
+
+    // Never leave the Save button stuck disabled from a previous failed submit
+    const submitBtn = document.querySelector('#advanceForm button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerText = 'Save Advance Record';
+    }
 
     // If preselectedSection not specified, check currently active section filter
     let targetSec = preselectedSection;
@@ -196,8 +217,18 @@ const AdvancesModule = {
   isSubmitting: false,
   async handleFormSubmit(e) {
     if (e && e.preventDefault) e.preventDefault();
-    if (this.isSubmitting) return;
+    if (this.isSubmitting) {
+      window.App?.showToast?.('⏳ Still saving the previous request…', 'info');
+      return;
+    }
     this.isSubmitting = true;
+
+    // Instant visual feedback so the first tap never feels "dead"
+    const submitBtn = document.querySelector('#advanceForm button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerText = '⏳ Saving to Google Sheets…';
+    }
 
     try {
       const user = AuthService.getCurrentUser();
@@ -239,6 +270,10 @@ const AdvancesModule = {
       window.App.showToast("Cloud Notice: " + (err.message || "Failed to save advance record."), "error");
     } finally {
       this.isSubmitting = false;
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Save Advance Record';
+      }
     }
   },
 
@@ -248,6 +283,7 @@ const AdvancesModule = {
       return;
     }
     if (!confirm("Are you sure you want to permanently delete this advance entry? Google Sheets will recalculate automatically.")) return;
+    window.App?.showToast?.('⏳ Deleting advance…', 'info');
     try {
       await ApiService.deleteAdvance(id);
       window.App.showToast("🗑️ Advance record deleted from Google Sheets.", "info");

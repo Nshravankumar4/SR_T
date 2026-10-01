@@ -197,7 +197,12 @@ window.App = {
   },
 
   async refreshData(isSilent = false) {
-    if (this.isSyncing) return;
+    if (this.isSyncing) {
+      // Don't silently drop the request — re-run once the current refresh finishes
+      // so a save/delete always ends with fresh data on screen.
+      this._refreshQueued = true;
+      return;
+    }
     this.isSyncing = true;
     if (!isSilent) this.updateCloudStatus('Syncing...', 'online');
 
@@ -242,6 +247,10 @@ window.App = {
       this.updateCloudStatus('⚠ Cloud Unreachable • Local Cache', 'offline');
     } finally {
       this.isSyncing = false;
+      if (this._refreshQueued) {
+        this._refreshQueued = false;
+        setTimeout(() => this.refreshData(true), 50);
+      }
     }
 
     // Populate Settings fields
@@ -750,8 +759,17 @@ window.App = {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         document.getElementById(`tab-${target}`)?.classList.add('active');
 
+        // Mobile: close the slide-in menu after a tab is chosen (actions feel dead otherwise)
+        if (window.innerWidth <= 900) {
+          document.querySelector('.app-sidebar')?.classList.remove('open');
+        }
+
         if (target === 'sheetview' && typeof SheetViewModule !== 'undefined') {
           SheetViewModule.render();
+        }
+
+        if (target === 'excel' && typeof BackupModule !== 'undefined') {
+          BackupModule.loadCloudBackups();
         }
       });
     });
@@ -764,6 +782,16 @@ window.App = {
 
     // Transport Form submit
     document.getElementById('transportForm')?.addEventListener('submit', (e) => TransportModule.handleFormSubmit(e));
+
+    // Make HTML5 validation visible: a first tap must never look like a dead click
+    ['transportForm', 'advanceForm'].forEach((fid) => {
+      document.getElementById(fid)?.addEventListener('invalid', () => {
+        const now = Date.now();
+        if (this._lastInvalidToastAt && now - this._lastInvalidToastAt < 3000) return;
+        this._lastInvalidToastAt = now;
+        this.showToast('⚠️ Please fill the required fields highlighted in the form.', 'error');
+      }, true);
+    });
     
     // Auto balance calculations
     document.getElementById('transportToPay')?.addEventListener('input', () => TransportModule.onPaymentInputChange());

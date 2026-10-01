@@ -270,6 +270,10 @@ const SheetViewModule = {
     const isCustomSec = section.num >= 3;
     const isAdmin = typeof AuthService !== 'undefined' && AuthService.isAdmin();
 
+    // Auto-sum totals shown in the bottom Total row (ToPay + ToPay-Balance included)
+    const toPaySum = trips.reduce((s, r) => s + window.parseAmount(r.toPay), 0);
+    const balSum = trips.reduce((s, r) => s + window.parseAmount(r.balance), 0);
+
     return `
       <div class="excel-sheet-wrapper" style="margin-bottom: ${isFullView ? '40px' : '0'};">
         ${isFullView ? `
@@ -332,7 +336,10 @@ const SheetViewModule = {
               <td class="excel-cell center excel-yellow"><strong>Total</strong></td>
               <td class="excel-cell" colspan="8"></td>
               <td class="excel-cell right font-mono excel-yellow"><strong>${totalAmount.toLocaleString('en-IN')}</strong></td>
-              <td class="excel-cell" colspan="4"></td>
+              <td class="excel-cell right font-mono excel-yellow"><strong>${toPaySum.toLocaleString('en-IN')}</strong></td>
+              <td class="excel-cell"></td>
+              <td class="excel-cell right font-mono excel-yellow"><strong>${balSum.toLocaleString('en-IN')}</strong></td>
+              <td class="excel-cell"></td>
             </tr>
           </tbody>
         </table>
@@ -420,6 +427,7 @@ const SheetViewModule = {
     const s1LatestDate = (typeof window.getLatestTripDate === 'function')
       ? window.getLatestTripDate(trips, '14-08-2026')
       : '14-08-2026';
+    const s1ToPaySum = trips.reduce((s, r) => s + window.parseAmount(r.toPay), 0);
     let rowsHtml = '';
     trips.forEach((r, idx) => {
       const amt = Number(r.amount) || 0;
@@ -495,7 +503,8 @@ const SheetViewModule = {
               <td class="excel-cell center excel-yellow"><strong>Total</strong></td>
               <td class="excel-cell" colspan="8"></td>
               <td class="excel-cell right font-mono excel-yellow"><strong>${totalAmount.toLocaleString('en-IN')}</strong></td>
-              <td class="excel-cell" colspan="2"></td>
+              <td class="excel-cell right font-mono excel-yellow"><strong>${s1ToPaySum.toLocaleString('en-IN')}</strong></td>
+              <td class="excel-cell"></td>
               <td class="excel-cell right font-mono excel-yellow"><strong>${toPayBal.toLocaleString('en-IN')}</strong></td>
               <td class="excel-cell"></td>
             </tr>
@@ -569,6 +578,47 @@ const SheetViewModule = {
     for (let i = 1; i < allSectionsData.length; i++) {
       html += this.renderGenericSectionView(allSectionsData[i], true);
     }
+
+    // 🧾 Grand auto-sum bar at the very bottom of the Full Sheet view
+    const gFreight = allSectionsData.reduce((s, x) => s + (Number(x.totalAmount) || 0), 0);
+    const gToPay = allSectionsData.reduce((s, x) => s + x.trips.reduce((k, r) => k + window.parseAmount(r.toPay), 0), 0);
+    const gBal = allSectionsData.reduce((s, x) => s + (Number(x.toPayBal) || 0), 0);
+    const gAdv = allSectionsData.reduce((s, x) => s + (Number(x.advSum) || 0), 0);
+    const lastSec = allSectionsData[allSectionsData.length - 1];
+
+    html += `
+      <div class="excel-sheet-wrapper" style="margin-top: 14px; padding: 1rem 1.5rem;">
+        <table class="excel-table" style="max-width: 760px; margin: 0 auto;">
+          <thead>
+            <tr>
+              <th class="excel-th" colspan="2">🧮 GRAND TOTAL — ALL SECTIONS (Auto Sum)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="excel-cell bold" style="width: 320px;">Total Freight (To Billed)</td>
+              <td class="excel-cell right font-mono excel-yellow"><strong>${gFreight.toLocaleString('en-IN')}</strong></td>
+            </tr>
+            <tr>
+              <td class="excel-cell bold">Total ToPay</td>
+              <td class="excel-cell right font-mono excel-yellow"><strong>${gToPay.toLocaleString('en-IN')}</strong></td>
+            </tr>
+            <tr>
+              <td class="excel-cell bold">Total ToPay-Balance (pending)</td>
+              <td class="excel-cell right font-mono excel-red"><strong>${gBal.toLocaleString('en-IN')}</strong></td>
+            </tr>
+            <tr>
+              <td class="excel-cell bold">Total Advances (all sections)</td>
+              <td class="excel-cell right font-mono excel-yellow"><strong>${gAdv.toLocaleString('en-IN')}</strong></td>
+            </tr>
+            <tr>
+              <td class="excel-cell bold">${window.escapeHtml(lastSec.latestDate || '')} Final Net Outstanding</td>
+              <td class="excel-cell right font-mono excel-cyan" style="font-weight: bold; font-size: 1.05rem;"><strong>${(Number(lastSec.netOutstanding) || 0).toLocaleString('en-IN')}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
 
     return html;
   }

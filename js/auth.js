@@ -157,13 +157,17 @@ const AuthService = {
 
       // Also obtain a server-issued session token so privileged cloud actions
       // (delete / restore / password change / sections) are authorized.
+      // Alias passwords (Rudra / Shravan@1 / EShravan@2) are mapped to the
+      // canonical credentials so the cloud always issues a valid token.
       const cloudUrl = typeof ApiService !== 'undefined' ? ApiService.getApiUrl() : '';
+      const cloudPassword = (u === 'rudra') ? 'RudraSarika@2505' : 'Shravan';
       if (cloudUrl) {
         try {
           const tokenResp = await fetch(cloudUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'login', username: u, password: p })
+            // text/plain avoids the CORS preflight Apps Script cannot answer
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'login', username: u, password: cloudPassword })
           });
           const tokenResult = await tokenResp.json();
           if (tokenResult && tokenResult.success && tokenResult.token) {
@@ -184,7 +188,8 @@ const AuthService = {
       try {
         const response = await fetch(apiUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          // text/plain avoids the CORS preflight Apps Script cannot answer
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({ action: 'login', username: u, password: p })
         });
         const result = await response.json();

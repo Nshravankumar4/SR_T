@@ -190,6 +190,7 @@ body.employee-mode .admin-only,
   border-right: 1px solid #1e293b;
   z-index: 50;
   transition: transform 0.3s ease;
+  overflow: hidden; /* keeps footer from overlapping the scrollable menu */
 }
 
 .sidebar-header {
@@ -306,11 +307,13 @@ body.employee-mode .admin-only,
 /* Sidebar Menu Navigation (Top to Down) */
 .sidebar-menu {
   flex: 1;
+  min-height: 0; /* allow the menu to shrink so it never overlaps Logout */
   padding: 1rem 0.75rem;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .sidebar-menu .nav-tab {
@@ -367,6 +370,7 @@ body.employee-mode .admin-only,
   flex-direction: column;
   gap: 0.75rem;
   background: rgba(15, 23, 42, 0.95);
+  flex-shrink: 0; /* footer stays pinned below the menu — no overlap */
 }
 
 .sidebar-footer .status-indicator {
@@ -379,6 +383,11 @@ body.employee-mode .admin-only,
   background: rgba(255, 255, 255, 0.04);
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.08);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .status-dot {
@@ -441,7 +450,25 @@ body.employee-mode .admin-only,
   padding: 0.85rem 1.25rem;
   justify-content: space-between;
   align-items: center;
+  gap: 0.75rem;
   border-bottom: 1px solid #1e293b;
+}
+
+/* Brand text truncates instead of pushing Menu/Logout buttons off-screen */
+.mobile-top-bar > div:first-child {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.mobile-top-bar > div:first-child strong {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-top-bar > div:last-child {
+  flex-shrink: 0;
 }
 
 .main-content-scroll {
@@ -787,6 +814,9 @@ tbody tr:hover {
   gap: 0.75rem;
   background: #f8fafc;
   border-radius: 0 0 12px 12px;
+  position: sticky; /* Save/Cancel always visible while scrolling the modal on phones */
+  bottom: 0;
+  z-index: 5;
 }
 
 .form-grid {
@@ -825,6 +855,11 @@ tbody tr:hover {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  pointer-events: none; /* toasts never swallow taps aimed at Save/Delete buttons */
+}
+
+.toast {
+  pointer-events: none;
 }
 
 .toast {

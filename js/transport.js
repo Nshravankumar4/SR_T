@@ -150,7 +150,11 @@ const TransportModule = {
     const sections = typeof ApiService !== 'undefined' ? ApiService.getSections() : [];
     const activeSections = sections.filter(s => !s.isArchive);
     const defaultSec = activeSections.length > 0 ? activeSections[activeSections.length - 1].name : 'Section 2';
-    const target = selectedSection || defaultSec;
+    let target = selectedSection || defaultSec;
+    // Never keep a stale/deleted section selected — fall back to the active one
+    if (!sections.some(s => s.name.toLowerCase() === String(target).toLowerCase())) {
+      target = defaultSec;
+    }
 
     secSelect.innerHTML = sections.map(s => `
       <option value="${s.name}" ${s.name.toLowerCase() === target.toLowerCase() ? 'selected' : ''}>
@@ -168,9 +172,10 @@ const TransportModule = {
       ? Math.max(...secTrips.map(r => Number(r.slNo) || 0)) + 1
       : (chosen === 'Section 1' ? 34 : 1);
     
-    // Only auto-update SL NO if it's a new record
+    // Only auto-update SL NO and default date if it's a new record
     if (!document.getElementById('transportId').value) {
       document.getElementById('transportSlNo').value = nextSl;
+      this.setDefaultDate(chosen);
     }
     const hint = document.getElementById('transportSectionHint');
     if (hint) {
@@ -178,11 +183,31 @@ const TransportModule = {
     }
   },
 
+  // Default date for NEW trips = latest trip date (chosen section first, then overall), else today.
+  setDefaultDate(sectionName = null) {
+    const dateEl = document.getElementById('transportDate');
+    if (!dateEl) return;
+    let trips = this.records || [];
+    if (sectionName) {
+      const inSec = trips.filter(r => window.getTripSection(r) === sectionName);
+      if (inSec.length > 0) trips = inSec;
+    }
+    const latest = typeof window.getLatestTripDate === 'function' ? window.getLatestTripDate(trips, '') : '';
+    const inputVal = (latest && window.formatDateForInput) ? window.formatDateForInput(latest) : '';
+    dateEl.value = inputVal || new Date().toISOString().split('T')[0];
+  },
+
   openAddModal(preselectedSection = null) {
     document.getElementById('transportForm').reset();
     document.getElementById('transportId').value = '';
     document.getElementById('transportModalTitle').innerText = '➕ Add Transport Record';
-    document.getElementById('transportDate').value = new Date().toISOString().split('T')[0];
+
+    // Never leave the Save button stuck disabled from a previous failed submit
+    const submitBtn = document.querySelector('#transportForm button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerText = 'Save Transport Record';
+    }
     
     let sec = preselectedSection;
     if (!sec && typeof SheetViewModule !== 'undefined' && SheetViewModule.activeView && SheetViewModule.activeView !== 'FULL') {
@@ -190,7 +215,7 @@ const TransportModule = {
     }
 
     this.populateSectionDropdown(sec);
-    this.onSectionChange();
+    this.onSectionChange(); // also auto-fills the date from the section's last trip
     
     document.getElementById('transportModal').classList.add('active');
   },
@@ -239,11 +264,11 @@ const TransportModule = {
 
   // Recalculates balance on input change
   onPaymentInputChange() {
-    const toPay = Number(document.getElementById('transportToPay').value) || 0;
+    const toPay = window.parseAmount(document.getElementById('transportToPay').value);
     const paidInput = document.getElementById('transportPaid');
     const balanceInput = document.getElementById('transportBalance');
 
-    let paidVal = Number(paidInput.value) || 0;
+    let paidVal = window.parseAmount(paidInput.value);
     if (paidVal > toPay) {
       paidVal = toPay;
       paidInput.value = toPay;
@@ -255,7 +280,7 @@ const TransportModule = {
 
   // Helper button: Quick Mark as Paid
   markFullyPaid() {
-    const toPay = Number(document.getElementById('transportToPay').value) || 0;
+    const toPay = window.parseAmount(document.getElementById('transportToPay').value);
     document.getElementById('transportPaid').value = toPay;
     document.getElementById('transportBalance').value = 0;
   },
@@ -263,8 +288,18 @@ const TransportModule = {
   isSubmitting: false,
   async handleFormSubmit(e) {
     if (e && e.preventDefault) e.preventDefault();
-    if (this.isSubmitting) return;
+    if (this.isSubmitting) {
+      window.App?.showToast?.('⏳ Still saving the previous request…', 'info');
+      return;
+    }
     this.isSubmitting = true;
+
+    // Instant visual feedback so the first tap never feels "dead"
+    const submitBtn = document.querySelector('#transportForm button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerText = '⏳ Saving to Google Sheets…';
+    }
 
     try {
       const user = AuthService.getCurrentUser();
@@ -326,6 +361,10 @@ const TransportModule = {
       window.App.showToast("Cloud Notice: " + (err.message || "Failed to save transport record."), "error");
     } finally {
       this.isSubmitting = false;
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Save Transport Record';
+      }
     }
   },
 
@@ -335,6 +374,7 @@ const TransportModule = {
       return;
     }
     if (!confirm("Are you sure you want to permanently delete this transport record? Google Sheets will recalculate automatically.")) return;
+    window.App?.showToast?.('⏳ Deleting transport record…', 'info');
     try {
       await ApiService.deleteTransport(id);
       window.App.showToast("🗑️ Transport record deleted from Google Sheets.", "info");

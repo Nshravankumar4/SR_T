@@ -180,6 +180,33 @@ function doGet(e) {
       });
     }
 
+    // Cloud backup history from Google Drive (Admin session only) so the
+    // Admin can see backup dates taken from ANY device (e.g. their phone).
+    if (action === 'listBackups') {
+      var buSessionUser = getActiveSessionUser({
+        token: (e && e.parameter) ? e.parameter.token : '',
+        user: (e && e.parameter) ? e.parameter.user : ''
+      });
+      if (buSessionUser !== 'admin') {
+        return sessionInvalidResponse();
+      }
+      var buFiles = [];
+      try {
+        var buFolders = DriveApp.getFoldersByName(BACKUP_FOLDER);
+        if (buFolders.hasNext()) {
+          var buIt = buFolders.next().getFiles();
+          while (buIt.hasNext()) {
+            var buF = buIt.next();
+            buFiles.push({ name: buF.getName(), created: buF.getDateCreated().toISOString() });
+          }
+        }
+      } catch (buErr) {
+        return jsonResponse({ success: true, backups: [], warning: buErr.toString() });
+      }
+      buFiles.sort(function(a, b) { return (a.created < b.created) ? 1 : -1; });
+      return jsonResponse({ success: true, backups: buFiles.slice(0, 25) });
+    }
+
     return jsonResponse({ success: false, message: 'Invalid action: ' + action });
   } catch (err) {
     return jsonResponse({ success: false, error: err.toString() });
@@ -320,9 +347,11 @@ function doPost(e) {
       return jsonResponse(executeDeleteRecord(ss, envelope, user));
     }
 
-    // 8. Create Backup (Manual or Automatic)
+    // 8. Create Backup (Manual or Automatic) — creator's name is baked into
+    //    the Drive file name so every device can see WHO took the backup.
     if (action === 'createBackup') {
-      var bRes = createCloudBackup(ss, envelope.reason || 'Manual');
+      var bReason = (envelope.reason || 'Manual') + ' - ' + (user || role || 'User');
+      var bRes = createCloudBackup(ss, bReason);
       return jsonResponse(bRes);
     }
 

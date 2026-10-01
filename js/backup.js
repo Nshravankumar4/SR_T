@@ -13,6 +13,8 @@ const BackupModule = {
   storageKeySnapshots: 'shinex_backup_snapshots_v1',
   storageKeySettings: 'shinex_backup_settings_v1',
   snapshots: [],
+  cloudBackups: [],
+  cloudBackupsLoaded: false,
   isAutoBackupEnabled: true,
   isAutoDownloadEnabled: false,
 
@@ -20,6 +22,74 @@ const BackupModule = {
     this.loadSettings();
     this.loadSnapshots();
     this.renderUI();
+    // Admin: pull the Google Drive backup list (dates visible on every device)
+    this.loadCloudBackups();
+  },
+
+  /**
+   * Loads cloud (Google Drive) backup history — Admin only.
+   * Unlike the device-local snapshot list, these are visible on the Admin's phone too.
+   */
+  async loadCloudBackups(force = false) {
+    const section = document.getElementById('cloudBackupSection');
+    const tbody = document.getElementById('cloudBackupListBody');
+    const isAdmin = typeof AuthService !== 'undefined' && AuthService.isAdmin();
+    if (!isAdmin) {
+      if (section) section.style.display = 'none';
+      return;
+    }
+    if (section) section.style.display = 'block';
+    if (this.cloudBackupsLoaded && !force) {
+      this.renderCloudBackups();
+      return;
+    }
+    if (typeof ApiService === 'undefined' || typeof ApiService.getCloudBackups !== 'function') return;
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding: 1rem; color: var(--text-muted);">🔄 Loading cloud backups from Google Drive…</td></tr>';
+    }
+    try {
+      this.cloudBackups = await ApiService.getCloudBackups();
+      this.cloudBackupsLoaded = true;
+      this.renderCloudBackups();
+    } catch (err) {
+      console.warn('Cloud backup list unavailable (redeploy backend/Code.gs to enable):', err);
+      if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding: 1rem; color: #b45309;">⚠️ Cloud list unavailable. Redeploy the latest backend/Code.gs in Apps Script, then click 🔄 Refresh.</td></tr>';
+      }
+    }
+  },
+
+  renderCloudBackups() {
+    const section = document.getElementById('cloudBackupSection');
+    const tbody = document.getElementById('cloudBackupListBody');
+    if (!tbody) return;
+    const isAdmin = typeof AuthService !== 'undefined' && AuthService.isAdmin();
+    if (!isAdmin) {
+      if (section) section.style.display = 'none';
+      return;
+    }
+    if (section) section.style.display = 'block';
+
+    if (!this.cloudBackups || this.cloudBackups.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding: 1rem; color: var(--text-muted);">No cloud backups found in the Google Drive "Shinex_Backups" folder yet.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = this.cloudBackups.map((b) => {
+      let when = String(b.created || '');
+      try {
+        when = new Date(b.created).toLocaleString('en-IN', {
+          day: '2-digit', month: '2-digit', year: 'numeric',
+          hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+        });
+      } catch (e) {}
+      return `
+        <tr>
+          <td><strong>${when}</strong></td>
+          <td><code style="font-size: 0.78rem; word-break: break-all;">${window.escapeHtml(b.name || '')}</code></td>
+        </tr>
+      `;
+    }).join('');
   },
 
   loadSettings() {
@@ -154,6 +224,9 @@ const BackupModule = {
     this.snapshots.unshift(snapshot);
     this.saveSnapshots();
     this.renderUI();
+
+    // The Drive copy is created server-side shortly after — reload the cloud list
+    setTimeout(() => this.loadCloudBackups(true), 2500);
 
     // 1. Client-side Download if requested or enabled
     if (triggerDownload && typeof ExcelModule !== 'undefined') {

@@ -1018,6 +1018,22 @@ const ApiService = {
     };
   },
 
+  // Lists Google Drive cloud backups with their dates (Admin session only),
+  // so the Admin can view backup history from any device (phone included).
+  async getCloudBackups() {
+    const u = typeof AuthService !== 'undefined' ? AuthService.getCurrentUser() : null;
+    if (!u || u.role !== 'Admin') return [];
+    const url = this.getApiUrl();
+    if (!url) return [];
+    const sep = url.includes('?') ? '&' : '?';
+    const reqUrl = `${url}${sep}action=listBackups&user=${encodeURIComponent(u.name || '')}&token=${encodeURIComponent(u.token || '')}&_=${Date.now()}`;
+    const response = await fetch(reqUrl, { method: 'GET', redirect: 'follow' });
+    const text = await response.text();
+    const data = JSON.parse(text);
+    if (data && data.success && Array.isArray(data.backups)) return data.backups;
+    return [];
+  },
+
   getApiUrl() {
     return localStorage.getItem('transport_api_url') || DEFAULT_API_URL;
   },
