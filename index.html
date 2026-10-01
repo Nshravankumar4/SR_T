@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Transport Management & Ledger System</title>
-  <link rel="stylesheet" href="css/styles.css?v=4.5">
+  <link rel="stylesheet" href="css/styles.css?v=4.6">
   <!-- High-Performance Spreadsheet Engines (Local for 100% Offline & Private Repo Support) -->
   <script src="libs/exceljs.min.js?v=3.0"></script>
   <script src="libs/FileSaver.min.js?v=3.0"></script>
@@ -16,7 +16,8 @@
   <div id="authWrapper" class="auth-wrapper">
     <div class="auth-card">
       <div class="auth-header">
-        <h1>🚛 Transport Ledger Management</h1>
+        <h1>🚛 Shinex Ledger</h1>
+        <p style="font-size: 0.82rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.9; margin-top: -0.35rem;">Transport &amp; Accounts</p>
         <p>Sign in with your secure account</p>
       </div>
 
@@ -55,6 +56,11 @@
 
         <button type="submit" id="loginSubmitBtn" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-weight: 600; font-size: 1rem; border-radius: 8px;">🚀 Secure Login</button>
       </form>
+
+      <div style="margin-top: 1.25rem; padding-top: 0.85rem; border-top: 1px solid rgba(255,255,255,0.12); text-align: center; font-size: 0.72rem; color: #94a3b8; line-height: 1.6;">
+        🚛 Shinex Ledger • Transport &amp; Accounts<br>
+        © 2026 Shinex UQ Genetic Seeds Pvt. Ltd. All rights reserved.
+      </div>
     </div>
   </div>
 
@@ -124,6 +130,9 @@
         <button id="logoutBtn" class="sidebar-logout-btn" onclick="window.App ? window.App.logout() : AuthService.logout()">
           <span>🚪</span> Logout
         </button>
+        <div style="text-align: center; font-size: 0.66rem; color: #64748b; line-height: 1.5;">
+          © 2026 Shinex UQ Genetic Seeds Pvt. Ltd.<br>All rights reserved.
+        </div>
       </div>
     </aside>
 
@@ -219,6 +228,7 @@
                 <option value="ALL">All Statuses</option>
                 <option value="Paid">Paid</option>
                 <option value="Partially Paid">Partially Paid</option>
+                <option value="Billed">Billed</option>
                 <option value="Pending">Pending</option>
               </select>
               <select id="monthFilter" class="form-control">
@@ -427,11 +437,32 @@
               </div>
             </div>
 
+            <!-- ☁️ Cloud Backups in Google Drive (visible on EVERY device, incl. admin's phone) -->
+            <div id="cloudBackupSection" style="display: none; margin-bottom: 1.25rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                <h4 style="color: var(--primary); font-size: 0.95rem; margin: 0;">☁️ Cloud Backups (Google Drive — visible on all devices)</h4>
+                <button class="btn btn-secondary btn-sm" onclick="BackupModule.loadCloudBackups(true)" title="Reload cloud backup list">🔄 Refresh</button>
+              </div>
+              <div style="overflow-x: auto; background: #fff; border: 1px solid var(--border); border-radius: 8px;">
+                <table class="table" style="margin-bottom: 0; font-size: 0.84rem;">
+                  <thead>
+                    <tr style="background: #f1f5f9;">
+                      <th>Backup Date &amp; Time</th>
+                      <th>File Name (Google Drive)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cloudBackupListBody">
+                    <!-- Rendered by BackupModule.loadCloudBackups() -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             <!-- Backup History Table (Point-in-Time Recovery) -->
             <div>
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
                 <h4 style="color: var(--primary); font-size: 0.95rem; margin: 0;">📜 Backup Snapshots History (Point-in-Time Recovery)</h4>
-                <span style="font-size: 0.8rem; color: var(--text-muted);">Snapshots are stored securely and recoverable with 1 click</span>
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Device-local snapshots (this phone/PC only) • recoverable with 1 click</span>
               </div>
               <div style="overflow-x: auto; background: #fff; border: 1px solid var(--border); border-radius: 8px;">
                 <table class="table" style="margin-bottom: 0; font-size: 0.84rem;">
@@ -633,7 +664,7 @@
           <!-- ToPay and Payment section with automatic calculations -->
           <div style="background: #f8fafc; border: 1px solid var(--border); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-              <span style="font-weight: 700; font-size: 0.9rem; color: var(--primary);">Payment Details (ToPay & Balance)</span>
+              <span style="font-weight: 700; font-size: 0.9rem; color: var(--primary);">Payment Details: ToPay • ToPaid • ToPay-Balance</span>
               <button type="button" class="btn btn-secondary btn-sm" onclick="TransportModule.markFullyPaid()">⚡ Mark Fully Paid</button>
             </div>
 
@@ -643,13 +674,13 @@
                 <input type="number" id="transportToPay" class="form-control" placeholder="0 if Freight Billed">
               </div>
               <div class="form-group">
-                <label for="transportPaid">Paid Amount (₹)</label>
+                <label for="transportPaid">ToPaid / Paid Amount (₹)</label>
                 <input type="number" id="transportPaid" class="form-control" placeholder="0">
               </div>
             </div>
 
             <div class="form-group" style="margin-top: 0.75rem;">
-              <label for="transportBalance">Balance Remaining (₹) [Auto-calculated]</label>
+              <label for="transportBalance">ToPay-Balance (₹) [Auto: ToPay − Paid]</label>
               <input type="number" id="transportBalance" class="form-control" readonly style="background: #f1f5f9; font-weight: 700; color: var(--danger);">
             </div>
           </div>
@@ -753,8 +784,13 @@
         <button class="modal-close" onclick="App.closeManageSectionModal()">✕</button>
       </div>
       <div class="modal-body">
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
           Edit section titles or delete custom sections. Preceding section balances chain automatically.
+        </p>
+        <p style="font-size: 0.78rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 0.5rem 0.75rem; margin-bottom: 1rem;">
+          🛡️ <strong>Section 1 &amp; Section 2 are core/protected</strong> and show “Protected” instead of a delete button.
+          Every <strong>custom section (Section 3+)</strong> shows a <strong>🗑️ Delete</strong> button here (Admin only),
+          and also in the Live Excel Sheet section header.
         </p>
         <div id="sectionManageList" style="display: flex; flex-direction: column; gap: 0.75rem;">
           <!-- Dynamically populated by App.openManageSectionModal() -->
@@ -804,14 +840,14 @@
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Application Scripts with Cache Busters -->
-  <script src="js/auth.js?v=9.0"></script>
-  <script src="js/api.js?v=9.0"></script>
-  <script src="js/transport.js?v=9.0"></script>
-  <script src="js/advances.js?v=9.0"></script>
-  <script src="js/excel.js?v=9.0"></script>
-  <script src="js/sheetview.js?v=9.0"></script>
-  <script src="js/backup.js?v=9.0"></script>
-  <script src="js/app.js?v=9.0"></script>
+  <script src="js/auth.js?v=12.0"></script>
+  <script src="js/api.js?v=12.0"></script>
+  <script src="js/transport.js?v=12.0"></script>
+  <script src="js/advances.js?v=12.0"></script>
+  <script src="js/excel.js?v=12.1"></script>
+  <script src="js/sheetview.js?v=12.1"></script>
+  <script src="js/backup.js?v=12.0"></script>
+  <script src="js/app.js?v=12.1"></script>
 </body>
 </html>
 

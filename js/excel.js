@@ -123,7 +123,7 @@ const ExcelModule = {
     // ROW 3: OPENING BALANCE (Column 15 - Note column)
     // ========================================================
     const obCell = ws.getCell('O3');
-    obCell.value = `Before March 2026 1,20,000`;
+    obCell.value = `Before March 2026 ${(typeof ApiService !== 'undefined' ? ApiService.getOpeningBalance() : 120000).toLocaleString('en-IN')}`;
     obCell.fill = yellowFill;
     obCell.font = { name: 'Calibri', size: 10, bold: false };
     obCell.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -242,27 +242,36 @@ const ExcelModule = {
       curRow++;
     });
 
-    // Fill blank row before totals if needed
-    curRow = Math.max(curRow, 32);
+    // Dynamic Section 1 layout: keeps the canonical Shinex rows (totals=33,
+    // advances/recon=36-50) for the standard 27-trip section, but shifts every
+    // block down when more trips exist so data rows never overwrite totals.
+    const s1BlankRow = Math.max(curRow, 32);
+    const s1TotalRow = Math.max(s1BlankRow + 1, 33);
+    const rowBase = s1TotalRow - 33; // 0 = exact 1:1 layout
+    const s1AdvHeaderRow = 36 + rowBase;
+    const s1AdvStartRow = 37 + rowBase;
+    const s1ReconRow = 36 + rowBase;
+    const s1OutRow = 41 + rowBase;
+    const s1AdvTotRowNum = Math.max(50 + rowBase, s1AdvStartRow + s1Advances.length);
 
     // ========================================================
-    // ROW 33: SECTION 1 TOTALS
+    // SECTION 1 TOTALS
     // ========================================================
-    const totalRow33 = ws.getRow(33);
+    const totalRow33 = ws.getRow(s1TotalRow);
     totalRow33.getCell(10).value = 'Total';
     totalRow33.getCell(10).fill = yellowFill;
     totalRow33.getCell(10).font = boldBlack11;
     totalRow33.getCell(10).border = thinBorder;
     totalRow33.getCell(10).alignment = { horizontal: 'center', vertical: 'middle' };
 
-    totalRow33.getCell(11).value = s1TotalAmount || 1609850;
+    totalRow33.getCell(11).value = s1TotalAmount;
     totalRow33.getCell(11).fill = yellowFill;
     totalRow33.getCell(11).font = boldBlack11;
     totalRow33.getCell(11).border = thinBorder;
     totalRow33.getCell(11).numFmt = '#,##,##0';
     totalRow33.getCell(11).alignment = { horizontal: 'right', vertical: 'middle' };
 
-    totalRow33.getCell(14).value = s1TotalBal || 283500;
+    totalRow33.getCell(14).value = s1TotalBal;
     totalRow33.getCell(14).fill = yellowFill;
     totalRow33.getCell(14).font = boldBlack11;
     totalRow33.getCell(14).border = thinBorder;
@@ -273,53 +282,53 @@ const ExcelModule = {
     // ========================================================
     // ROWS 36 to 50: SECTION 1 ADVANCES & RECONCILIATION
     // ========================================================
-    // Advances Header (Row 36, Left)
-    ws.getCell('A36').value = 'Advance';
-    ws.getCell('A36').fill = yellowFill;
-    ws.getCell('A36').font = boldBlack11;
-    ws.getCell('A36').border = thinBorder;
-    ws.getCell('A36').alignment = { horizontal: 'center', vertical: 'middle' };
+    // Advances Header (Left)
+    ws.getCell(`A${s1AdvHeaderRow}`).value = 'Advance';
+    ws.getCell(`A${s1AdvHeaderRow}`).fill = yellowFill;
+    ws.getCell(`A${s1AdvHeaderRow}`).font = boldBlack11;
+    ws.getCell(`A${s1AdvHeaderRow}`).border = thinBorder;
+    ws.getCell(`A${s1AdvHeaderRow}`).alignment = { horizontal: 'center', vertical: 'middle' };
 
-    ws.getCell('B36').value = 'Amount';
-    ws.getCell('B36').fill = yellowFill;
-    ws.getCell('B36').font = boldBlack11;
-    ws.getCell('B36').border = thinBorder;
-    ws.getCell('B36').alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getCell(`B${s1AdvHeaderRow}`).value = 'Amount';
+    ws.getCell(`B${s1AdvHeaderRow}`).fill = yellowFill;
+    ws.getCell(`B${s1AdvHeaderRow}`).font = boldBlack11;
+    ws.getCell(`B${s1AdvHeaderRow}`).border = thinBorder;
+    ws.getCell(`B${s1AdvHeaderRow}`).alignment = { horizontal: 'center', vertical: 'middle' };
 
-    // Section 1 Reconciliation (Row 36-41, Right)
-    ws.getCell('J36').value = 'To Billed';
-    ws.getCell('J36').border = thinBorder;
-    ws.getCell('K36').value = s1TotalAmount || 1609850;
-    ws.getCell('K36').fill = peachFill;
-    ws.getCell('K36').font = boldBlack11;
-    ws.getCell('K36').border = thinBorder;
-    ws.getCell('K36').numFmt = '#,##,##0';
+    // Section 1 Reconciliation (Right)
+    ws.getCell(`J${s1ReconRow}`).value = 'To Billed';
+    ws.getCell(`J${s1ReconRow}`).border = thinBorder;
+    ws.getCell(`K${s1ReconRow}`).value = s1TotalAmount;
+    ws.getCell(`K${s1ReconRow}`).fill = peachFill;
+    ws.getCell(`K${s1ReconRow}`).font = boldBlack11;
+    ws.getCell(`K${s1ReconRow}`).border = thinBorder;
+    ws.getCell(`K${s1ReconRow}`).numFmt = '#,##,##0';
 
-    ws.getCell('J37').value = 'ToPay bal';
-    ws.getCell('J37').border = thinBorder;
-    ws.getCell('K37').value = s1TotalBal || 283500;
-    ws.getCell('K37').fill = yellowFill;
-    ws.getCell('K37').font = boldBlack11;
-    ws.getCell('K37').border = thinBorder;
-    ws.getCell('K37').numFmt = '#,##,##0';
+    ws.getCell(`J${s1ReconRow + 1}`).value = 'ToPay bal';
+    ws.getCell(`J${s1ReconRow + 1}`).border = thinBorder;
+    ws.getCell(`K${s1ReconRow + 1}`).value = s1TotalBal;
+    ws.getCell(`K${s1ReconRow + 1}`).fill = yellowFill;
+    ws.getCell(`K${s1ReconRow + 1}`).font = boldBlack11;
+    ws.getCell(`K${s1ReconRow + 1}`).border = thinBorder;
+    ws.getCell(`K${s1ReconRow + 1}`).numFmt = '#,##,##0';
 
-    const s1TotalPayable = (s1TotalAmount || 1609850) + (s1TotalBal || 283500);
-    ws.getCell('J38').value = 'TotalB=ToBilled+TopayBAl';
-    ws.getCell('J38').border = thinBorder;
-    ws.getCell('K38').value = s1TotalPayable; // 18,93,350
-    ws.getCell('K38').fill = peachFill;
-    ws.getCell('K38').font = boldBlack11;
-    ws.getCell('K38').border = thinBorder;
-    ws.getCell('K38').numFmt = '#,##,##0';
+    const s1TotalPayable = s1TotalAmount + s1TotalBal;
+    ws.getCell(`J${s1ReconRow + 2}`).value = 'TotalB=ToBilled+TopayBAl';
+    ws.getCell(`J${s1ReconRow + 2}`).border = thinBorder;
+    ws.getCell(`K${s1ReconRow + 2}`).value = s1TotalPayable; // 18,93,350
+    ws.getCell(`K${s1ReconRow + 2}`).fill = peachFill;
+    ws.getCell(`K${s1ReconRow + 2}`).font = boldBlack11;
+    ws.getCell(`K${s1ReconRow + 2}`).border = thinBorder;
+    ws.getCell(`K${s1ReconRow + 2}`).numFmt = '#,##,##0';
 
-    ws.getCell('J39').value = 'less adv';
-    ws.getCell('J39').border = thinBorder;
+    ws.getCell(`J${s1ReconRow + 3}`).value = 'less adv';
+    ws.getCell(`J${s1ReconRow + 3}`).border = thinBorder;
 
-    // Populate Section 1 Advances Rows 37 to 49
-    let advRow = 37;
+    // Populate Section 1 Advances
+    let advRow = s1AdvStartRow;
     let s1AdvSum = 0;
     s1Advances.forEach((a) => {
-      const amt = Number(a.amount) || 0;
+      const amt = window.parseAmount(a.amount);
       s1AdvSum += amt;
 
       const r = ws.getRow(advRow);
@@ -332,9 +341,9 @@ const ExcelModule = {
       r.getCell(2).numFmt = '#,##,##0';
       r.getCell(2).alignment = { horizontal: 'right', vertical: 'middle' };
 
-      // Row 37 March balance note
-      if (advRow === 37) {
-        r.getCell(3).value = '1,20,000';
+      // First advance row carries the March balance note
+      if (advRow === s1AdvStartRow) {
+        r.getCell(3).value = (typeof ApiService !== 'undefined' ? ApiService.getOpeningBalance() : 120000).toLocaleString('en-IN');
         r.getCell(3).fill = yellowFill;
         r.getCell(3).border = thinBorder;
         r.getCell(4).value = 'March 2026 balance';
@@ -352,41 +361,48 @@ const ExcelModule = {
       advRow++;
     });
 
-    // Advance Total Row 50
-    const advTotRow = ws.getRow(50);
+    // Advance Total Row
+    const advTotRow = ws.getRow(s1AdvTotRowNum);
     advTotRow.getCell(1).value = 'Total';
     advTotRow.getCell(1).fill = yellowFill;
     advTotRow.getCell(1).font = boldBlack11;
     advTotRow.getCell(1).border = thinBorder;
     advTotRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
 
-    advTotRow.getCell(2).value = s1AdvSum || 1883350;
+    advTotRow.getCell(2).value = s1AdvSum;
     advTotRow.getCell(2).fill = yellowFill;
     advTotRow.getCell(2).font = boldBlack11;
     advTotRow.getCell(2).border = thinBorder;
     advTotRow.getCell(2).numFmt = '#,##,##0';
     advTotRow.getCell(2).alignment = { horizontal: 'right', vertical: 'middle' };
 
-    // Update 'less adv' value in K39
-    ws.getCell('K39').value = s1AdvSum || 1883350;
-    ws.getCell('K39').fill = yellowFill;
-    ws.getCell('K39').font = boldBlack11;
-    ws.getCell('K39').border = thinBorder;
-    ws.getCell('K39').numFmt = '#,##,##0';
+    // Update 'less adv' value
+    ws.getCell(`K${s1ReconRow + 3}`).value = s1AdvSum;
+    ws.getCell(`K${s1ReconRow + 3}`).fill = yellowFill;
+    ws.getCell(`K${s1ReconRow + 3}`).font = boldBlack11;
+    ws.getCell(`K${s1ReconRow + 3}`).border = thinBorder;
+    ws.getCell(`K${s1ReconRow + 3}`).numFmt = '#,##,##0';
 
-    // Outstanding in Row 41
-    const s1LatestDate = '17-06-2026';
-    ws.getCell('H41').value = `${s1LatestDate} (out standing)`;
-    ws.getCell('H41').border = thinBorder;
-    ws.getCell('H41').alignment = { horizontal: 'center', vertical: 'middle' };
-    ws.getCell('J41').value = 'TotalB-Less Adv';
-    ws.getCell('J41').border = thinBorder;
-    const s1Outstanding = s1TotalPayable - (s1AdvSum || 1883350);
-    ws.getCell('K41').value = s1Outstanding; // 10,000
-    ws.getCell('K41').fill = cyanOutFill;
-    ws.getCell('K41').font = boldBlack11;
-    ws.getCell('K41').border = thinBorder;
-    ws.getCell('K41').numFmt = '#,##,##0';
+    // Outstanding (dynamic latest trip date for Section 1)
+    const s1LatestDate = (typeof window.getLatestTripDate === 'function')
+      ? window.getLatestTripDate(s1Trips, '17-06-2026')
+      : '17-06-2026';
+    const s1AdvDateAll = (typeof window.getLatestTripDate === 'function')
+      ? window.getLatestTripDate(aRecords.filter(a => (typeof window.isSection1Advance ? window.isSection1Advance(a) : a.section === 'Section 1')), '')
+      : '';
+    const s1AdvDateNote = (s1AdvDateAll && typeof window.parseDateToTimestamp === 'function' && window.parseDateToTimestamp(s1AdvDateAll) > window.parseDateToTimestamp(s1LatestDate))
+      ? ` / adv ${s1AdvDateAll}` : '';
+    ws.getCell(`H${s1OutRow}`).value = `${s1LatestDate}${s1AdvDateNote} (out standing)`;
+    ws.getCell(`H${s1OutRow}`).border = thinBorder;
+    ws.getCell(`H${s1OutRow}`).alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getCell(`J${s1OutRow}`).value = 'TotalB-Less Adv';
+    ws.getCell(`J${s1OutRow}`).border = thinBorder;
+    const s1Outstanding = s1TotalPayable - s1AdvSum;
+    ws.getCell(`K${s1OutRow}`).value = s1Outstanding; // 10,000 with current data
+    ws.getCell(`K${s1OutRow}`).fill = cyanOutFill;
+    ws.getCell(`K${s1OutRow}`).font = boldBlack11;
+    ws.getCell(`K${s1OutRow}`).border = thinBorder;
+    ws.getCell(`K${s1OutRow}`).numFmt = '#,##,##0';
 
     // ========================================================
     // SECTIONS 2, 3, 4... DYNAMIC MULTI-SECTION LOOP
@@ -400,13 +416,19 @@ const ExcelModule = {
     const s2Amt = defaultS2Trips.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
     const s2ToPayBal = defaultS2Trips.reduce((sum, r) => sum + (Number(r.balance) || 0), 0);
     const s2AdvSum = defaultS2Advs.reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
-    const s2OldBal = s1Outstanding || 10000;
+    const s2OldBal = s1Outstanding;
     const s2OldBalDate = '14-08-2026';
     const s2TotPayable = s2Amt + s2OldBal + s2ToPayBal;
     const s2NetOut = s2TotPayable - s2AdvSum;
-    const s2LatestDate = (typeof window.getLatestTripDate === 'function')
-      ? window.getLatestTripDate([...defaultS2Trips, ...defaultS2Advs], '23-09-2026')
+    const s2TripDate = (typeof window.getLatestTripDate === 'function')
+      ? window.getLatestTripDate(defaultS2Trips, '23-09-2026')
       : '23-09-2026';
+    const s2AdvDateOnly = (typeof window.getLatestTripDate === 'function')
+      ? window.getLatestTripDate(defaultS2Advs, '')
+      : '';
+    const s2AdvDateNote = (s2AdvDateOnly && typeof window.parseDateToTimestamp === 'function' && window.parseDateToTimestamp(s2AdvDateOnly) > window.parseDateToTimestamp(s2TripDate))
+      ? ` / adv ${s2AdvDateOnly}` : '';
+    const s2LatestDate = s2TripDate + s2AdvDateNote;
 
     const laterSections = (allSectionsData && allSectionsData.length > 1)
       ? allSectionsData.slice(1)
@@ -424,10 +446,12 @@ const ExcelModule = {
         }];
 
     if (normalizedFilter === 'FULL') {
-      let curStartRow = 53;
+      // Section 2 starts at row 53 (canonical layout) or right after Section 1's
+      // last used row when Section 1 has grown beyond 27 trips.
+      let curStartRow = Math.max(53, s1AdvTotRowNum + 3, s1OutRow + 3);
 
       laterSections.forEach((secData) => {
-      const { section, trips, advances, totalAmount, oldBal, oldBalDate, totalPayable, advSum, netOutstanding, latestDate } = secData;
+      const { section, trips, advances, totalAmount, oldBal, oldBalDate, totalPayable, advSum, netOutstanding, latestDate, latestAdvDate = '' } = secData;
 
       // 1. Blue divider banner (matching Shinex Excel format)
       ws.mergeCells(`A${curStartRow}:O${curStartRow}`);
@@ -618,7 +642,7 @@ const ExcelModule = {
       ws.getCell(`J${r4}`).alignment = { horizontal: 'right', vertical: 'middle' };
 
       const r6 = reconRow + 5;
-      ws.getCell(`H${r6}`).value = `${latestDate} (out standing)`;
+      ws.getCell(`H${r6}`).value = `${latestDate}${latestAdvDate ? ` / adv ${latestAdvDate}` : ''} (out standing)`;
       ws.getCell(`H${r6}`).border = thinBorder;
       ws.getCell(`H${r6}`).alignment = { horizontal: 'center', vertical: 'middle' };
       ws.getCell(`H${r6}`).font = boldBlack11;
@@ -747,7 +771,7 @@ const ExcelModule = {
   },
 
   writeSingleGenericSection(ws, secData, yellowFill, cyanDivider, thinBorder, boldBlack11, regular10, navyHeaderFill, headerFontRed, headerFontWhite, peachFill, cyanOutFill) {
-    const { section, trips, advances, totalAmount, oldBal, oldBalDate, totalPayable, advSum, netOutstanding, latestDate } = secData;
+    const { section, trips, advances, totalAmount, oldBal, oldBalDate, totalPayable, advSum, netOutstanding, latestDate, latestAdvDate = '' } = secData;
 
     // 1. Company Banner
     ws.mergeCells('E1:I1');
@@ -953,7 +977,7 @@ const ExcelModule = {
     ws.getCell(`J${r4}`).alignment = { horizontal: 'right', vertical: 'middle' };
 
     const r6 = reconRow + 5;
-    ws.getCell(`H${r6}`).value = `${latestDate} (out standing)`;
+    ws.getCell(`H${r6}`).value = `${latestDate}${latestAdvDate ? ` / adv ${latestAdvDate}` : ''} (out standing)`;
     ws.getCell(`H${r6}`).border = thinBorder;
     ws.getCell(`H${r6}`).alignment = { horizontal: 'center', vertical: 'middle' };
     ws.getCell(`H${r6}`).font = boldBlack11;

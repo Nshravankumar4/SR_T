@@ -114,7 +114,7 @@ const AdvancesModule = {
     const isAdmin = AuthService.isAdmin();
 
     tbody.innerHTML = this.filteredAdvances.map((a, index) => {
-      const formattedAmount = (Number(a.amount) || 0).toLocaleString('en-IN');
+      const formattedAmount = window.parseAmount(a.amount).toLocaleString('en-IN');
       const secName = window.getAdvanceSection(a);
       const isS1 = secName === 'Section 1';
       const isS2 = secName === 'Section 2';
@@ -123,17 +123,17 @@ const AdvancesModule = {
 
       return `
         <tr>
-          <td><strong>${index + 1}</strong></td>
-          <td><span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; font-size: 0.72rem; font-weight: 600;">${secName}</span></td>
-          <td><strong>${window.formatDateForDisplay(a.date) || '-'}</strong></td>
+          <td><strong>${window.escapeHtml(index + 1)}</strong></td>
+          <td><span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; font-size: 0.72rem; font-weight: 600;">${window.escapeHtml(secName)}</span></td>
+          <td><strong>${window.escapeHtml(window.formatDateForDisplay(a.date) || '-')}</strong></td>
           <td style="color: var(--primary); font-weight: 700;">₹${formattedAmount}</td>
-          <td>${a.description || a.note || 'Advance Payment'}</td>
-          <td><code>${a.reference || '-'}</code></td>
-          <td><span class="badge ${a.createdBy === 'Admin' ? 'badge-primary' : 'badge-success'}">${a.createdBy || 'User'}</span></td>
+          <td>${window.escapeHtml(a.description || a.note || 'Advance Payment')}</td>
+          <td><code>${window.escapeHtml(a.reference || '-')}</code></td>
+          <td><span class="badge ${a.createdBy === 'Admin' ? 'badge-primary' : 'badge-success'}">${window.escapeHtml(a.createdBy || 'User')}</span></td>
           <td>
             <div style="display: flex; gap: 0.35rem;">
-              <button class="btn btn-secondary btn-sm" onclick="AdvancesModule.openEditModal('${a.id}')" title="Edit Advance">✏️</button>
-              ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="AdvancesModule.confirmDelete('${a.id}')" title="Delete Advance">🗑️</button>` : ''}
+              <button class="btn btn-secondary btn-sm" onclick="AdvancesModule.openEditModal('${window.escapeAttr(a.id)}')" title="Edit Advance">✏️</button>
+              ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="AdvancesModule.confirmDelete('${window.escapeAttr(a.id)}')" title="Delete Advance">🗑️</button>` : ''}
             </div>
           </td>
         </tr>
@@ -147,7 +147,11 @@ const AdvancesModule = {
     const sections = typeof ApiService !== 'undefined' ? ApiService.getSections() : [];
     const activeSections = sections.filter(s => !s.isArchive);
     const defaultSec = activeSections.length > 0 ? activeSections[activeSections.length - 1].name : 'Section 2';
-    const target = selectedSection || defaultSec;
+    let target = selectedSection || defaultSec;
+    // Never keep a stale/deleted section selected — fall back to the active one
+    if (!sections.some(s => s.name.toLowerCase() === String(target).toLowerCase())) {
+      target = defaultSec;
+    }
 
     secSelect.innerHTML = sections.map(s => `
       <option value="${s.name}" ${s.name.toLowerCase() === target.toLowerCase() ? 'selected' : ''}>
@@ -156,11 +160,28 @@ const AdvancesModule = {
     `).join('');
   },
 
+  // Default date for a NEW advance = latest existing entry (advance first, then last trip), else today.
+  setDefaultDate() {
+    const dateEl = document.getElementById('advanceDate');
+    if (!dateEl) return;
+    const combined = [...(this.advances || []), ...(window.App?.transportRecords || [])];
+    const latest = typeof window.getLatestTripDate === 'function' ? window.getLatestTripDate(combined, '') : '';
+    const inputVal = (latest && window.formatDateForInput) ? window.formatDateForInput(latest) : '';
+    dateEl.value = inputVal || new Date().toISOString().split('T')[0];
+  },
+
   openAddModal(preselectedSection = null) {
     document.getElementById('advanceForm').reset();
     document.getElementById('advanceId').value = '';
     document.getElementById('advanceModalTitle').innerText = '➕ Record Advance Payment';
-    document.getElementById('advanceDate').value = new Date().toISOString().split('T')[0];
+    this.setDefaultDate();
+
+    // Never leave the Save button stuck disabled from a previous failed submit
+    const submitBtn = document.querySelector('#advanceForm button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerText = 'Save Advance Record';
+    }
 
     // If preselectedSection not specified, check currently active section filter
     let targetSec = preselectedSection;
@@ -196,8 +217,18 @@ const AdvancesModule = {
   isSubmitting: false,
   async handleFormSubmit(e) {
     if (e && e.preventDefault) e.preventDefault();
-    if (this.isSubmitting) return;
+    if (this.isSubmitting) {
+      window.App?.showToast?.('⏳ Still saving the previous request…', 'info');
+      return;
+    }
     this.isSubmitting = true;
+
+    // Instant visual feedback so the first tap never feels "dead"
+    const submitBtn = document.querySelector('#advanceForm button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerText = '⏳ Saving to Google Sheets…';
+    }
 
     try {
       const user = AuthService.getCurrentUser();
@@ -239,6 +270,10 @@ const AdvancesModule = {
       window.App.showToast("Cloud Notice: " + (err.message || "Failed to save advance record."), "error");
     } finally {
       this.isSubmitting = false;
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Save Advance Record';
+      }
     }
   },
 
@@ -248,6 +283,7 @@ const AdvancesModule = {
       return;
     }
     if (!confirm("Are you sure you want to permanently delete this advance entry? Google Sheets will recalculate automatically.")) return;
+    window.App?.showToast?.('⏳ Deleting advance…', 'info');
     try {
       await ApiService.deleteAdvance(id);
       window.App.showToast("🗑️ Advance record deleted from Google Sheets.", "info");

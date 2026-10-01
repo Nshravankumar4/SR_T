@@ -197,7 +197,12 @@ window.App = {
   },
 
   async refreshData(isSilent = false) {
-    if (this.isSyncing) return;
+    if (this.isSyncing) {
+      // Don't silently drop the request — re-run once the current refresh finishes
+      // so a save/delete always ends with fresh data on screen.
+      this._refreshQueued = true;
+      return;
+    }
     this.isSyncing = true;
     if (!isSilent) this.updateCloudStatus('Syncing...', 'online');
 
@@ -233,14 +238,19 @@ window.App = {
         this.updateCloudStatus(this.cloudSyncWarning, 'offline');
         if (banner) banner.style.display = 'block';
       } else {
-        this.updateCloudStatus('Online • Live Database Active', 'online');
+        // Cloud reachable-but-not-returned (or no URL): never claim "Live Database"
+        this.updateCloudStatus('⚠ Cloud Unreachable • Local Cache', 'offline');
         if (banner) banner.style.display = 'none';
       }
     } catch (err) {
       console.error("refreshData error:", err);
-      this.updateCloudStatus('Online • Live Database Active', 'online');
+      this.updateCloudStatus('⚠ Cloud Unreachable • Local Cache', 'offline');
     } finally {
       this.isSyncing = false;
+      if (this._refreshQueued) {
+        this._refreshQueued = false;
+        setTimeout(() => this.refreshData(true), 50);
+      }
     }
 
     // Populate Settings fields
@@ -308,6 +318,10 @@ window.App = {
   },
 
   async restoreExactExcelSheetData() {
+    if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) {
+      alert('Permission denied: Only Admin can reset the database.');
+      return;
+    }
     if (confirm("Reset data to the exact 34 transport records (27 in Section 1 + 7 in Section 2) and 15 advances from your Shinex Excel file?")) {
       await ApiService.resetToExactExcelData();
       await this.refreshData();
@@ -418,9 +432,11 @@ window.App = {
 
       // Dynamic Titles
       const mS1Title = document.getElementById('metricS1Title');
-      if (mS1Title) mS1Title.innerText = `${s1.latestDate || '14-08-2026'} Old Balance (S1)`;
+      const s1AdvNote = s1.latestAdvDate ? ` • adv ${s1.latestAdvDate}` : '';
+      if (mS1Title) mS1Title.innerText = `${s1.latestDate || '14-08-2026'}${s1AdvNote} Old Balance (S1)`;
       const mNetOutTitle = document.getElementById('metricNetOutTitle');
-      if (mNetOutTitle) mNetOutTitle.innerText = `${activeSec.latestDate || '23-09-2026'} Net Outstanding`;
+      const netAdvNote = activeSec.latestAdvDate ? ` • adv ${activeSec.latestAdvDate}` : '';
+      if (mNetOutTitle) mNetOutTitle.innerText = `${activeSec.latestDate || '23-09-2026'}${netAdvNote} Net Outstanding`;
 
       // Dynamically render all Section Reconciliation Cards in #financialSectionReconGrid
       const reconGrid = document.getElementById('financialSectionReconGrid');
@@ -475,7 +491,7 @@ window.App = {
               </div>
 
               <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 2px dashed #e2e8f0; display: flex; justify-content: space-between; align-items: center; color: #0284c7; font-weight: 700; font-size: 1.05rem;">
-                <span>(=) ${secData.latestDate || ''} (out standing)</span>
+                <span>(=) ${secData.latestDate || ''}${secData.latestAdvDate ? ` / adv ${secData.latestAdvDate}` : ''} (out standing)</span>
                 <span style="font-size: 1.15rem; color: ${(Number(secData.netOutstanding) || 0) > 0 ? 'var(--danger)' : 'var(--success)'};">₹${(Number(secData.netOutstanding) || 0).toLocaleString('en-IN')}</span>
               </div>
             </div>
@@ -562,17 +578,17 @@ window.App = {
         <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem;">
           <div>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <strong>${s.name}</strong>
+              <strong>${window.escapeHtml(s.name)}</strong>
               <span class="badge ${s.isArchive ? 'badge-secondary' : 'badge-success'}" style="font-size: 0.72rem;">${s.isArchive ? 'Archive' : 'Active'}</span>
             </div>
             <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
-              ${s.title || 'Standard Section'} • ${tripCount} trips, ${advCount} advances
+              ${window.escapeHtml(s.title || 'Standard Section')} • ${tripCount} trips, ${advCount} advances
             </div>
           </div>
           <div style="display: flex; gap: 0.4rem;">
-            <button class="btn btn-sm btn-secondary" onclick="App.promptEditSection('${s.name}')" title="Edit Section Title">✏️ Edit</button>
+            <button class="btn btn-sm btn-secondary" onclick="App.promptEditSection('${window.escapeAttr(s.name)}')" title="Edit Section Title">✏️ Edit</button>
             ${(!isCore && isAdmin) ? `
-              <button class="btn btn-sm btn-danger" onclick="App.confirmDeleteSection('${s.name}')" title="Delete Section">🗑️ Delete</button>
+              <button class="btn btn-sm btn-danger" onclick="App.confirmDeleteSection('${window.escapeAttr(s.name)}')" title="Delete Section">🗑️ Delete</button>
             ` : (isCore ? `<span style="font-size: 0.75rem; color: #94a3b8; padding: 0.25rem 0.5rem;">Protected</span>` : '')}
           </div>
         </div>
@@ -745,8 +761,17 @@ window.App = {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         document.getElementById(`tab-${target}`)?.classList.add('active');
 
+        // Mobile: close the slide-in menu after a tab is chosen (actions feel dead otherwise)
+        if (window.innerWidth <= 900) {
+          document.querySelector('.app-sidebar')?.classList.remove('open');
+        }
+
         if (target === 'sheetview' && typeof SheetViewModule !== 'undefined') {
           SheetViewModule.render();
+        }
+
+        if (target === 'excel' && typeof BackupModule !== 'undefined') {
+          BackupModule.loadCloudBackups();
         }
       });
     });
@@ -759,6 +784,16 @@ window.App = {
 
     // Transport Form submit
     document.getElementById('transportForm')?.addEventListener('submit', (e) => TransportModule.handleFormSubmit(e));
+
+    // Make HTML5 validation visible: a first tap must never look like a dead click
+    ['transportForm', 'advanceForm'].forEach((fid) => {
+      document.getElementById(fid)?.addEventListener('invalid', () => {
+        const now = Date.now();
+        if (this._lastInvalidToastAt && now - this._lastInvalidToastAt < 3000) return;
+        this._lastInvalidToastAt = now;
+        this.showToast('⚠️ Please fill the required fields highlighted in the form.', 'error');
+      }, true);
+    });
     
     // Auto balance calculations
     document.getElementById('transportToPay')?.addEventListener('input', () => TransportModule.onPaymentInputChange());

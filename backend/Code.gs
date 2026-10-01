@@ -43,6 +43,85 @@ function getSpreadsheet() {
 }
 
 // =========================================================================
+// 0. SECURITY HELPERS (SESSION TOKENS, HASHING, SAFE AMOUNT PARSING)
+// =========================================================================
+
+// Must match AuthService.salt in js/auth.js so client and server hashes agree.
+var CLIENT_PASSWORD_SALT = 'SHINEX_SEED_SECURE_SALT_2026_@#!';
+
+// Parses '55,000' / '₹1,20,000' / '1,20,000' / 55000 / '' safely to a number.
+function parseAmount(value) {
+  if (typeof value === 'number') return isFinite(value) ? value : 0;
+  var cleaned = String(value === null || value === undefined ? '' : value).replace(/[^0-9.\-]/g, '');
+  return Number(cleaned) || 0;
+}
+
+// SHA-256(salt + password) as lowercase hex — mirrors AuthService.hash() in js/auth.js.
+// Only the hash ever leaves this backend now; plaintext passwords stay in ScriptProperties.
+function hashPassword(password) {
+  var digest = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    CLIENT_PASSWORD_SALT + String(password === null || password === undefined ? '' : password),
+    Utilities.Charset.UTF_8
+  );
+  return digest.map(function(b) {
+    return ('0' + (b & 0xFF).toString(16)).slice(-2);
+  }).join('');
+}
+
+// Maps any accepted username / display name to its canonical account key.
+function normalizeUserName(name) {
+  var u = String(name === null || name === undefined ? '' : name).trim().toLowerCase();
+  if (u === 'admin' || u === 'admin1' || u === 'shravan' || u === 'administrator') return 'admin';
+  if (u === 'rudra' || u === 'sarika' || u === 'employee' || u === 'user') return 'rudra';
+  return null;
+}
+
+// --- Device session tokens (ScriptProperties; newest 5 per account kept) ---
+function getSessionList(accountKey) {
+  var raw = PropertiesService.getScriptProperties().getProperty('SESSIONS_' + accountKey);
+  if (!raw) return [];
+  try {
+    var list = JSON.parse(raw);
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function issueSessionToken(accountKey) {
+  var token = Utilities.getUuid();
+  var list = getSessionList(accountKey);
+  list.unshift({ token: token, at: new Date().toISOString() });
+  if (list.length > 5) list = list.slice(0, 5);
+  PropertiesService.getScriptProperties().setProperty('SESSIONS_' + accountKey, JSON.stringify(list));
+  return token;
+}
+
+// Returns 'admin' | 'rudra' only when the envelope carries a token this server issued
+// for that account. Tokens are never exposed through doGet.
+function getActiveSessionUser(envelope) {
+  if (!envelope) return null;
+  var token = String(envelope.token || '').trim();
+  if (!token) return null;
+  var accountKey = normalizeUserName(envelope.user || envelope.username);
+  if (!accountKey) return null;
+  var list = getSessionList(accountKey);
+  for (var i = 0; i < list.length; i++) {
+    if (list[i] && String(list[i].token) === token) return accountKey;
+  }
+  return null;
+}
+
+function sessionInvalidResponse() {
+  return jsonResponse({
+    success: false,
+    error: 'SESSION_INVALID',
+    message: 'Session not authorized for this action. Please log out and log in again.'
+  });
+}
+
+// =========================================================================
 // 1. GET REQUEST HANDLER (LIGHTWEIGHT VERSION POLLING & FULL DATASET RETRIEVAL)
 // =========================================================================
 
@@ -89,13 +168,43 @@ function doGet(e) {
         data: {
           transport: transportData,
           advances: advanceData,
+          sections: getSectionsMeta(),
           summary: summary
         },
+        // Passwords leave this server as salted SHA-256 hashes only; the
+        // plaintext values never appear in any API response.
         auth: {
-          adminPass: props.getProperty('ADMIN_PASS') || 'Shravan',
-          empPass: props.getProperty('EMP_PASS') || 'RudraSarika@2505'
+          adminPassHash: hashPassword(props.getProperty('ADMIN_PASS') || 'Shravan'),
+          empPassHash: hashPassword(props.getProperty('EMP_PASS') || 'RudraSarika@2505')
         }
       });
+    }
+
+    // Cloud backup history from Google Drive (Admin session only) so the
+    // Admin can see backup dates taken from ANY device (e.g. their phone).
+    if (action === 'listBackups') {
+      var buSessionUser = getActiveSessionUser({
+        token: (e && e.parameter) ? e.parameter.token : '',
+        user: (e && e.parameter) ? e.parameter.user : ''
+      });
+      if (buSessionUser !== 'admin') {
+        return sessionInvalidResponse();
+      }
+      var buFiles = [];
+      try {
+        var buFolders = DriveApp.getFoldersByName(BACKUP_FOLDER);
+        if (buFolders.hasNext()) {
+          var buIt = buFolders.next().getFiles();
+          while (buIt.hasNext()) {
+            var buF = buIt.next();
+            buFiles.push({ name: buF.getName(), created: buF.getDateCreated().toISOString() });
+          }
+        }
+      } catch (buErr) {
+        return jsonResponse({ success: true, backups: [], warning: buErr.toString() });
+      }
+      buFiles.sort(function(a, b) { return (a.created < b.created) ? 1 : -1; });
+      return jsonResponse({ success: true, backups: buFiles.slice(0, 25) });
     }
 
     return jsonResponse({ success: false, message: 'Invalid action: ' + action });
@@ -132,7 +241,10 @@ function doPost(e) {
     var ss = getSpreadsheet();
     ensureAllSheets(ss);
 
-    // 1. Secure Authentication Verification
+    // Resolved once per request: 'admin' | 'rudra' | null (null = no valid session token)
+    var sessionUser = getActiveSessionUser(envelope);
+
+    // 1. Secure Authentication Verification (rate-limited, issues a server session token)
     if (action === 'login') {
       var u = String(envelope.username || '').trim().toLowerCase();
       var p = String(envelope.password || '').trim();
@@ -142,6 +254,15 @@ function doPost(e) {
       var empUser = props.getProperty('EMP_USER') || 'rudra';
       var empPass = props.getProperty('EMP_PASS') || 'RudraSarika@2505';
 
+      // Server-side brute-force guard: lock after 8 failures in a 5 minute window.
+      var failWindowMs = 5 * 60 * 1000;
+      var failCount = Number(props.getProperty('LOGIN_FAILS') || 0) || 0;
+      var failAt = Number(props.getProperty('LOGIN_FAIL_AT') || 0) || 0;
+      if (Date.now() - failAt > failWindowMs) failCount = 0;
+      if (failCount >= 8) {
+        return jsonResponse({ success: false, message: 'Too many failed attempts. Please wait a few minutes and try again.' });
+      }
+
       var isAdminMatch = (u === 'admin' || u === 'admin1' || u === adminUser.toLowerCase()) &&
                          (p === adminPass || p === 'Shravan' || p === 'Shravan@1');
 
@@ -149,48 +270,67 @@ function doPost(e) {
                        (p === empPass || p === 'RudraSarika@2505');
 
       if (isAdminMatch) {
-        return jsonResponse({ success: true, role: 'Admin', name: 'Administrator', token: Utilities.getUuid() });
+        props.setProperty('LOGIN_FAILS', '0');
+        return jsonResponse({ success: true, role: 'Admin', name: 'Administrator', token: issueSessionToken('admin') });
       } else if (isEmpMatch) {
-        return jsonResponse({ success: true, role: 'Employee', name: 'Rudra', token: Utilities.getUuid() });
+        props.setProperty('LOGIN_FAILS', '0');
+        return jsonResponse({ success: true, role: 'Employee', name: 'Rudra', token: issueSessionToken('rudra') });
       } else {
+        props.setProperty('LOGIN_FAILS', String(failCount + 1));
+        props.setProperty('LOGIN_FAIL_AT', String(Date.now()));
         return jsonResponse({ success: false, message: 'Invalid Username or Password' });
       }
     }
 
-    // 2. Change Password
+    // 2. Change Password — requires the target user's or Admin's valid session token.
     if (action === 'updatePassword') {
       var targetUser = String(envelope.username || '').trim().toLowerCase();
       var newPass = String(envelope.password || '').trim();
       var props = PropertiesService.getScriptProperties();
+      var targetKey = (targetUser === 'admin1') ? 'admin' : targetUser;
+      if (!sessionUser || !(sessionUser === 'admin' || sessionUser === targetKey)) {
+        return sessionInvalidResponse();
+      }
       if (!newPass || newPass.length < 6) {
         return jsonResponse({ success: false, message: 'Password must be at least 6 characters.' });
       }
       if (targetUser === 'admin' || targetUser === 'admin1') {
         props.setProperty('ADMIN_PASS', newPass);
-        return jsonResponse({ success: true, message: 'Admin password updated live in cloud.' });
+        var pwdVer1 = incrementDataVersion(ss, 'UPDATE_PASSWORD', user);
+        return jsonResponse({ success: true, version: pwdVer1, message: 'Admin password updated live in cloud.' });
       } else if (targetUser === 'rudra') {
         props.setProperty('EMP_PASS', newPass);
-        return jsonResponse({ success: true, message: 'Rudra password updated live in cloud.' });
+        var pwdVer2 = incrementDataVersion(ss, 'UPDATE_PASSWORD', user);
+        return jsonResponse({ success: true, version: pwdVer2, message: 'Rudra password updated live in cloud.' });
       }
       return jsonResponse({ success: false, message: 'User not found.' });
     }
 
-    // 3. Add Transport
+    // 3-6. Record mutations — every write requires a valid device session token.
+    var MUTATION_ACTIONS = {
+      addTransport: true,
+      updateTransport: true,
+      addAdvance: true,
+      updateAdvance: true,
+      createBackup: true,
+      saveSections: true
+    };
+    if (MUTATION_ACTIONS[action] && !sessionUser) {
+      return sessionInvalidResponse();
+    }
+
     if (action === 'addTransport') {
       return jsonResponse(executeAddTransport(ss, payload, user, role));
     }
 
-    // 4. Update Transport
     if (action === 'updateTransport') {
       return jsonResponse(executeUpdateTransport(ss, payload, user, role));
     }
 
-    // 5. Add Advance
     if (action === 'addAdvance') {
       return jsonResponse(executeAddAdvance(ss, payload, user, role));
     }
 
-    // 6. Update Advance
     if (action === 'updateAdvance') {
       return jsonResponse(executeUpdateAdvance(ss, payload, user, role));
     }
@@ -207,9 +347,11 @@ function doPost(e) {
       return jsonResponse(executeDeleteRecord(ss, envelope, user));
     }
 
-    // 8. Create Backup (Manual or Automatic)
+    // 8. Create Backup (Manual or Automatic) — creator's name is baked into
+    //    the Drive file name so every device can see WHO took the backup.
     if (action === 'createBackup') {
-      var bRes = createCloudBackup(ss, envelope.reason || 'Manual');
+      var bReason = (envelope.reason || 'Manual') + ' - ' + (user || role || 'User');
+      var bRes = createCloudBackup(ss, bReason);
       return jsonResponse(bRes);
     }
 
@@ -225,11 +367,35 @@ function doPost(e) {
       return jsonResponse(executeRestoreFullDataset(ss, envelope.data || {}, user));
     }
 
-    // 10. Recalculate All Financials
+    // 10. Recalculate All Financials (Admin session only)
     if (action === 'recalculateFinancials') {
+      if (sessionUser !== 'admin') return sessionInvalidResponse();
       recalculateFinancials(ss);
       var newVer = incrementDataVersion(ss, 'RECALCULATE_FINANCIALS', user);
       return jsonResponse({ success: true, version: newVer, message: "Authoritative financials recalculated successfully." });
+    }
+
+    // 11. Persist Section Definitions (Google Sheets = source of truth for sections)
+    if (action === 'saveSections') {
+      var sectionsList = envelope.data;
+      if (typeof sectionsList === 'string') {
+        try { sectionsList = JSON.parse(sectionsList); } catch (eSec) {}
+      }
+      if (!Array.isArray(sectionsList)) {
+        return jsonResponse({ success: false, message: 'Invalid sections payload.' });
+      }
+      setMetaValue(ss, 'SECTIONS', JSON.stringify(sectionsList));
+      var secVer = incrementDataVersion(ss, 'SAVE_SECTIONS', user);
+      return jsonResponse({ success: true, version: secVer, message: 'Sections synchronized across devices.' });
+    }
+
+    // 12. Opening Balance (Admin session only)
+    if (action === 'setOpeningBalance') {
+      if (sessionUser !== 'admin') return sessionInvalidResponse();
+      var obVal = parseAmount(envelope.amount);
+      setMetaValue(ss, 'OPENING_BALANCE', obVal);
+      var obVer = incrementDataVersion(ss, 'SET_OPENING_BALANCE', user);
+      return jsonResponse({ success: true, version: obVer, openingBalance: obVal, message: 'Opening balance updated.' });
     }
 
     return jsonResponse({ success: false, message: 'Unknown action: ' + action });
@@ -254,9 +420,10 @@ function userCanDelete(envelope) {
     return false;
   }
 
-  // Must have role === 'Admin' and known admin username ('admin', 'admin1', 'shravan')
+  // Must claim role === 'Admin' with a known admin username...
   if (role === 'Admin' && (user === 'admin' || user === 'admin1' || user === 'shravan' || user === 'administrator')) {
-    return true;
+    // ...AND carry a session token this server issued to the admin account.
+    return getActiveSessionUser(envelope) === 'admin';
   }
 
   return false;
@@ -395,7 +562,7 @@ function executeAddAdvance(ss, item, user, role) {
   var newId = item.id || ('ADV-' + Utilities.formatDate(new Date(), "GMT+5:30", "yyyyMMdd") + '-' + Math.floor(100 + Math.random() * 900));
   var now = new Date().toISOString();
 
-  var amount = Number(item.amount) || 0;
+  var amount = parseAmount(item.amount);
   if (amount <= 0) {
     throw new Error("Advance Amount must be greater than zero.");
   }
@@ -450,7 +617,7 @@ function executeUpdateAdvance(ss, item, user, role) {
     return executeAddAdvance(ss, item, user, role);
   }
 
-  var amount = Number(item.amount) || 0;
+  var amount = parseAmount(item.amount);
   if (amount <= 0) {
     throw new Error("Advance Amount must be greater than zero.");
   }
@@ -574,7 +741,7 @@ function executeRestoreFullDataset(ss, rData, user) {
     aSheet.appendRow([
       a.id || ('ADV-' + Utilities.getUuid().substring(0, 8)),
       String(a.date || ''),
-      Number(a.amount) || 0,
+      parseAmount(a.amount),
       String(a.description || a.note || 'Advance Payment'),
       String(a.reference || ''),
       normalizeSection(a.section || 'Section 2'),
@@ -583,6 +750,15 @@ function executeRestoreFullDataset(ss, rData, user) {
       now
     ]);
   });
+
+  // 4. Restore Section Definitions when provided
+  var secRows = rData.sections || [];
+  if (typeof secRows === 'string') {
+    try { secRows = JSON.parse(secRows); } catch (eSec) {}
+  }
+  if (Array.isArray(secRows) && secRows.length > 0) {
+    setMetaValue(ss, 'SECTIONS', JSON.stringify(secRows));
+  }
 
   recalculateFinancials(ss);
   var newVersion = incrementDataVersion(ss, 'RESTORE_DATASET', user);
@@ -599,13 +775,13 @@ function executeRestoreFullDataset(ss, rData, user) {
 // =========================================================================
 
 function calculateTransportRow(item) {
-  var amount = Number(item.amount) || 0;
-  var toPay = Number(item.toPay) || 0;
+  var amount = parseAmount(item.amount);
+  var toPay = parseAmount(item.toPay);
   var rawPaid = item.paid;
   var isPaid = (rawPaid === 'Paid' || String(rawPaid).toLowerCase() === 'paid');
 
-  var paid = isPaid ? 'Paid' : (Number(rawPaid) || 0);
-  var paidNum = isPaid ? toPay : (Number(paid) || 0);
+  var paid = isPaid ? 'Paid' : parseAmount(rawPaid);
+  var paidNum = isPaid ? toPay : parseAmount(paid);
   if (paidNum > toPay) paidNum = toPay;
 
   var balance = isPaid ? 0 : Math.max(0, toPay - paidNum);
@@ -646,12 +822,12 @@ function recalculateFinancials(ss) {
 
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
-    var amount = Number(row[10]) || 0;
-    var toPay = Number(row[11]) || 0;
+    var amount = parseAmount(row[10]);
+    var toPay = parseAmount(row[11]);
     var rawPaid = row[12];
     var isPaid = (rawPaid === 'Paid' || String(rawPaid).toLowerCase() === 'paid');
 
-    var paidNum = isPaid ? toPay : (Number(rawPaid) || 0);
+    var paidNum = isPaid ? toPay : parseAmount(rawPaid);
     if (paidNum > toPay) paidNum = toPay;
     var correctBalance = isPaid ? 0 : Math.max(0, toPay - paidNum);
 
@@ -784,6 +960,18 @@ function setMetaValue(ss, key, val) {
   sheet.appendRow([key, val, now]);
 }
 
+// Sections are stored as JSON in the _Meta sheet; returns null when never saved.
+function getSectionsMeta() {
+  var raw = getMetaValue(getSpreadsheet(), 'SECTIONS', '');
+  if (!raw) return null;
+  try {
+    var list = JSON.parse(String(raw));
+    return Array.isArray(list) && list.length > 0 ? list : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 function getAllMeta(ss) {
   var sheet = ss.getSheetByName(SHEET_META);
   if (!sheet) return {};
@@ -852,10 +1040,10 @@ function getTransportRows(sheet) {
       toCity: String(d[7] || '').trim(),
       quantity: String(d[8] || '').trim(),
       mTax: String(d[9] || '').trim(),
-      amount: Number(d[10]) || 0,
-      toPay: Number(d[11]) || 0,
-      paid: (d[12] === 'Paid' || String(d[12]).toLowerCase() === 'paid') ? 'Paid' : (Number(d[12]) || 0),
-      balance: Number(d[13]) || 0,
+      amount: parseAmount(d[10]),
+      toPay: parseAmount(d[11]),
+      paid: (d[12] === 'Paid' || String(d[12]).toLowerCase() === 'paid') ? 'Paid' : parseAmount(d[12]),
+      balance: parseAmount(d[13]),
       status: String(d[14] || 'Pending').trim(),
       note: String(d[15] || '').trim(),
       section: normalizeSection(d[16]),
@@ -878,7 +1066,7 @@ function getAdvanceRows(sheet) {
     rows.push({
       id: String(d[0]).trim(),
       date: String(d[1] || '').trim(),
-      amount: Number(d[2]) || 0,
+      amount: parseAmount(d[2]),
       description: String(d[3] || 'Advance Payment').trim(),
       note: String(d[3] || '').trim(),
       reference: String(d[4] || '').trim(),

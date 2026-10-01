@@ -111,14 +111,15 @@ const SheetViewModule = {
     });
   },
 
-  // Sequentially calculates chained reconciliation metrics across all sections
-  computeAllSectionsData() {
-    const transport = window.App?.transportRecords || [];
-    const advances = window.App?.advanceRecords || [];
-    const sections = typeof ApiService !== 'undefined' ? ApiService.getSections() : [
+  // Sequentially calculates chained reconciliation metrics across all sections.
+  // Optional overrides let callers (e.g. backup snapshots) compute from historic data.
+  computeAllSectionsData(transportArg, advancesArg, sectionsArg) {
+    const transport = transportArg || window.App?.transportRecords || [];
+    const advances = advancesArg || window.App?.advanceRecords || [];
+    const sections = sectionsArg || (typeof ApiService !== 'undefined' ? ApiService.getSections() : [
       { id: 'section-1', name: 'Section 1', num: 1, isArchive: true },
       { id: 'section-2', name: 'Section 2', num: 2, isArchive: false }
-    ];
+    ]);
 
     let prevOutBal = 0;
     let prevOutDate = '14-08-2026';
@@ -145,6 +146,15 @@ const SheetViewModule = {
       let totalPayable = 0;
       let netOutstanding = 0;
       let latestDate = '';
+      let latestAdvDate = ''; // last advance date, only when it falls AFTER the last trip
+
+      // Primary label = last TRIP date (matches the trip table row-for-row).
+      // If an advance is dated later, it is surfaced as a secondary "advance dd-mm-yyyy" note.
+      const lastAdvDate = secAdvs.length ? window.getLatestTripDate(secAdvs, '') : '';
+      const advNoteIfNewer = (tripDate) => {
+        if (!lastAdvDate || !tripDate) return '';
+        return (window.parseDateToTimestamp(lastAdvDate) > window.parseDateToTimestamp(tripDate)) ? lastAdvDate : '';
+      };
 
       if (idx === 0) {
         // Section 1 (April - August 2026)
@@ -152,16 +162,19 @@ const SheetViewModule = {
         oldBalDate = 'Before March 2026';
         totalPayable = totalAmount + toPayBal; // 18,93,350
         netOutstanding = totalPayable - advSum; // 10,000
-        latestDate = '17-06-2026';
+        latestDate = window.getLatestTripDate(secTrips, '17-06-2026');
+        latestAdvDate = advNoteIfNewer(latestDate);
       } else {
         // Section 2, Section 3, Section 4... chained from previous section's Net Outstanding!
         oldBal = prevOutBal;
         oldBalDate = (sec.name === 'Section 2') ? '14-08-2026' : prevOutDate;
         totalPayable = totalAmount + oldBal + toPayBal;
         netOutstanding = totalPayable - advSum;
-        const allItems = [...secTrips, ...secAdvs];
         const defaultDate = (sec.name === 'Section 2') ? '23-09-2026' : (prevOutDate || new Date().toISOString().split('T')[0]);
-        latestDate = window.getLatestTripDate(allItems, defaultDate);
+        // Trips drive the date; fall back to advances/default only when no trips exist yet
+        const tripDate = secTrips.length ? window.getLatestTripDate(secTrips, defaultDate) : '';
+        latestDate = tripDate || (lastAdvDate ? lastAdvDate : defaultDate);
+        latestAdvDate = tripDate ? advNoteIfNewer(tripDate) : '';
       }
 
       prevOutBal = netOutstanding;
@@ -178,7 +191,8 @@ const SheetViewModule = {
         totalPayable,
         advSum,
         netOutstanding,
-        latestDate
+        latestDate,
+        latestAdvDate
       });
     });
 
@@ -197,7 +211,7 @@ const SheetViewModule = {
       const isSelected = this.activeView === viewKey;
       const btnClass = isSelected ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
       const icon = isAct ? '🟢' : '📁';
-      html += `<button class="${btnClass}" onclick="SheetViewModule.setView('${viewKey}')">${icon} ${s.name} ${isAct ? '(Active)' : '(Archive)'}</button>`;
+      html += `<button class="${btnClass}" onclick="SheetViewModule.setView('${window.escapeAttr(viewKey)}')">${icon} ${window.escapeHtml(s.name)} ${isAct ? '(Active)' : '(Archive)'}</button>`;
     });
 
     const isFullSelected = this.activeView === 'FULL';
@@ -233,7 +247,7 @@ const SheetViewModule = {
 
   // Renders any Section >= 2 with exact Shinex structure, advances on left, and reconciliation on right
   renderGenericSectionView(secData, isFullView = false) {
-    const { section, trips, advances, totalAmount, oldBal, oldBalDate, totalPayable, advSum, netOutstanding, latestDate, toPayBal = 0 } = secData;
+    const { section, trips, advances, totalAmount, oldBal, oldBalDate, totalPayable, advSum, netOutstanding, latestDate, latestAdvDate = '', toPayBal = 0 } = secData;
 
     let rowsHtml = '';
     trips.forEach((r, idx) => {
@@ -246,28 +260,32 @@ const SheetViewModule = {
       const balStyle = toPayBal > 0 ? 'color: #dc2626; font-weight: bold;' : '';
 
       rowsHtml += `
-        <tr onclick="TransportModule.openEditModal('${r.id}')" style="cursor: pointer;" title="✏️ Click to edit trip (LR: ${r.lrNo || r.id})">
+        <tr onclick="TransportModule.openEditModal('${window.escapeAttr(r.id)}')" style="cursor: pointer;" title="✏️ Click to edit trip (LR: ${window.escapeHtml(r.lrNo || r.id)})">
           <td class="excel-cell center excel-row-num">${(section.num * 25) + idx + 1}</td>
           <td class="excel-cell center">${r.slNo || (idx + 1)}</td>
-          <td class="excel-cell center"><strong>${r.lrNo || ''}</strong></td>
-          <td class="excel-cell center">${r.dcNo || ''}</td>
-          <td class="excel-cell center">${r.date || ''}</td>
-          <td class="excel-cell center font-mono">${r.vehicleNumber || ''}</td>
-          <td class="excel-cell left">${r.fromCity || ''}</td>
-          <td class="excel-cell left"><strong>${r.toCity || ''}</strong></td>
-          <td class="excel-cell center">${r.quantity || ''}</td>
-          <td class="excel-cell center">${r.mTax || ''}</td>
+          <td class="excel-cell center"><strong>${window.escapeHtml(r.lrNo || '')}</strong></td>
+          <td class="excel-cell center">${window.escapeHtml(r.dcNo || '')}</td>
+          <td class="excel-cell center">${window.escapeHtml(r.date || '')}</td>
+          <td class="excel-cell center font-mono">${window.escapeHtml(r.vehicleNumber || '')}</td>
+          <td class="excel-cell left">${window.escapeHtml(r.fromCity || '')}</td>
+          <td class="excel-cell left"><strong>${window.escapeHtml(r.toCity || '')}</strong></td>
+          <td class="excel-cell center">${window.escapeHtml(r.quantity || '')}</td>
+          <td class="excel-cell center">${window.escapeHtml(r.mTax || '')}</td>
           <td class="excel-cell right font-mono">${amt > 0 ? amt.toLocaleString('en-IN') : ''}</td>
-          <td class="excel-cell right font-mono">${r.toPay ? Number(r.toPay).toLocaleString('en-IN') : ''}</td>
-          <td class="excel-cell center font-mono" style="${paidStyle}">${r.paid || ''}</td>
+          <td class="excel-cell right font-mono">${r.toPay ? window.parseAmount(r.toPay).toLocaleString('en-IN') : ''}</td>
+          <td class="excel-cell center font-mono" style="${paidStyle}">${window.escapeHtml(r.paid || '')}</td>
           <td class="excel-cell right font-mono" style="${balStyle}">${toPayBal > 0 ? toPayBal.toLocaleString('en-IN') : ''}</td>
-          <td class="excel-cell left" style="${noteStyle}">${r.note || ''}</td>
+          <td class="excel-cell left" style="${noteStyle}">${window.escapeHtml(r.note || '')}</td>
         </tr>
       `;
     });
 
     const isCustomSec = section.num >= 3;
     const isAdmin = typeof AuthService !== 'undefined' && AuthService.isAdmin();
+
+    // Auto-sum totals shown in the bottom Total row (ToPay + ToPay-Balance included)
+    const toPaySum = trips.reduce((s, r) => s + window.parseAmount(r.toPay), 0);
+    const balSum = trips.reduce((s, r) => s + window.parseAmount(r.balance), 0);
 
     return `
       <div class="excel-sheet-wrapper" style="margin-bottom: ${isFullView ? '40px' : '0'};">
@@ -276,7 +294,7 @@ const SheetViewModule = {
           <div style="background: #44b3e1; color: #fff; font-weight: bold; text-align: center; padding: 7px 12px; letter-spacing: 2px; margin: 25px 0 15px 0; font-size: 1.05rem; display: flex; justify-content: space-between; align-items: center; border-radius: 4px;">
             <span>${section.name} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; NEW</span>
             ${isAdmin && isCustomSec ? `
-              <button class="btn btn-sm btn-danger" onclick="App.confirmDeleteSection('${section.name}')" style="font-size: 0.72rem; padding: 2px 8px;" title="Delete this section">🗑️ Delete ${section.name}</button>
+              <button class="btn btn-sm btn-danger" onclick="App.confirmDeleteSection('${window.escapeAttr(section.name)}')" style="font-size: 0.72rem; padding: 2px 8px;" title="Delete this section">🗑️ Delete ${window.escapeHtml(section.name)}</button>
             ` : ''}
           </div>
         ` : ''}
@@ -284,17 +302,17 @@ const SheetViewModule = {
         <!-- Section Header Bar with Admin Controls -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; background: #e0f2fe; padding: 6px 12px; border-radius: 6px; border: 1px solid #bae6fd;">
           <div style="font-weight: 700; color: #0369a1; font-size: 0.95rem;">
-            📑 ${section.name}: ${section.title || (section.isArchive ? 'Archive' : 'Active Ledger')}
+            📑 ${window.escapeHtml(section.name)}: ${window.escapeHtml(section.title || (section.isArchive ? 'Archive' : 'Active Ledger'))}
           </div>
           <div style="display: flex; gap: 0.5rem; align-items: center;">
             <div style="background: #ffff00; border: 1px solid #000; padding: 3px 12px; font-weight: 600; font-size: 0.82rem;">
               Before ${oldBalDate || '14-08-2026'}: ₹${oldBal.toLocaleString('en-IN')}
             </div>
             ${isAdmin ? `
-              <button class="btn btn-sm btn-secondary" onclick="App.promptEditSection('${section.name}')" style="font-size: 0.75rem; padding: 2px 8px;" title="Edit Section Title">✏️ Edit</button>
+              <button class="btn btn-sm btn-secondary" onclick="App.promptEditSection('${window.escapeAttr(section.name)}')" style="font-size: 0.75rem; padding: 2px 8px;" title="Edit Section Title">✏️ Edit</button>
             ` : ''}
             ${isAdmin && isCustomSec ? `
-              <button class="btn btn-sm btn-danger" onclick="App.confirmDeleteSection('${section.name}')" style="font-size: 0.75rem; padding: 2px 8px;" title="Delete this Section">🗑️ Delete</button>
+              <button class="btn btn-sm btn-danger" onclick="App.confirmDeleteSection('${window.escapeAttr(section.name)}')" style="font-size: 0.75rem; padding: 2px 8px;" title="Delete this Section">🗑️ Delete</button>
             ` : ''}
           </div>
         </div>
@@ -320,7 +338,7 @@ const SheetViewModule = {
             </tr>
           </thead>
           <tbody>
-            ${rowsHtml || `<tr><td colspan="15" class="excel-cell center" style="padding: 1.5rem; color: #64748b;">No trips logged in ${section.name} yet. Click "+ Add Transport Record" to add trips to this section.</td></tr>`}
+            ${rowsHtml || `<tr><td colspan="15" class="excel-cell center" style="padding: 1.5rem; color: #64748b;">No trips logged in ${window.escapeHtml(section.name)} yet. Click "+ Add Transport Record" to add trips to this section.</td></tr>`}
 
             <!-- Gap Row -->
             <tr style="height: 14px;"><td colspan="15" class="excel-cell-blank"></td></tr>
@@ -331,7 +349,10 @@ const SheetViewModule = {
               <td class="excel-cell center excel-yellow"><strong>Total</strong></td>
               <td class="excel-cell" colspan="8"></td>
               <td class="excel-cell right font-mono excel-yellow"><strong>${totalAmount.toLocaleString('en-IN')}</strong></td>
-              <td class="excel-cell" colspan="4"></td>
+              <td class="excel-cell right font-mono excel-yellow"><strong>${toPaySum.toLocaleString('en-IN')}</strong></td>
+              <td class="excel-cell"></td>
+              <td class="excel-cell right font-mono excel-yellow"><strong>${balSum.toLocaleString('en-IN')}</strong></td>
+              <td class="excel-cell"></td>
             </tr>
           </tbody>
         </table>
@@ -350,9 +371,9 @@ const SheetViewModule = {
               </thead>
               <tbody>
                 ${advances.map(a => `
-                  <tr onclick="AdvancesModule.openEditModal('${a.id}')" style="cursor: pointer;" title="✏️ Click to edit advance">
-                    <td class="excel-cell center">${a.date || ''}</td>
-                    <td class="excel-cell right font-mono">${(Number(a.amount) || 0).toLocaleString('en-IN')}</td>
+                  <tr onclick="AdvancesModule.openEditModal('${window.escapeAttr(a.id)}')" style="cursor: pointer;" title="✏️ Click to edit advance">
+                    <td class="excel-cell center">${window.escapeHtml(a.date || '')}</td>
+                    <td class="excel-cell right font-mono">${window.parseAmount(a.amount).toLocaleString('en-IN')}</td>
                   </tr>
                 `).join('')}
                 ${advances.length === 0 ? `
@@ -402,7 +423,7 @@ const SheetViewModule = {
                 </tr>
                 <tr style="height: 12px;"><td colspan="3" class="excel-cell-blank"></td></tr>
                 <tr>
-                  <td class="excel-cell center bold" style="border: 1px solid #000;">${latestDate} (out standing)</td>
+                  <td class="excel-cell center bold" style="border: 1px solid #000;">${latestDate} (out standing)${latestAdvDate ? `<div style="font-size: 0.7rem; font-weight: 600; color: #64748b;">advance ${window.escapeHtml(latestAdvDate)}</div>` : ''}</td>
                   <td class="excel-cell bold" style="border: 1px solid #000; font-size: 0.82rem;">TotalB-Less Adv</td>
                   <td class="excel-cell right font-mono bold" style="border: 1px solid #000; background: #94dcf8; font-size: 1.05rem;">${netOutstanding.toLocaleString('en-IN')}</td>
                 </tr>
@@ -419,6 +440,15 @@ const SheetViewModule = {
     const s1LatestDate = (typeof window.getLatestTripDate === 'function')
       ? window.getLatestTripDate(trips, '14-08-2026')
       : '14-08-2026';
+    // Secondary note when a Section 1 advance is dated after the last trip
+    let s1AdvDateNote = '';
+    if (advances && advances.length && typeof window.getLatestTripDate === 'function') {
+      const aDate = window.getLatestTripDate(advances, '');
+      if (aDate && window.parseDateToTimestamp(aDate) > window.parseDateToTimestamp(s1LatestDate)) {
+        s1AdvDateNote = aDate;
+      }
+    }
+    const s1ToPaySum = trips.reduce((s, r) => s + window.parseAmount(r.toPay), 0);
     let rowsHtml = '';
     trips.forEach((r, idx) => {
       const amt = Number(r.amount) || 0;
@@ -430,22 +460,22 @@ const SheetViewModule = {
       const balStyle = bal > 0 ? 'color: #dc2626 !important; font-weight: bold;' : '';
 
       rowsHtml += `
-        <tr onclick="TransportModule.openEditModal('${r.id}')" style="cursor: pointer;" title="✏️ Click to edit trip (LR: ${r.lrNo || r.id})">
+        <tr onclick="TransportModule.openEditModal('${window.escapeAttr(r.id)}')" style="cursor: pointer;" title="✏️ Click to edit trip (LR: ${window.escapeHtml(r.lrNo || r.id)})">
           <td class="excel-cell center excel-row-num">${5 + idx}</td>
           <td class="excel-cell center">${r.slNo || (idx + 1)}</td>
-          <td class="excel-cell center"><strong>${r.lrNo || ''}</strong></td>
-          <td class="excel-cell center">${r.dcNo || ''}</td>
-          <td class="excel-cell center">${r.date || ''}</td>
-          <td class="excel-cell center font-mono">${r.vehicleNumber || ''}</td>
-          <td class="excel-cell left">${r.fromCity || ''}</td>
-          <td class="excel-cell left">${r.toCity || ''}</td>
-          <td class="excel-cell center">${r.quantity || ''}</td>
-          <td class="excel-cell center">${r.mTax || ''}</td>
+          <td class="excel-cell center"><strong>${window.escapeHtml(r.lrNo || '')}</strong></td>
+          <td class="excel-cell center">${window.escapeHtml(r.dcNo || '')}</td>
+          <td class="excel-cell center">${window.escapeHtml(r.date || '')}</td>
+          <td class="excel-cell center font-mono">${window.escapeHtml(r.vehicleNumber || '')}</td>
+          <td class="excel-cell left">${window.escapeHtml(r.fromCity || '')}</td>
+          <td class="excel-cell left">${window.escapeHtml(r.toCity || '')}</td>
+          <td class="excel-cell center">${window.escapeHtml(r.quantity || '')}</td>
+          <td class="excel-cell center">${window.escapeHtml(r.mTax || '')}</td>
           <td class="excel-cell right font-mono">${amt > 0 ? amt.toLocaleString('en-IN') : ''}</td>
           <td class="excel-cell right font-mono">${toPay > 0 ? toPay.toLocaleString('en-IN') : ''}</td>
-          <td class="excel-cell center" style="${paid === 'Paid' ? 'background: #c6efce; color: #006100; font-weight: bold;' : ''}">${paid || ''}</td>
+          <td class="excel-cell center" style="${paid === 'Paid' ? 'background: #c6efce; color: #006100; font-weight: bold;' : ''}">${window.escapeHtml(paid || '')}</td>
           <td class="excel-cell right font-mono" style="${balStyle}">${bal > 0 ? bal.toLocaleString('en-IN') : ''}</td>
-          <td class="excel-cell left" style="${noteStyle}">${r.note || ''}</td>
+          <td class="excel-cell left" style="${noteStyle}">${window.escapeHtml(r.note || '')}</td>
         </tr>
       `;
     });
@@ -462,7 +492,7 @@ const SheetViewModule = {
 
         <div style="display: flex; justify-content: flex-end; margin-bottom: 4px;">
           <div style="background: #ffff00; border: 1px solid #000; padding: 2px 12px; font-size: 0.85rem;">
-            Before March 2026 1,20,000
+            Before March 2026 ${(typeof ApiService !== 'undefined' ? ApiService.getOpeningBalance() : 120000).toLocaleString('en-IN')}
           </div>
         </div>
 
@@ -494,7 +524,8 @@ const SheetViewModule = {
               <td class="excel-cell center excel-yellow"><strong>Total</strong></td>
               <td class="excel-cell" colspan="8"></td>
               <td class="excel-cell right font-mono excel-yellow"><strong>${totalAmount.toLocaleString('en-IN')}</strong></td>
-              <td class="excel-cell" colspan="2"></td>
+              <td class="excel-cell right font-mono excel-yellow"><strong>${s1ToPaySum.toLocaleString('en-IN')}</strong></td>
+              <td class="excel-cell"></td>
               <td class="excel-cell right font-mono excel-yellow"><strong>${toPayBal.toLocaleString('en-IN')}</strong></td>
               <td class="excel-cell"></td>
             </tr>
@@ -513,9 +544,9 @@ const SheetViewModule = {
               </thead>
               <tbody>
                 ${advances.map((a, i) => `
-                  <tr onclick="AdvancesModule.openEditModal('${a.id}')" style="cursor: pointer;" title="✏️ Click to edit advance">
-                    <td class="excel-cell center">${a.date || ''}</td>
-                    <td class="excel-cell right font-mono">${(Number(a.amount) || 0) > 0 ? (Number(a.amount) || 0).toLocaleString('en-IN') : ''}</td>
+                  <tr onclick="AdvancesModule.openEditModal('${window.escapeAttr(a.id)}')" style="cursor: pointer;" title="✏️ Click to edit advance">
+                    <td class="excel-cell center">${window.escapeHtml(a.date || '')}</td>
+                    <td class="excel-cell right font-mono">${window.parseAmount(a.amount) > 0 ? window.parseAmount(a.amount).toLocaleString('en-IN') : ''}</td>
                   </tr>
                 `).join('')}
                 <tr style="font-weight: bold;">
@@ -547,7 +578,7 @@ const SheetViewModule = {
                 </tr>
                 <tr style="height: 12px;"><td colspan="2" class="excel-cell-blank"></td></tr>
                 <tr>
-                  <td class="excel-cell center bold" style="border: 1px solid #000;">${s1LatestDate} (out standing)</td>
+                  <td class="excel-cell center bold" style="border: 1px solid #000;">${s1LatestDate} (out standing)${s1AdvDateNote ? `<div style="font-size: 0.7rem; font-weight: 600; color: #64748b;">advance ${window.escapeHtml(s1AdvDateNote)}</div>` : ''}</td>
                   <td class="excel-cell bold" style="border: 1px solid #000; font-size: 0.82rem;">TotalB-Less Adv</td>
                   <td class="excel-cell right font-mono bold" style="border: 1px solid #000; background: #94dcf8; font-size: 1.05rem;">${outstanding.toLocaleString('en-IN')}</td>
                 </tr>
@@ -568,6 +599,47 @@ const SheetViewModule = {
     for (let i = 1; i < allSectionsData.length; i++) {
       html += this.renderGenericSectionView(allSectionsData[i], true);
     }
+
+    // 🧾 Grand auto-sum bar at the very bottom of the Full Sheet view
+    const gFreight = allSectionsData.reduce((s, x) => s + (Number(x.totalAmount) || 0), 0);
+    const gToPay = allSectionsData.reduce((s, x) => s + x.trips.reduce((k, r) => k + window.parseAmount(r.toPay), 0), 0);
+    const gBal = allSectionsData.reduce((s, x) => s + (Number(x.toPayBal) || 0), 0);
+    const gAdv = allSectionsData.reduce((s, x) => s + (Number(x.advSum) || 0), 0);
+    const lastSec = allSectionsData[allSectionsData.length - 1];
+
+    html += `
+      <div class="excel-sheet-wrapper" style="margin-top: 14px; padding: 1rem 1.5rem;">
+        <table class="excel-table" style="max-width: 760px; margin: 0 auto;">
+          <thead>
+            <tr>
+              <th class="excel-th" colspan="2">🧮 GRAND TOTAL — ALL SECTIONS (Auto Sum)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="excel-cell bold" style="width: 320px;">Total Freight (To Billed)</td>
+              <td class="excel-cell right font-mono excel-yellow"><strong>${gFreight.toLocaleString('en-IN')}</strong></td>
+            </tr>
+            <tr>
+              <td class="excel-cell bold">Total ToPay</td>
+              <td class="excel-cell right font-mono excel-yellow"><strong>${gToPay.toLocaleString('en-IN')}</strong></td>
+            </tr>
+            <tr>
+              <td class="excel-cell bold">Total ToPay-Balance (pending)</td>
+              <td class="excel-cell right font-mono excel-red"><strong>${gBal.toLocaleString('en-IN')}</strong></td>
+            </tr>
+            <tr>
+              <td class="excel-cell bold">Total Advances (all sections)</td>
+              <td class="excel-cell right font-mono excel-yellow"><strong>${gAdv.toLocaleString('en-IN')}</strong></td>
+            </tr>
+            <tr>
+              <td class="excel-cell bold">${window.escapeHtml(lastSec.latestDate || '')}${lastSec.latestAdvDate ? ` / adv ${window.escapeHtml(lastSec.latestAdvDate)}` : ''} Final Net Outstanding</td>
+              <td class="excel-cell right font-mono excel-cyan" style="font-weight: bold; font-size: 1.05rem;"><strong>${(Number(lastSec.netOutstanding) || 0).toLocaleString('en-IN')}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
 
     return html;
   }
