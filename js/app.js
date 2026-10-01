@@ -432,9 +432,11 @@ window.App = {
 
       // Dynamic Titles
       const mS1Title = document.getElementById('metricS1Title');
-      if (mS1Title) mS1Title.innerText = `${s1.latestDate || '14-08-2026'} Old Balance (S1)`;
+      const s1AdvNote = s1.latestAdvDate ? ` • adv ${s1.latestAdvDate}` : '';
+      if (mS1Title) mS1Title.innerText = `${s1.latestDate || '14-08-2026'}${s1AdvNote} Old Balance (S1)`;
       const mNetOutTitle = document.getElementById('metricNetOutTitle');
-      if (mNetOutTitle) mNetOutTitle.innerText = `${activeSec.latestDate || '23-09-2026'} Net Outstanding`;
+      const netAdvNote = activeSec.latestAdvDate ? ` • adv ${activeSec.latestAdvDate}` : '';
+      if (mNetOutTitle) mNetOutTitle.innerText = `${activeSec.latestDate || '23-09-2026'}${netAdvNote} Net Outstanding`;
 
       // Dynamically render all Section Reconciliation Cards in #financialSectionReconGrid
       const reconGrid = document.getElementById('financialSectionReconGrid');
@@ -489,7 +491,7 @@ window.App = {
               </div>
 
               <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 2px dashed #e2e8f0; display: flex; justify-content: space-between; align-items: center; color: #0284c7; font-weight: 700; font-size: 1.05rem;">
-                <span>(=) ${secData.latestDate || ''} (out standing)</span>
+                <span>(=) ${secData.latestDate || ''}${secData.latestAdvDate ? ` / adv ${secData.latestAdvDate}` : ''} (out standing)</span>
                 <span style="font-size: 1.15rem; color: ${(Number(secData.netOutstanding) || 0) > 0 ? 'var(--danger)' : 'var(--success)'};">₹${(Number(secData.netOutstanding) || 0).toLocaleString('en-IN')}</span>
               </div>
             </div>

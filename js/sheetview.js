@@ -146,6 +146,15 @@ const SheetViewModule = {
       let totalPayable = 0;
       let netOutstanding = 0;
       let latestDate = '';
+      let latestAdvDate = ''; // last advance date, only when it falls AFTER the last trip
+
+      // Primary label = last TRIP date (matches the trip table row-for-row).
+      // If an advance is dated later, it is surfaced as a secondary "advance dd-mm-yyyy" note.
+      const lastAdvDate = secAdvs.length ? window.getLatestTripDate(secAdvs, '') : '';
+      const advNoteIfNewer = (tripDate) => {
+        if (!lastAdvDate || !tripDate) return '';
+        return (window.parseDateToTimestamp(lastAdvDate) > window.parseDateToTimestamp(tripDate)) ? lastAdvDate : '';
+      };
 
       if (idx === 0) {
         // Section 1 (April - August 2026)
@@ -154,15 +163,18 @@ const SheetViewModule = {
         totalPayable = totalAmount + toPayBal; // 18,93,350
         netOutstanding = totalPayable - advSum; // 10,000
         latestDate = window.getLatestTripDate(secTrips, '17-06-2026');
+        latestAdvDate = advNoteIfNewer(latestDate);
       } else {
         // Section 2, Section 3, Section 4... chained from previous section's Net Outstanding!
         oldBal = prevOutBal;
         oldBalDate = (sec.name === 'Section 2') ? '14-08-2026' : prevOutDate;
         totalPayable = totalAmount + oldBal + toPayBal;
         netOutstanding = totalPayable - advSum;
-        const allItems = [...secTrips, ...secAdvs];
         const defaultDate = (sec.name === 'Section 2') ? '23-09-2026' : (prevOutDate || new Date().toISOString().split('T')[0]);
-        latestDate = window.getLatestTripDate(allItems, defaultDate);
+        // Trips drive the date; fall back to advances/default only when no trips exist yet
+        const tripDate = secTrips.length ? window.getLatestTripDate(secTrips, defaultDate) : '';
+        latestDate = tripDate || (lastAdvDate ? lastAdvDate : defaultDate);
+        latestAdvDate = tripDate ? advNoteIfNewer(tripDate) : '';
       }
 
       prevOutBal = netOutstanding;
@@ -179,7 +191,8 @@ const SheetViewModule = {
         totalPayable,
         advSum,
         netOutstanding,
-        latestDate
+        latestDate,
+        latestAdvDate
       });
     });
 
@@ -234,7 +247,7 @@ const SheetViewModule = {
 
   // Renders any Section >= 2 with exact Shinex structure, advances on left, and reconciliation on right
   renderGenericSectionView(secData, isFullView = false) {
-    const { section, trips, advances, totalAmount, oldBal, oldBalDate, totalPayable, advSum, netOutstanding, latestDate, toPayBal = 0 } = secData;
+    const { section, trips, advances, totalAmount, oldBal, oldBalDate, totalPayable, advSum, netOutstanding, latestDate, latestAdvDate = '', toPayBal = 0 } = secData;
 
     let rowsHtml = '';
     trips.forEach((r, idx) => {
@@ -410,7 +423,7 @@ const SheetViewModule = {
                 </tr>
                 <tr style="height: 12px;"><td colspan="3" class="excel-cell-blank"></td></tr>
                 <tr>
-                  <td class="excel-cell center bold" style="border: 1px solid #000;">${latestDate} (out standing)</td>
+                  <td class="excel-cell center bold" style="border: 1px solid #000;">${latestDate} (out standing)${latestAdvDate ? `<div style="font-size: 0.7rem; font-weight: 600; color: #64748b;">advance ${window.escapeHtml(latestAdvDate)}</div>` : ''}</td>
                   <td class="excel-cell bold" style="border: 1px solid #000; font-size: 0.82rem;">TotalB-Less Adv</td>
                   <td class="excel-cell right font-mono bold" style="border: 1px solid #000; background: #94dcf8; font-size: 1.05rem;">${netOutstanding.toLocaleString('en-IN')}</td>
                 </tr>
@@ -427,6 +440,14 @@ const SheetViewModule = {
     const s1LatestDate = (typeof window.getLatestTripDate === 'function')
       ? window.getLatestTripDate(trips, '14-08-2026')
       : '14-08-2026';
+    // Secondary note when a Section 1 advance is dated after the last trip
+    let s1AdvDateNote = '';
+    if (advances && advances.length && typeof window.getLatestTripDate === 'function') {
+      const aDate = window.getLatestTripDate(advances, '');
+      if (aDate && window.parseDateToTimestamp(aDate) > window.parseDateToTimestamp(s1LatestDate)) {
+        s1AdvDateNote = aDate;
+      }
+    }
     const s1ToPaySum = trips.reduce((s, r) => s + window.parseAmount(r.toPay), 0);
     let rowsHtml = '';
     trips.forEach((r, idx) => {
@@ -557,7 +578,7 @@ const SheetViewModule = {
                 </tr>
                 <tr style="height: 12px;"><td colspan="2" class="excel-cell-blank"></td></tr>
                 <tr>
-                  <td class="excel-cell center bold" style="border: 1px solid #000;">${s1LatestDate} (out standing)</td>
+                  <td class="excel-cell center bold" style="border: 1px solid #000;">${s1LatestDate} (out standing)${s1AdvDateNote ? `<div style="font-size: 0.7rem; font-weight: 600; color: #64748b;">advance ${window.escapeHtml(s1AdvDateNote)}</div>` : ''}</td>
                   <td class="excel-cell bold" style="border: 1px solid #000; font-size: 0.82rem;">TotalB-Less Adv</td>
                   <td class="excel-cell right font-mono bold" style="border: 1px solid #000; background: #94dcf8; font-size: 1.05rem;">${outstanding.toLocaleString('en-IN')}</td>
                 </tr>
@@ -612,7 +633,7 @@ const SheetViewModule = {
               <td class="excel-cell right font-mono excel-yellow"><strong>${gAdv.toLocaleString('en-IN')}</strong></td>
             </tr>
             <tr>
-              <td class="excel-cell bold">${window.escapeHtml(lastSec.latestDate || '')} Final Net Outstanding</td>
+              <td class="excel-cell bold">${window.escapeHtml(lastSec.latestDate || '')}${lastSec.latestAdvDate ? ` / adv ${window.escapeHtml(lastSec.latestAdvDate)}` : ''} Final Net Outstanding</td>
               <td class="excel-cell right font-mono excel-cyan" style="font-weight: bold; font-size: 1.05rem;"><strong>${(Number(lastSec.netOutstanding) || 0).toLocaleString('en-IN')}</strong></td>
             </tr>
           </tbody>

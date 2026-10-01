@@ -387,7 +387,12 @@ const ExcelModule = {
     const s1LatestDate = (typeof window.getLatestTripDate === 'function')
       ? window.getLatestTripDate(s1Trips, '17-06-2026')
       : '17-06-2026';
-    ws.getCell(`H${s1OutRow}`).value = `${s1LatestDate} (out standing)`;
+    const s1AdvDateAll = (typeof window.getLatestTripDate === 'function')
+      ? window.getLatestTripDate(aRecords.filter(a => (typeof window.isSection1Advance ? window.isSection1Advance(a) : a.section === 'Section 1')), '')
+      : '';
+    const s1AdvDateNote = (s1AdvDateAll && typeof window.parseDateToTimestamp === 'function' && window.parseDateToTimestamp(s1AdvDateAll) > window.parseDateToTimestamp(s1LatestDate))
+      ? ` / adv ${s1AdvDateAll}` : '';
+    ws.getCell(`H${s1OutRow}`).value = `${s1LatestDate}${s1AdvDateNote} (out standing)`;
     ws.getCell(`H${s1OutRow}`).border = thinBorder;
     ws.getCell(`H${s1OutRow}`).alignment = { horizontal: 'center', vertical: 'middle' };
     ws.getCell(`J${s1OutRow}`).value = 'TotalB-Less Adv';
@@ -415,9 +420,15 @@ const ExcelModule = {
     const s2OldBalDate = '14-08-2026';
     const s2TotPayable = s2Amt + s2OldBal + s2ToPayBal;
     const s2NetOut = s2TotPayable - s2AdvSum;
-    const s2LatestDate = (typeof window.getLatestTripDate === 'function')
-      ? window.getLatestTripDate([...defaultS2Trips, ...defaultS2Advs], '23-09-2026')
+    const s2TripDate = (typeof window.getLatestTripDate === 'function')
+      ? window.getLatestTripDate(defaultS2Trips, '23-09-2026')
       : '23-09-2026';
+    const s2AdvDateOnly = (typeof window.getLatestTripDate === 'function')
+      ? window.getLatestTripDate(defaultS2Advs, '')
+      : '';
+    const s2AdvDateNote = (s2AdvDateOnly && typeof window.parseDateToTimestamp === 'function' && window.parseDateToTimestamp(s2AdvDateOnly) > window.parseDateToTimestamp(s2TripDate))
+      ? ` / adv ${s2AdvDateOnly}` : '';
+    const s2LatestDate = s2TripDate + s2AdvDateNote;
 
     const laterSections = (allSectionsData && allSectionsData.length > 1)
       ? allSectionsData.slice(1)
@@ -440,7 +451,7 @@ const ExcelModule = {
       let curStartRow = Math.max(53, s1AdvTotRowNum + 3, s1OutRow + 3);
 
       laterSections.forEach((secData) => {
-      const { section, trips, advances, totalAmount, oldBal, oldBalDate, totalPayable, advSum, netOutstanding, latestDate } = secData;
+      const { section, trips, advances, totalAmount, oldBal, oldBalDate, totalPayable, advSum, netOutstanding, latestDate, latestAdvDate = '' } = secData;
 
       // 1. Blue divider banner (matching Shinex Excel format)
       ws.mergeCells(`A${curStartRow}:O${curStartRow}`);
@@ -631,7 +642,7 @@ const ExcelModule = {
       ws.getCell(`J${r4}`).alignment = { horizontal: 'right', vertical: 'middle' };
 
       const r6 = reconRow + 5;
-      ws.getCell(`H${r6}`).value = `${latestDate} (out standing)`;
+      ws.getCell(`H${r6}`).value = `${latestDate}${latestAdvDate ? ` / adv ${latestAdvDate}` : ''} (out standing)`;
       ws.getCell(`H${r6}`).border = thinBorder;
       ws.getCell(`H${r6}`).alignment = { horizontal: 'center', vertical: 'middle' };
       ws.getCell(`H${r6}`).font = boldBlack11;
@@ -760,7 +771,7 @@ const ExcelModule = {
   },
 
   writeSingleGenericSection(ws, secData, yellowFill, cyanDivider, thinBorder, boldBlack11, regular10, navyHeaderFill, headerFontRed, headerFontWhite, peachFill, cyanOutFill) {
-    const { section, trips, advances, totalAmount, oldBal, oldBalDate, totalPayable, advSum, netOutstanding, latestDate } = secData;
+    const { section, trips, advances, totalAmount, oldBal, oldBalDate, totalPayable, advSum, netOutstanding, latestDate, latestAdvDate = '' } = secData;
 
     // 1. Company Banner
     ws.mergeCells('E1:I1');
@@ -966,7 +977,7 @@ const ExcelModule = {
     ws.getCell(`J${r4}`).alignment = { horizontal: 'right', vertical: 'middle' };
 
     const r6 = reconRow + 5;
-    ws.getCell(`H${r6}`).value = `${latestDate} (out standing)`;
+    ws.getCell(`H${r6}`).value = `${latestDate}${latestAdvDate ? ` / adv ${latestAdvDate}` : ''} (out standing)`;
     ws.getCell(`H${r6}`).border = thinBorder;
     ws.getCell(`H${r6}`).alignment = { horizontal: 'center', vertical: 'middle' };
     ws.getCell(`H${r6}`).font = boldBlack11;
