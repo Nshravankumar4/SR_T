@@ -875,12 +875,39 @@ window.getNoteBadgeHtml = function(note) {
   const s = String(note).toLowerCase().trim();
   if (!s || s === '-' || s === 'null' || s === 'undefined') return '-';
   if (s.includes('shortage') || s.includes('damage')) {
-    return `<span style="background: #ffc7ce; color: #9c0006; font-weight: bold; border: 1px solid #f87171; padding: 2px 7px; border-radius: 4px; font-size: 0.8rem; display: inline-block;">⚠️ ${note}</span>`;
+    return `<span style="background: #ffc7ce; color: #9c0006; font-weight: bold; border: 1px solid #f87171; padding: 2px 7px; border-radius: 4px; font-size: 0.8rem; display: inline-block;">⚠️ ${window.escapeHtml(note)}</span>`;
   }
   if (s.includes('u&s') || s.includes('truck place')) {
-    return `<span style="background: #e0f2fe; color: #0369a1; font-weight: bold; border: 1px solid #7dd3fc; padding: 2px 7px; border-radius: 4px; font-size: 0.8rem; display: inline-block;">🚛 ${note}</span>`;
+    return `<span style="background: #e0f2fe; color: #0369a1; font-weight: bold; border: 1px solid #7dd3fc; padding: 2px 7px; border-radius: 4px; font-size: 0.8rem; display: inline-block;">🚛 ${window.escapeHtml(note)}</span>`;
   }
-  return `<span style="background: #ffff00; color: #000000; font-weight: bold; border: 1px solid #eab308; padding: 2px 7px; border-radius: 4px; font-size: 0.8rem; display: inline-block;">⏱️ ${note}</span>`;
+  return `<span style="background: #ffff00; color: #000000; font-weight: bold; border: 1px solid #eab308; padding: 2px 7px; border-radius: 4px; font-size: 0.8rem; display: inline-block;">⏱️ ${window.escapeHtml(note)}</span>`;
+};
+
+// Parses "55,000" / "₹1,20,000" / "1,20,000" / 55000 / "" safely to a number (0 on failure).
+window.parseAmount = function(v) {
+  if (typeof v === 'number') return isFinite(v) ? v : 0;
+  const cleaned = String(v === null || v === undefined ? '' : v).replace(/[^0-9.\-]/g, '');
+  return Number(cleaned) || 0;
+};
+
+// HTML-escapes user-entered values before innerHTML injection (XSS guard).
+window.escapeHtml = function(v) {
+  return String(v === null || v === undefined ? '' : v)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
+
+// Escapes a value for a single-quoted JS string inside a double-quoted HTML attribute.
+window.escapeAttr = function(v) {
+  return String(v === null || v === undefined ? '' : v)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 };
 
 window.formatDateForInput = function(dStr) {
@@ -981,6 +1008,16 @@ const API_CONFIG = {
 };
 
 const ApiService = {
+  // Current device session identity + server-issued token for authorized envelopes
+  getSessionEnvelope() {
+    const u = typeof AuthService !== 'undefined' ? AuthService.getCurrentUser() : null;
+    return {
+      user: u ? u.name : '',
+      role: u ? u.role : '',
+      token: u ? u.token : ''
+    };
+  },
+
   getApiUrl() {
     return localStorage.getItem('transport_api_url') || DEFAULT_API_URL;
   },
@@ -1051,6 +1088,7 @@ const ApiService = {
     sections.push(newSec);
     sections.sort((a, b) => (Number(a.num) || 0) - (Number(b.num) || 0));
     localStorage.setItem(API_CONFIG.storageKeySections, JSON.stringify(sections));
+    this.pushSectionsToCloud(sections);
     window.broadcastDataChange('sections_updated', { section: newSec });
     return newSec;
   },
@@ -1075,12 +1113,16 @@ const ApiService = {
     }
     localStorage.setItem(API_CONFIG.storageKeySections, JSON.stringify(sections));
 
-    // Cascade rename to trips and advances
+    // Cascade rename to trips and advances (locally, then push each changed
+    // record up so the cloud sheets carry the new section name too)
+    const renamedTrips = [];
+    const renamedAdvs = [];
     if (cleanOld.toLowerCase() !== cleanNew.toLowerCase()) {
       const trips = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyTransport) || '[]');
       trips.forEach(t => {
         if (window.getTripSection(t).toLowerCase() === cleanOld.toLowerCase()) {
           t.section = cleanNew;
+          renamedTrips.push(t);
         }
       });
       localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(trips));
@@ -1089,10 +1131,20 @@ const ApiService = {
       advs.forEach(a => {
         if (window.getAdvanceSection(a).toLowerCase() === cleanOld.toLowerCase()) {
           a.section = cleanNew;
+          renamedAdvs.push(a);
         }
       });
       localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(advs));
     }
+
+    this.pushSectionsToCloud(sections);
+    renamedTrips.forEach(t => {
+      this.saveTransport(t).catch(err => console.warn('Section rename: cloud sync failed for trip', t.id, err));
+    });
+    renamedAdvs.forEach(a => {
+      this.saveAdvance(a).catch(err => console.warn('Section rename: cloud sync failed for advance', a.id, err));
+    });
+
     window.broadcastDataChange('sections_updated', { section: sections[idx] });
     return sections[idx];
   },
@@ -1109,8 +1161,36 @@ const ApiService = {
     let sections = this.getSections();
     sections = sections.filter(s => s.name.toLowerCase() !== normalized.toLowerCase());
     localStorage.setItem(API_CONFIG.storageKeySections, JSON.stringify(sections));
+    this.pushSectionsToCloud(sections);
     window.broadcastDataChange('sections_updated', { sectionName });
     return true;
+  },
+
+  // Pushes the full section list to Google Sheets so every device shares it.
+  // On failure a dirty flag is kept and the next successful fetch re-pushes.
+  pushSectionsToCloud(sections) {
+    const url = this.getApiUrl();
+    if (!url) return Promise.resolve(false);
+    const envelope = { action: 'saveSections', ...this.getSessionEnvelope(), data: sections };
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(envelope)
+    })
+      .then(r => r.json())
+      .then(res => {
+        if (res && res.success) {
+          if (res.version) this.setCurrentVersion(res.version);
+          localStorage.removeItem('shinex_sections_dirty');
+          return true;
+        }
+        localStorage.setItem('shinex_sections_dirty', '1');
+        return false;
+      })
+      .catch(() => {
+        localStorage.setItem('shinex_sections_dirty', '1');
+        return false;
+      });
   },
 
   // Initialize storage with exact real Shinex data
@@ -1156,6 +1236,9 @@ const ApiService = {
           action: 'restoreFullDataset',
           user: 'admin',
           role: 'Admin',
+          token: (typeof AuthService !== 'undefined' && AuthService.getCurrentUser())
+            ? AuthService.getCurrentUser().token
+            : '',
           data: {
             transport: REAL_SHINEX_TRANSPORT,
             advances: REAL_SHINEX_ADVANCES,
@@ -1178,17 +1261,32 @@ const ApiService = {
   },
 
   setOpeningBalance(amount) {
-    localStorage.setItem(API_CONFIG.storageKeyOpeningBal, String(Number(amount) || 0));
-    window.broadcastDataChange('opening_balance_updated', { amount: Number(amount) || 0 });
+    const val = window.parseAmount(amount);
+    localStorage.setItem(API_CONFIG.storageKeyOpeningBal, String(val));
+    window.broadcastDataChange('opening_balance_updated', { amount: val });
+
+    // Persist to the shared _Meta sheet so every device sees the same value
+    // (server requires a valid Admin session token).
+    const url = this.getApiUrl();
+    const u = typeof AuthService !== 'undefined' ? AuthService.getCurrentUser() : null;
+    if (!url || !u || u.role !== 'Admin') return;
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'setOpeningBalance', ...this.getSessionEnvelope(), amount: val })
+    })
+      .then(r => r.json())
+      .then(res => { if (res && res.version) this.setCurrentVersion(res.version); })
+      .catch(err => console.warn('Opening balance cloud sync failed:', err));
   },
 
   normalizeTransportRecord(t) {
     if (!t) return null;
-    const toPay = Number(t.toPay !== undefined ? t.toPay : t.ToPay) || 0;
+    const toPay = window.parseAmount(t.toPay !== undefined ? t.toPay : t.ToPay);
     const paidRaw = t.paid !== undefined ? t.paid : t.Paid;
     const isPaid = (paidRaw === 'Paid' || String(paidRaw).toLowerCase() === 'paid');
-    const paid = isPaid ? 'Paid' : (Number(paidRaw) || 0);
-    const paidNum = isPaid ? toPay : (Number(paid) || 0);
+    const paid = isPaid ? 'Paid' : window.parseAmount(paidRaw);
+    const paidNum = isPaid ? toPay : window.parseAmount(paid);
     const balance = isPaid ? 0 : Math.max(0, toPay - paidNum);
 
     let status = t.status || t.Status;
@@ -1212,7 +1310,7 @@ const ApiService = {
       toCity: String(t.toCity !== undefined ? t.toCity : (t.To_City || '')),
       quantity: String(t.quantity !== undefined ? t.quantity : (t.Quantity || '')),
       mTax: String(t.mTax !== undefined ? t.mTax : (t.M_TAX || '')),
-      amount: Number(t.amount !== undefined ? t.amount : t.Amount) || 0,
+      amount: window.parseAmount(t.amount !== undefined ? t.amount : t.Amount),
       toPay,
       paid,
       balance,
@@ -1231,7 +1329,7 @@ const ApiService = {
     return {
       id,
       date: window.formatDateForDisplay(a.date || a.Date || ''),
-      amount: Number(a.amount !== undefined ? a.amount : a.Amount) || 0,
+      amount: window.parseAmount(a.amount !== undefined ? a.amount : a.Amount),
       description: String(a.description || a.Description || a.note || a.Note || 'Advance Payment'),
       note: String(a.note || a.Note || a.description || a.Description || ''),
       reference: String(a.reference || a.Reference || ''),
@@ -1265,6 +1363,22 @@ const ApiService = {
           }
           if (result.auth && typeof AuthService !== 'undefined' && AuthService.syncPasswordsFromCloud) {
             AuthService.syncPasswordsFromCloud(result.auth);
+          }
+
+          // Sections: Google Sheets is now the cross-device source of truth
+          const cloudSections = result.data.sections;
+          if (Array.isArray(cloudSections) && cloudSections.length > 0) {
+            if (localStorage.getItem('shinex_sections_dirty')) {
+              // Local section edits never reached the cloud — re-push instead of clobbering
+              this.pushSectionsToCloud(this.getSections());
+            } else {
+              localStorage.setItem(API_CONFIG.storageKeySections, JSON.stringify(cloudSections));
+            }
+          }
+
+          // Opening balance: one shared value from the backend _Meta sheet
+          if (result.data.summary && result.data.summary.openingBalance !== undefined && result.data.summary.openingBalance !== null) {
+            localStorage.setItem(API_CONFIG.storageKeyOpeningBal, String(window.parseAmount(result.data.summary.openingBalance)));
           }
           const rawTrips = Array.isArray(result.data.transport) ? result.data.transport : [];
           const rawAdvs = Array.isArray(result.data.advances) ? result.data.advances : [];
@@ -1321,7 +1435,11 @@ const ApiService = {
       advances = REAL_SHINEX_ADVANCES;
       localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(REAL_SHINEX_ADVANCES));
     }
-    return { transport, advances, source: 'local' };
+
+    // Normalize local records exactly like cloud records (comma parsing, balance, status)
+    const cleanLocalT = transport.map(t => this.normalizeTransportRecord(t)).filter(Boolean);
+    const cleanLocalA = advances.map(a => this.normalizeAdvanceRecord(a)).filter(Boolean);
+    return { transport: cleanLocalT, advances: cleanLocalA, source: 'local' };
   },
 
   async testConnection(customUrl) {
@@ -1443,10 +1561,10 @@ const ApiService = {
     const username = user ? user.name : 'Unknown';
     const role = user ? user.role : 'Guest';
 
-    // Ensure numeric calculations
-    const toPay = Number(record.toPay) || 0;
-    const paid = (record.paid === 'Paid' || String(record.paid).toLowerCase() === 'paid') ? 'Paid' : (Number(record.paid) || 0);
-    const balance = (paid === 'Paid') ? 0 : Math.max(0, toPay - (Number(paid) || 0));
+    // Ensure numeric calculations (comma-formatted values like "55,000" parse correctly)
+    const toPay = window.parseAmount(record.toPay);
+    const paid = (record.paid === 'Paid' || String(record.paid).toLowerCase() === 'paid') ? 'Paid' : window.parseAmount(record.paid);
+    const balance = (paid === 'Paid') ? 0 : Math.max(0, toPay - window.parseAmount(paid));
     let status = record.status;
     if (!status || status === 'undefined' || status === 'null') {
       if (balance <= 0 && toPay > 0) status = 'Paid';
@@ -1464,13 +1582,14 @@ const ApiService = {
       paid,
       balance,
       status,
-      amount: Number(record.amount) || 0
+      amount: window.parseAmount(record.amount)
     };
 
     const envelope = {
       action: isEdit ? 'updateTransport' : 'addTransport',
       user: username,
       role: role,
+      token: user ? user.token : '',
       data: cleanRecord
     };
 
@@ -1545,7 +1664,8 @@ const ApiService = {
           type: 'transport',
           id: id,
           user: username,
-          role: role
+          role: role,
+          token: user ? user.token : ''
         })
       });
       const text = await response.text();
@@ -1584,7 +1704,7 @@ const ApiService = {
     const username = user ? user.name : 'Unknown';
     const role = user ? user.role : 'Guest';
 
-    const amount = Number(advance.amount) || 0;
+    const amount = window.parseAmount(advance.amount);
     if (amount <= 0) {
       throw new Error("Advance Amount must be greater than zero.");
     }
@@ -1600,6 +1720,7 @@ const ApiService = {
       action: isEdit ? 'updateAdvance' : 'addAdvance',
       user: username,
       role: role,
+      token: user ? user.token : '',
       data: cleanAdv
     };
 
@@ -1668,7 +1789,8 @@ const ApiService = {
           type: 'advance',
           id: id,
           user: username,
-          role: role
+          role: role,
+          token: user ? user.token : ''
         })
       });
       const text = await response.text();

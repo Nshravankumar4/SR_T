@@ -154,6 +154,26 @@ const AuthService = {
         expiresAt: Date.now() + (8 * 60 * 60 * 1000),
         loggedInAt: new Date().toISOString()
       };
+
+      // Also obtain a server-issued session token so privileged cloud actions
+      // (delete / restore / password change / sections) are authorized.
+      const cloudUrl = typeof ApiService !== 'undefined' ? ApiService.getApiUrl() : '';
+      if (cloudUrl) {
+        try {
+          const tokenResp = await fetch(cloudUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'login', username: u, password: p })
+          });
+          const tokenResult = await tokenResp.json();
+          if (tokenResult && tokenResult.success && tokenResult.token) {
+            user.token = tokenResult.token;
+          }
+        } catch (tokenErr) {
+          console.warn("Could not obtain cloud session token (will retry on next login):", tokenErr);
+        }
+      }
+
       sessionStorage.setItem(this.sessionKey, JSON.stringify(user));
       return { success: true, user };
     }
@@ -293,7 +313,10 @@ const AuthService = {
           body: JSON.stringify({
             action: 'updatePassword',
             username: key,
-            password: newPassword.trim()
+            password: newPassword.trim(),
+            user: currentUser ? currentUser.name : '',
+            role: currentUser ? currentUser.role : '',
+            token: currentUser ? currentUser.token : ''
           })
         });
         const res = await resp.json();
@@ -312,21 +335,20 @@ const AuthService = {
     const users = this.getUsers();
     let changed = false;
 
-    if (authData.adminPass && users['admin']) {
-      const h = await this.hash(authData.adminPass);
-      if (users['admin'].passwordHash !== h) {
-        users['admin'].passwordHash = h;
-        if (users['admin1']) users['admin1'].passwordHash = h;
-        changed = true;
-      }
+    // Preferred: salted SHA-256 hashes straight from the backend (no plaintext ever sent).
+    // Legacy plaintext fields are still honored for one release during transition.
+    const adminHash = authData.adminPassHash || (authData.adminPass ? await this.hash(authData.adminPass) : null);
+    const empHash = authData.empPassHash || (authData.empPass ? await this.hash(authData.empPass) : null);
+
+    if (adminHash && users['admin'] && users['admin'].passwordHash !== adminHash) {
+      users['admin'].passwordHash = adminHash;
+      if (users['admin1']) users['admin1'].passwordHash = adminHash;
+      changed = true;
     }
 
-    if (authData.empPass && users['rudra']) {
-      const h = await this.hash(authData.empPass);
-      if (users['rudra'].passwordHash !== h) {
-        users['rudra'].passwordHash = h;
-        changed = true;
-      }
+    if (empHash && users['rudra'] && users['rudra'].passwordHash !== empHash) {
+      users['rudra'].passwordHash = empHash;
+      changed = true;
     }
 
     if (changed) {

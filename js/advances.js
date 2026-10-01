@@ -114,7 +114,7 @@ const AdvancesModule = {
     const isAdmin = AuthService.isAdmin();
 
     tbody.innerHTML = this.filteredAdvances.map((a, index) => {
-      const formattedAmount = (Number(a.amount) || 0).toLocaleString('en-IN');
+      const formattedAmount = window.parseAmount(a.amount).toLocaleString('en-IN');
       const secName = window.getAdvanceSection(a);
       const isS1 = secName === 'Section 1';
       const isS2 = secName === 'Section 2';
@@ -123,17 +123,17 @@ const AdvancesModule = {
 
       return `
         <tr>
-          <td><strong>${index + 1}</strong></td>
-          <td><span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; font-size: 0.72rem; font-weight: 600;">${secName}</span></td>
-          <td><strong>${window.formatDateForDisplay(a.date) || '-'}</strong></td>
+          <td><strong>${window.escapeHtml(index + 1)}</strong></td>
+          <td><span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; font-size: 0.72rem; font-weight: 600;">${window.escapeHtml(secName)}</span></td>
+          <td><strong>${window.escapeHtml(window.formatDateForDisplay(a.date) || '-')}</strong></td>
           <td style="color: var(--primary); font-weight: 700;">₹${formattedAmount}</td>
-          <td>${a.description || a.note || 'Advance Payment'}</td>
-          <td><code>${a.reference || '-'}</code></td>
-          <td><span class="badge ${a.createdBy === 'Admin' ? 'badge-primary' : 'badge-success'}">${a.createdBy || 'User'}</span></td>
+          <td>${window.escapeHtml(a.description || a.note || 'Advance Payment')}</td>
+          <td><code>${window.escapeHtml(a.reference || '-')}</code></td>
+          <td><span class="badge ${a.createdBy === 'Admin' ? 'badge-primary' : 'badge-success'}">${window.escapeHtml(a.createdBy || 'User')}</span></td>
           <td>
             <div style="display: flex; gap: 0.35rem;">
-              <button class="btn btn-secondary btn-sm" onclick="AdvancesModule.openEditModal('${a.id}')" title="Edit Advance">✏️</button>
-              ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="AdvancesModule.confirmDelete('${a.id}')" title="Delete Advance">🗑️</button>` : ''}
+              <button class="btn btn-secondary btn-sm" onclick="AdvancesModule.openEditModal('${window.escapeAttr(a.id)}')" title="Edit Advance">✏️</button>
+              ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="AdvancesModule.confirmDelete('${window.escapeAttr(a.id)}')" title="Delete Advance">🗑️</button>` : ''}
             </div>
           </td>
         </tr>

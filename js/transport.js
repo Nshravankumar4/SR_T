@@ -55,10 +55,16 @@ const TransportModule = {
       // Status filter
       const matchesStatus = (statusVal === 'ALL') || (item.status === statusVal);
 
-      // Month filter (YYYY-MM)
+      // Month filter (selects YYYY-MM; dates are stored DD-MM-YYYY)
       let matchesMonth = true;
       if (monthVal !== 'ALL' && item.date) {
-        matchesMonth = item.date.startsWith(monthVal);
+        const ts = typeof window.parseDateToTimestamp === 'function' ? window.parseDateToTimestamp(item.date) : 0;
+        if (ts > 0) {
+          const d = new Date(ts);
+          matchesMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` === monthVal;
+        } else {
+          matchesMonth = false;
+        }
       }
 
       return matchesSearch && matchesStatus && matchesMonth;
@@ -83,7 +89,7 @@ const TransportModule = {
     const isAdmin = typeof AuthService !== 'undefined' && AuthService.isAdmin();
 
     if (this.filteredRecords.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="16" style="text-align: center; padding: 2rem; color: var(--text-muted);">No transport records found for this section.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="17" style="text-align: center; padding: 2rem; color: var(--text-muted);">No transport records found for this section.</td></tr>`;
       return;
     }
 
@@ -110,27 +116,27 @@ const TransportModule = {
       return `
         <tr>
           <td><strong>${r.slNo || (index + 1)}</strong></td>
-          <td><span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; font-size: 0.72rem; font-weight: 600;">${secName}</span></td>
-          <td><strong>${r.lrNo || '-'}</strong></td>
-          <td>${r.dcNo || '-'}</td>
-          <td>${window.formatDateForDisplay(r.date) || '-'}</td>
-          <td><code>${r.vehicleNumber || '-'}</code></td>
-          <td>${r.fromCity || '-'}</td>
-          <td>${r.toCity || '-'}</td>
-          <td>${r.quantity || '-'}</td>
-          <td>${r.mTax || '-'}</td>
+          <td><span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; font-size: 0.72rem; font-weight: 600;">${window.escapeHtml(secName)}</span></td>
+          <td><strong>${window.escapeHtml(r.lrNo || '-')}</strong></td>
+          <td>${window.escapeHtml(r.dcNo || '-')}</td>
+          <td>${window.escapeHtml(window.formatDateForDisplay(r.date) || '-')}</td>
+          <td><code>${window.escapeHtml(r.vehicleNumber || '-')}</code></td>
+          <td>${window.escapeHtml(r.fromCity || '-')}</td>
+          <td>${window.escapeHtml(r.toCity || '-')}</td>
+          <td>${window.escapeHtml(r.quantity || '-')}</td>
+          <td>${window.escapeHtml(r.mTax || '-')}</td>
           <td>₹${formattedAmount}</td>
           <td><strong>₹${formattedToPay}</strong></td>
           <td style="color: var(--success);">₹${formattedPaid}</td>
           <td style="color: ${r.balance > 0 ? 'var(--danger)' : 'var(--text-muted)'}; font-weight: bold;">₹${formattedBalance}</td>
-          <td><span class="badge ${badgeClass}">${status}</span></td>
+          <td><span class="badge ${badgeClass}">${window.escapeHtml(status)}</span></td>
           <td>
-            ${(typeof window.getNoteBadgeHtml === 'function') ? window.getNoteBadgeHtml(r.note) : (r.note || '-')}
+            ${(typeof window.getNoteBadgeHtml === 'function') ? window.getNoteBadgeHtml(r.note) : window.escapeHtml(r.note || '-')}
           </td>
           <td>
             <div style="display: flex; gap: 0.35rem;">
-              <button class="btn btn-secondary btn-sm" onclick="TransportModule.openEditModal('${r.id}')" title="Edit">✏️</button>
-              ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="TransportModule.confirmDelete('${r.id}')" title="Delete">🗑️</button>` : ''}
+              <button class="btn btn-secondary btn-sm" onclick="TransportModule.openEditModal('${window.escapeAttr(r.id)}')" title="Edit">✏️</button>
+              ${isAdmin ? `<button class="btn btn-danger btn-sm" onclick="TransportModule.confirmDelete('${window.escapeAttr(r.id)}')" title="Delete">🗑️</button>` : ''}
             </div>
           </td>
         </tr>

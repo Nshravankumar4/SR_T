@@ -123,7 +123,7 @@ const BackupModule = {
     let netOutVal = '₹0';
     try {
       if (typeof SheetViewModule !== 'undefined') {
-        const computed = SheetViewModule.computeAllSectionsData(transport, advances);
+        const computed = SheetViewModule.computeAllSectionsData(transport, advances, sections);
         if (computed && computed.length > 0) {
           const active = computed[computed.length - 1];
           netOutVal = '₹' + (Number(active.netOutstanding) || 0).toLocaleString('en-IN');
@@ -170,7 +170,10 @@ const BackupModule = {
           body: JSON.stringify({
             action: 'createBackup',
             reason: reason,
-            timestamp: fileStamp
+            timestamp: fileStamp,
+            user: (typeof AuthService !== 'undefined' && AuthService.getCurrentUser()) ? AuthService.getCurrentUser().name : '',
+            role: (typeof AuthService !== 'undefined' && AuthService.getCurrentUser()) ? AuthService.getCurrentUser().role : '',
+            token: (typeof AuthService !== 'undefined' && AuthService.getCurrentUser()) ? AuthService.getCurrentUser().token : ''
           })
         }).catch(err => console.warn("Background cloud backup notification:", err));
       } catch (e) {}
@@ -234,6 +237,7 @@ const BackupModule = {
               action: 'restoreFullDataset',
               user: user ? user.name : 'Administrator',
               role: user ? user.role : 'Admin',
+              token: user ? user.token : '',
               data: {
                 transport: transport,
                 advances: advances,

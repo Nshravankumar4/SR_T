@@ -111,14 +111,15 @@ const SheetViewModule = {
     });
   },
 
-  // Sequentially calculates chained reconciliation metrics across all sections
-  computeAllSectionsData() {
-    const transport = window.App?.transportRecords || [];
-    const advances = window.App?.advanceRecords || [];
-    const sections = typeof ApiService !== 'undefined' ? ApiService.getSections() : [
+  // Sequentially calculates chained reconciliation metrics across all sections.
+  // Optional overrides let callers (e.g. backup snapshots) compute from historic data.
+  computeAllSectionsData(transportArg, advancesArg, sectionsArg) {
+    const transport = transportArg || window.App?.transportRecords || [];
+    const advances = advancesArg || window.App?.advanceRecords || [];
+    const sections = sectionsArg || (typeof ApiService !== 'undefined' ? ApiService.getSections() : [
       { id: 'section-1', name: 'Section 1', num: 1, isArchive: true },
       { id: 'section-2', name: 'Section 2', num: 2, isArchive: false }
-    ];
+    ]);
 
     let prevOutBal = 0;
     let prevOutDate = '14-08-2026';
@@ -152,7 +153,7 @@ const SheetViewModule = {
         oldBalDate = 'Before March 2026';
         totalPayable = totalAmount + toPayBal; // 18,93,350
         netOutstanding = totalPayable - advSum; // 10,000
-        latestDate = '17-06-2026';
+        latestDate = window.getLatestTripDate(secTrips, '17-06-2026');
       } else {
         // Section 2, Section 3, Section 4... chained from previous section's Net Outstanding!
         oldBal = prevOutBal;
@@ -197,7 +198,7 @@ const SheetViewModule = {
       const isSelected = this.activeView === viewKey;
       const btnClass = isSelected ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
       const icon = isAct ? '🟢' : '📁';
-      html += `<button class="${btnClass}" onclick="SheetViewModule.setView('${viewKey}')">${icon} ${s.name} ${isAct ? '(Active)' : '(Archive)'}</button>`;
+      html += `<button class="${btnClass}" onclick="SheetViewModule.setView('${window.escapeAttr(viewKey)}')">${icon} ${window.escapeHtml(s.name)} ${isAct ? '(Active)' : '(Archive)'}</button>`;
     });
 
     const isFullSelected = this.activeView === 'FULL';
@@ -246,22 +247,22 @@ const SheetViewModule = {
       const balStyle = toPayBal > 0 ? 'color: #dc2626; font-weight: bold;' : '';
 
       rowsHtml += `
-        <tr onclick="TransportModule.openEditModal('${r.id}')" style="cursor: pointer;" title="✏️ Click to edit trip (LR: ${r.lrNo || r.id})">
+        <tr onclick="TransportModule.openEditModal('${window.escapeAttr(r.id)}')" style="cursor: pointer;" title="✏️ Click to edit trip (LR: ${window.escapeHtml(r.lrNo || r.id)})">
           <td class="excel-cell center excel-row-num">${(section.num * 25) + idx + 1}</td>
           <td class="excel-cell center">${r.slNo || (idx + 1)}</td>
-          <td class="excel-cell center"><strong>${r.lrNo || ''}</strong></td>
-          <td class="excel-cell center">${r.dcNo || ''}</td>
-          <td class="excel-cell center">${r.date || ''}</td>
-          <td class="excel-cell center font-mono">${r.vehicleNumber || ''}</td>
-          <td class="excel-cell left">${r.fromCity || ''}</td>
-          <td class="excel-cell left"><strong>${r.toCity || ''}</strong></td>
-          <td class="excel-cell center">${r.quantity || ''}</td>
-          <td class="excel-cell center">${r.mTax || ''}</td>
+          <td class="excel-cell center"><strong>${window.escapeHtml(r.lrNo || '')}</strong></td>
+          <td class="excel-cell center">${window.escapeHtml(r.dcNo || '')}</td>
+          <td class="excel-cell center">${window.escapeHtml(r.date || '')}</td>
+          <td class="excel-cell center font-mono">${window.escapeHtml(r.vehicleNumber || '')}</td>
+          <td class="excel-cell left">${window.escapeHtml(r.fromCity || '')}</td>
+          <td class="excel-cell left"><strong>${window.escapeHtml(r.toCity || '')}</strong></td>
+          <td class="excel-cell center">${window.escapeHtml(r.quantity || '')}</td>
+          <td class="excel-cell center">${window.escapeHtml(r.mTax || '')}</td>
           <td class="excel-cell right font-mono">${amt > 0 ? amt.toLocaleString('en-IN') : ''}</td>
-          <td class="excel-cell right font-mono">${r.toPay ? Number(r.toPay).toLocaleString('en-IN') : ''}</td>
-          <td class="excel-cell center font-mono" style="${paidStyle}">${r.paid || ''}</td>
+          <td class="excel-cell right font-mono">${r.toPay ? window.parseAmount(r.toPay).toLocaleString('en-IN') : ''}</td>
+          <td class="excel-cell center font-mono" style="${paidStyle}">${window.escapeHtml(r.paid || '')}</td>
           <td class="excel-cell right font-mono" style="${balStyle}">${toPayBal > 0 ? toPayBal.toLocaleString('en-IN') : ''}</td>
-          <td class="excel-cell left" style="${noteStyle}">${r.note || ''}</td>
+          <td class="excel-cell left" style="${noteStyle}">${window.escapeHtml(r.note || '')}</td>
         </tr>
       `;
     });
@@ -276,7 +277,7 @@ const SheetViewModule = {
           <div style="background: #44b3e1; color: #fff; font-weight: bold; text-align: center; padding: 7px 12px; letter-spacing: 2px; margin: 25px 0 15px 0; font-size: 1.05rem; display: flex; justify-content: space-between; align-items: center; border-radius: 4px;">
             <span>${section.name} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; NEW</span>
             ${isAdmin && isCustomSec ? `
-              <button class="btn btn-sm btn-danger" onclick="App.confirmDeleteSection('${section.name}')" style="font-size: 0.72rem; padding: 2px 8px;" title="Delete this section">🗑️ Delete ${section.name}</button>
+              <button class="btn btn-sm btn-danger" onclick="App.confirmDeleteSection('${window.escapeAttr(section.name)}')" style="font-size: 0.72rem; padding: 2px 8px;" title="Delete this section">🗑️ Delete ${window.escapeHtml(section.name)}</button>
             ` : ''}
           </div>
         ` : ''}
@@ -284,17 +285,17 @@ const SheetViewModule = {
         <!-- Section Header Bar with Admin Controls -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; background: #e0f2fe; padding: 6px 12px; border-radius: 6px; border: 1px solid #bae6fd;">
           <div style="font-weight: 700; color: #0369a1; font-size: 0.95rem;">
-            📑 ${section.name}: ${section.title || (section.isArchive ? 'Archive' : 'Active Ledger')}
+            📑 ${window.escapeHtml(section.name)}: ${window.escapeHtml(section.title || (section.isArchive ? 'Archive' : 'Active Ledger'))}
           </div>
           <div style="display: flex; gap: 0.5rem; align-items: center;">
             <div style="background: #ffff00; border: 1px solid #000; padding: 3px 12px; font-weight: 600; font-size: 0.82rem;">
               Before ${oldBalDate || '14-08-2026'}: ₹${oldBal.toLocaleString('en-IN')}
             </div>
             ${isAdmin ? `
-              <button class="btn btn-sm btn-secondary" onclick="App.promptEditSection('${section.name}')" style="font-size: 0.75rem; padding: 2px 8px;" title="Edit Section Title">✏️ Edit</button>
+              <button class="btn btn-sm btn-secondary" onclick="App.promptEditSection('${window.escapeAttr(section.name)}')" style="font-size: 0.75rem; padding: 2px 8px;" title="Edit Section Title">✏️ Edit</button>
             ` : ''}
             ${isAdmin && isCustomSec ? `
-              <button class="btn btn-sm btn-danger" onclick="App.confirmDeleteSection('${section.name}')" style="font-size: 0.75rem; padding: 2px 8px;" title="Delete this Section">🗑️ Delete</button>
+              <button class="btn btn-sm btn-danger" onclick="App.confirmDeleteSection('${window.escapeAttr(section.name)}')" style="font-size: 0.75rem; padding: 2px 8px;" title="Delete this Section">🗑️ Delete</button>
             ` : ''}
           </div>
         </div>
@@ -320,7 +321,7 @@ const SheetViewModule = {
             </tr>
           </thead>
           <tbody>
-            ${rowsHtml || `<tr><td colspan="15" class="excel-cell center" style="padding: 1.5rem; color: #64748b;">No trips logged in ${section.name} yet. Click "+ Add Transport Record" to add trips to this section.</td></tr>`}
+            ${rowsHtml || `<tr><td colspan="15" class="excel-cell center" style="padding: 1.5rem; color: #64748b;">No trips logged in ${window.escapeHtml(section.name)} yet. Click "+ Add Transport Record" to add trips to this section.</td></tr>`}
 
             <!-- Gap Row -->
             <tr style="height: 14px;"><td colspan="15" class="excel-cell-blank"></td></tr>
@@ -350,9 +351,9 @@ const SheetViewModule = {
               </thead>
               <tbody>
                 ${advances.map(a => `
-                  <tr onclick="AdvancesModule.openEditModal('${a.id}')" style="cursor: pointer;" title="✏️ Click to edit advance">
-                    <td class="excel-cell center">${a.date || ''}</td>
-                    <td class="excel-cell right font-mono">${(Number(a.amount) || 0).toLocaleString('en-IN')}</td>
+                  <tr onclick="AdvancesModule.openEditModal('${window.escapeAttr(a.id)}')" style="cursor: pointer;" title="✏️ Click to edit advance">
+                    <td class="excel-cell center">${window.escapeHtml(a.date || '')}</td>
+                    <td class="excel-cell right font-mono">${window.parseAmount(a.amount).toLocaleString('en-IN')}</td>
                   </tr>
                 `).join('')}
                 ${advances.length === 0 ? `
@@ -430,22 +431,22 @@ const SheetViewModule = {
       const balStyle = bal > 0 ? 'color: #dc2626 !important; font-weight: bold;' : '';
 
       rowsHtml += `
-        <tr onclick="TransportModule.openEditModal('${r.id}')" style="cursor: pointer;" title="✏️ Click to edit trip (LR: ${r.lrNo || r.id})">
+        <tr onclick="TransportModule.openEditModal('${window.escapeAttr(r.id)}')" style="cursor: pointer;" title="✏️ Click to edit trip (LR: ${window.escapeHtml(r.lrNo || r.id)})">
           <td class="excel-cell center excel-row-num">${5 + idx}</td>
           <td class="excel-cell center">${r.slNo || (idx + 1)}</td>
-          <td class="excel-cell center"><strong>${r.lrNo || ''}</strong></td>
-          <td class="excel-cell center">${r.dcNo || ''}</td>
-          <td class="excel-cell center">${r.date || ''}</td>
-          <td class="excel-cell center font-mono">${r.vehicleNumber || ''}</td>
-          <td class="excel-cell left">${r.fromCity || ''}</td>
-          <td class="excel-cell left">${r.toCity || ''}</td>
-          <td class="excel-cell center">${r.quantity || ''}</td>
-          <td class="excel-cell center">${r.mTax || ''}</td>
+          <td class="excel-cell center"><strong>${window.escapeHtml(r.lrNo || '')}</strong></td>
+          <td class="excel-cell center">${window.escapeHtml(r.dcNo || '')}</td>
+          <td class="excel-cell center">${window.escapeHtml(r.date || '')}</td>
+          <td class="excel-cell center font-mono">${window.escapeHtml(r.vehicleNumber || '')}</td>
+          <td class="excel-cell left">${window.escapeHtml(r.fromCity || '')}</td>
+          <td class="excel-cell left">${window.escapeHtml(r.toCity || '')}</td>
+          <td class="excel-cell center">${window.escapeHtml(r.quantity || '')}</td>
+          <td class="excel-cell center">${window.escapeHtml(r.mTax || '')}</td>
           <td class="excel-cell right font-mono">${amt > 0 ? amt.toLocaleString('en-IN') : ''}</td>
           <td class="excel-cell right font-mono">${toPay > 0 ? toPay.toLocaleString('en-IN') : ''}</td>
-          <td class="excel-cell center" style="${paid === 'Paid' ? 'background: #c6efce; color: #006100; font-weight: bold;' : ''}">${paid || ''}</td>
+          <td class="excel-cell center" style="${paid === 'Paid' ? 'background: #c6efce; color: #006100; font-weight: bold;' : ''}">${window.escapeHtml(paid || '')}</td>
           <td class="excel-cell right font-mono" style="${balStyle}">${bal > 0 ? bal.toLocaleString('en-IN') : ''}</td>
-          <td class="excel-cell left" style="${noteStyle}">${r.note || ''}</td>
+          <td class="excel-cell left" style="${noteStyle}">${window.escapeHtml(r.note || '')}</td>
         </tr>
       `;
     });
@@ -462,7 +463,7 @@ const SheetViewModule = {
 
         <div style="display: flex; justify-content: flex-end; margin-bottom: 4px;">
           <div style="background: #ffff00; border: 1px solid #000; padding: 2px 12px; font-size: 0.85rem;">
-            Before March 2026 1,20,000
+            Before March 2026 ${(typeof ApiService !== 'undefined' ? ApiService.getOpeningBalance() : 120000).toLocaleString('en-IN')}
           </div>
         </div>
 
@@ -513,9 +514,9 @@ const SheetViewModule = {
               </thead>
               <tbody>
                 ${advances.map((a, i) => `
-                  <tr onclick="AdvancesModule.openEditModal('${a.id}')" style="cursor: pointer;" title="✏️ Click to edit advance">
-                    <td class="excel-cell center">${a.date || ''}</td>
-                    <td class="excel-cell right font-mono">${(Number(a.amount) || 0) > 0 ? (Number(a.amount) || 0).toLocaleString('en-IN') : ''}</td>
+                  <tr onclick="AdvancesModule.openEditModal('${window.escapeAttr(a.id)}')" style="cursor: pointer;" title="✏️ Click to edit advance">
+                    <td class="excel-cell center">${window.escapeHtml(a.date || '')}</td>
+                    <td class="excel-cell right font-mono">${window.parseAmount(a.amount) > 0 ? window.parseAmount(a.amount).toLocaleString('en-IN') : ''}</td>
                   </tr>
                 `).join('')}
                 <tr style="font-weight: bold;">

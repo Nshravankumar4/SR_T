@@ -233,12 +233,13 @@ window.App = {
         this.updateCloudStatus(this.cloudSyncWarning, 'offline');
         if (banner) banner.style.display = 'block';
       } else {
-        this.updateCloudStatus('Online • Live Database Active', 'online');
+        // Cloud reachable-but-not-returned (or no URL): never claim "Live Database"
+        this.updateCloudStatus('⚠ Cloud Unreachable • Local Cache', 'offline');
         if (banner) banner.style.display = 'none';
       }
     } catch (err) {
       console.error("refreshData error:", err);
-      this.updateCloudStatus('Online • Live Database Active', 'online');
+      this.updateCloudStatus('⚠ Cloud Unreachable • Local Cache', 'offline');
     } finally {
       this.isSyncing = false;
     }
@@ -308,6 +309,10 @@ window.App = {
   },
 
   async restoreExactExcelSheetData() {
+    if (typeof AuthService !== 'undefined' && !AuthService.isAdmin()) {
+      alert('Permission denied: Only Admin can reset the database.');
+      return;
+    }
     if (confirm("Reset data to the exact 34 transport records (27 in Section 1 + 7 in Section 2) and 15 advances from your Shinex Excel file?")) {
       await ApiService.resetToExactExcelData();
       await this.refreshData();
@@ -562,17 +567,17 @@ window.App = {
         <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem;">
           <div>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <strong>${s.name}</strong>
+              <strong>${window.escapeHtml(s.name)}</strong>
               <span class="badge ${s.isArchive ? 'badge-secondary' : 'badge-success'}" style="font-size: 0.72rem;">${s.isArchive ? 'Archive' : 'Active'}</span>
             </div>
             <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
-              ${s.title || 'Standard Section'} • ${tripCount} trips, ${advCount} advances
+              ${window.escapeHtml(s.title || 'Standard Section')} • ${tripCount} trips, ${advCount} advances
             </div>
           </div>
           <div style="display: flex; gap: 0.4rem;">
-            <button class="btn btn-sm btn-secondary" onclick="App.promptEditSection('${s.name}')" title="Edit Section Title">✏️ Edit</button>
+            <button class="btn btn-sm btn-secondary" onclick="App.promptEditSection('${window.escapeAttr(s.name)}')" title="Edit Section Title">✏️ Edit</button>
             ${(!isCore && isAdmin) ? `
-              <button class="btn btn-sm btn-danger" onclick="App.confirmDeleteSection('${s.name}')" title="Delete Section">🗑️ Delete</button>
+              <button class="btn btn-sm btn-danger" onclick="App.confirmDeleteSection('${window.escapeAttr(s.name)}')" title="Delete Section">🗑️ Delete</button>
             ` : (isCore ? `<span style="font-size: 0.75rem; color: #94a3b8; padding: 0.25rem 0.5rem;">Protected</span>` : '')}
           </div>
         </div>
