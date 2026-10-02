@@ -5,6 +5,44 @@
  */
 
 const ExcelModule = {
+  // ===== Export-only amount helpers =====
+  // These READ the existing records; they never change what is stored.
+  num(v) {
+    if (typeof window !== 'undefined' && typeof window.parseAmount === 'function') {
+      return window.parseAmount(v);
+    }
+    const n = Number(String(v === null || v === undefined ? '' : v).replace(/[^0-9.\-]/g, ''));
+    return Number.isFinite(n) ? n : 0;
+  },
+
+  // The sheet stores the literal word "Paid" when a trip is settled in full.
+  isFullyPaid(r) {
+    const toPay = this.num(r.toPay);
+    const bal = this.num(r.balance);
+    const raw = String(r.paid === null || r.paid === undefined ? '' : r.paid).trim().toLowerCase();
+    if (raw === 'paid') return true;
+    if (String(r.status || '').trim().toLowerCase() === 'paid') return true;
+    return toPay > 0 && bal === 0 && this.num(r.paid) >= toPay;
+  },
+
+  // Real money that was paid against this trip (number, never the word "Paid").
+  paidAmountOf(r) {
+    const toPay = this.num(r.toPay);
+    if (this.isFullyPaid(r)) return toPay;
+    return this.num(r.paid);
+  },
+
+  // "Failed" money = the unpaid part of a trip whose Note/status marks it as
+  // failed (fail / cancel / shortage / returned / rejected / lost).
+  failedAmountOf(r) {
+    const note = String(r.note || '').toLowerCase();
+    const status = String(r.status || '').toLowerCase();
+    const isFailed = status.includes('fail') || note.includes('fail') || note.includes('cancel') ||
+      note.includes('shortage') || note.includes('returned') || note.includes('rejected') || note.includes('lost');
+    if (!isFailed) return 0;
+    return Math.max(0, this.num(r.toPay) - this.paidAmountOf(r));
+  },
+
   async exportToExcel(transportRecords, advanceRecords, openingBalance, sectionFilter = null, customFileName = null) {
     // Robust record resolution from parameters, window.App, or default dataset
     const tRecords = (transportRecords && transportRecords.length > 0)
@@ -135,13 +173,13 @@ const ExcelModule = {
     // ========================================================
     const headerTitles = [
       'SL.NO', 'LR No', '', 'DC No', 'Date', 'Vehicle Number', 'From', 'TO',
-      'Quantity', 'M/TAX', 'Amount', 'ToPay', 'ToPay-paid', 'ToPay-Balc', 'Note'
+      'Quantity', 'M/TAX', 'Amount', 'ToPay', 'ToPay-paid', 'ToPay-Balc', 'Note', 'Failed Amt.'
     ];
     const r4 = ws.getRow(4);
     r4.values = headerTitles;
     r4.height = 25;
 
-    for (let c = 1; c <= 15; c++) {
+    for (let c = 1; c <= 16; c++) {
       const cell = r4.getCell(c);
       cell.border = thinBorder;
       cell.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -152,7 +190,7 @@ const ExcelModule = {
       } else if (c === 15) {
         cell.fill = softBlueNote;
         cell.font = boldBlack11;
-      } else if ([12, 13, 14].includes(c)) {
+      } else if ([12, 13, 14, 16].includes(c)) {
         cell.fill = navyHeaderFill;
         cell.font = headerFontRed; // Red text in Shinex Excel
       } else {
@@ -167,7 +205,9 @@ const ExcelModule = {
     let curRow = 5;
     let s1TotalAmount = 0;
     let s1TotalToPay = 0;
+    let s1TotalPaid = 0;
     let s1TotalBal = 0;
+    let s1TotalFailed = 0;
 
     s1Trips.forEach((r, idx) => {
       const row = ws.getRow(curRow);
@@ -178,11 +218,12 @@ const ExcelModule = {
       s1TotalToPay += toPay;
       s1TotalBal += bal;
 
-      const isPaid = (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid' || r.status === 'Paid' || (toPay > 0 && bal === 0 && (r.status === 'Paid' || Number(r.paid) >= toPay)));
-      let paidVal = isPaid ? 'Paid' : r.paid;
-      if (typeof paidVal === 'number' && paidVal > 0) {
-        paidVal = (paidVal === toPay) ? 'Paid' : paidVal.toLocaleString('en-IN');
-      }
+      // Paid is written as the ACTUAL money (number), not the word "Paid"
+      const isPaid = this.isFullyPaid(r);
+      const paidNum = this.paidAmountOf(r);
+      const failedNum = this.failedAmountOf(r);
+      s1TotalPaid += paidNum;
+      s1TotalFailed += failedNum;
 
       const tripDateStr = r.date ? (window.formatDateForDisplay ? window.formatDateForDisplay(r.date) : r.date) : '';
 
@@ -199,13 +240,14 @@ const ExcelModule = {
         r.mTax || '',
         amt > 0 ? amt : '',
         toPay > 0 ? toPay : '',
-        paidVal || '',
+        paidNum > 0 ? paidNum : '',
         bal > 0 ? bal : '',
-        r.note || ''
+        r.note || '',
+        failedNum > 0 ? failedNum : ''
       ];
       row.height = 20;
 
-      for (let c = 1; c <= 15; c++) {
+      for (let c = 1; c <= 16; c++) {
         const cell = row.getCell(c);
         cell.border = thinBorder;
         cell.font = regular10;
@@ -213,19 +255,23 @@ const ExcelModule = {
         // Alignment
         if ([1, 2, 4, 5, 6, 8, 9].includes(c)) {
           cell.alignment = { horizontal: 'center', vertical: 'middle' };
-        } else if ([11, 12, 14].includes(c)) {
+        } else if ([11, 12, 13, 14, 16].includes(c)) {
           cell.alignment = { horizontal: 'right', vertical: 'middle' };
           if (typeof cell.value === 'number') cell.numFmt = '#,##,##0';
-        } else if (c === 13) {
-          cell.alignment = { horizontal: 'center', vertical: 'middle' };
         } else {
           cell.alignment = { horizontal: 'left', vertical: 'middle' };
         }
 
-        // Paid cell green background
-        if (c === 13 && (isPaid || String(cell.value).toLowerCase() === 'paid')) {
+        // Paid cell keeps its green highlight, but now shows the real amount
+        if (c === 13 && isPaid) {
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC6EFCE' } };
           cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF006100' } };
+        }
+
+        // Failed money is flagged red so it is obvious at a glance
+        if (c === 16 && failedNum > 0) {
+          cell.fill = redShortage;
+          cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
         }
 
         // Note highlights
@@ -288,6 +334,21 @@ totalRow33.getCell(14).value = s1TotalBal;
     totalRow33.getCell(14).border = thinBorder;
     totalRow33.getCell(14).numFmt = '#,##,##0';
     totalRow33.getCell(14).alignment = { horizontal: 'right', vertical: 'middle' };
+
+    // Auto-sum Paid and Failed money (numeric, so the sums are real)
+    totalRow33.getCell(13).value = s1TotalPaid;
+    totalRow33.getCell(13).fill = yellowFill;
+    totalRow33.getCell(13).font = boldBlack11;
+    totalRow33.getCell(13).border = thinBorder;
+    totalRow33.getCell(13).numFmt = '#,##,##0';
+    totalRow33.getCell(13).alignment = { horizontal: 'right', vertical: 'middle' };
+
+    totalRow33.getCell(16).value = s1TotalFailed;
+    totalRow33.getCell(16).fill = yellowFill;
+    totalRow33.getCell(16).font = boldBlack11;
+    totalRow33.getCell(16).border = thinBorder;
+    totalRow33.getCell(16).numFmt = '#,##,##0';
+    totalRow33.getCell(16).alignment = { horizontal: 'right', vertical: 'middle' };
     totalRow33.height = 22;
 
     // ========================================================
@@ -465,7 +526,7 @@ totalRow33.getCell(14).value = s1TotalBal;
       const { section, trips, advances, totalAmount, oldBal, oldBalDate, totalPayable, advSum, netOutstanding, latestDate, latestAdvDate = '' } = secData;
 
       // 1. Blue divider banner (matching Shinex Excel format)
-      ws.mergeCells(`A${curStartRow}:O${curStartRow}`);
+      ws.mergeCells(`A${curStartRow}:P${curStartRow}`);
       const divCell = ws.getCell(`A${curStartRow}`);
       divCell.value = `${section.name}                                                                        NEW`;
       divCell.fill = cyanDivider;
@@ -486,17 +547,17 @@ totalRow33.getCell(14).value = s1TotalBal;
       const hRow = ws.getRow(headerRowIndex);
       hRow.values = [
         'SL.NO', 'LR No', 'DC No', 'Date', 'Vehicle Number', 'From', 'TO',
-        'Quantity', 'M/TAX', 'Amount', 'ToPay', 'ToPay-paid', 'ToPay-Balc', 'Note'
+        'Quantity', 'M/TAX', 'Amount', 'ToPay', 'ToPay-paid', 'ToPay-Balc', 'Note', 'Failed Amt.'
       ];
       hRow.height = 25;
-      for (let c = 1; c <= 14; c++) {
+      for (let c = 1; c <= 15; c++) {
         const cell = hRow.getCell(c);
         cell.border = thinBorder;
         cell.alignment = { horizontal: 'center', vertical: 'middle' };
         if (c === 1) {
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
           cell.font = boldBlack11;
-        } else if ([11, 12, 13].includes(c)) {
+        } else if ([11, 12, 13, 15].includes(c)) {
           cell.fill = navyHeaderFill;
           cell.font = headerFontRed;
         } else {
@@ -515,11 +576,10 @@ totalRow33.getCell(14).value = s1TotalBal;
         const paid = Number(r.paid) || 0;
         const bal = Number(r.balance) || 0;
 
-        const isPaid = (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid' || r.status === 'Paid' || (toPay > 0 && bal === 0 && (r.status === 'Paid' || paid >= toPay)));
-        let paidVal = isPaid ? 'Paid' : r.paid;
-        if (typeof paidVal === 'number' && paidVal > 0) {
-          paidVal = (paidVal === toPay) ? 'Paid' : paidVal.toLocaleString('en-IN');
-        }
+        // Paid is written as the ACTUAL money (number), not the word "Paid"
+        const isPaid = this.isFullyPaid(r);
+        const paidNum = this.paidAmountOf(r);
+        const failedNum = this.failedAmountOf(r);
 
         const tripDateStr = r.date ? (window.formatDateForDisplay ? window.formatDateForDisplay(r.date) : r.date) : '';
 
@@ -535,19 +595,20 @@ totalRow33.getCell(14).value = s1TotalBal;
           r.mTax || '',
           amt > 0 ? amt : '',
           toPay > 0 ? toPay : '',
-          paidVal || '',
+          paidNum > 0 ? paidNum : '',
           bal > 0 ? bal : '',
-          r.note || ''
+          r.note || '',
+          failedNum > 0 ? failedNum : ''
         ];
 
-        for (let c = 1; c <= 14; c++) {
+        for (let c = 1; c <= 15; c++) {
           const cell = row.getCell(c);
           cell.border = thinBorder;
           cell.font = regular10;
           if (c === 1) cell.alignment = { horizontal: 'center', vertical: 'middle' };
           else if ([2, 3, 4, 5, 8, 9].includes(c)) cell.alignment = { horizontal: 'center', vertical: 'middle' };
           else if ([6, 7, 14].includes(c)) cell.alignment = { horizontal: 'left', vertical: 'middle' };
-          else if ([10, 11, 12, 13].includes(c)) {
+          else if ([10, 11, 12, 13, 15].includes(c)) {
             cell.alignment = { horizontal: 'right', vertical: 'middle' };
             if (typeof cell.value === 'number') cell.numFmt = '#,##,##0';
           }
@@ -558,17 +619,20 @@ totalRow33.getCell(14).value = s1TotalBal;
           row.getCell(14).fill = yellowFill;
         }
 
-        // Mirror the on-screen view: green "Paid" cell, red bold outstanding balance
-        const isPaidCell = isPaid || (paidVal === 'Paid' || String(paidVal).toLowerCase() === 'paid');
-        if (isPaidCell) {
+        // Mirror the on-screen view: green paid cell, red bold outstanding balance
+        if (isPaid) {
           const paidCell = row.getCell(12);
           paidCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC6EFCE' } };
           paidCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF006100' } };
-          paidCell.alignment = { horizontal: 'center', vertical: 'middle' };
         }
         if (bal > 0) {
           const balCell = row.getCell(13);
           balCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFDC2626' } };
+        }
+        if (failedNum > 0) {
+          const failCell = row.getCell(15);
+          failCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF0000' } };
+          failCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
         }
 
         curDataRow++;
@@ -591,9 +655,26 @@ totalRow33.getCell(14).value = s1TotalBal;
       secTotalRow.getCell(10).numFmt = '#,##,##0';
       secTotalRow.getCell(10).alignment = { horizontal: 'right', vertical: 'middle' };
 
-      // Auto-sum ToPay and ToPay-Balance (matches the on-screen Live Sheet total row)
+      // Auto-sum ToPay, Paid, ToPay-Balance and Failed money
       const toPaySum = trips.reduce((s, r) => s + window.parseAmount(r.toPay), 0);
       const balSum = trips.reduce((s, r) => s + window.parseAmount(r.balance), 0);
+      const paidSum = trips.reduce((s, r) => s + this.paidAmountOf(r), 0);
+      const failedSum = trips.reduce((s, r) => s + this.failedAmountOf(r), 0);
+
+      secTotalRow.getCell(12).value = paidSum;
+      secTotalRow.getCell(12).fill = yellowFill;
+      secTotalRow.getCell(12).font = boldBlack11;
+      secTotalRow.getCell(12).border = thinBorder;
+      secTotalRow.getCell(12).numFmt = '#,##,##0';
+      secTotalRow.getCell(12).alignment = { horizontal: 'right', vertical: 'middle' };
+
+      secTotalRow.getCell(15).value = failedSum;
+      secTotalRow.getCell(15).fill = yellowFill;
+      secTotalRow.getCell(15).font = boldBlack11;
+      secTotalRow.getCell(15).border = thinBorder;
+      secTotalRow.getCell(15).numFmt = '#,##,##0';
+      secTotalRow.getCell(15).alignment = { horizontal: 'right', vertical: 'middle' };
+
       secTotalRow.getCell(11).value = toPaySum;
       secTotalRow.getCell(11).fill = yellowFill;
       secTotalRow.getCell(11).font = boldBlack11;
@@ -742,10 +823,11 @@ totalRow33.getCell(14).value = s1TotalBal;
       12: 14, // Col 12: ToPay-paid
       13: 14, // Col 13: ToPay-Balc
       14: 52, // Col 14: Note (Halting notes)
-      15: 30  // Col 15: Note / March balance
+      15: 30, // Col 15: Note / March balance
+      16: 14  // Col 16: Failed Amt.
     };
 
-    for (let c = 1; c <= 15; c++) {
+    for (let c = 1; c <= 16; c++) {
       let maxLen = 0;
       const col = ws.getColumn(c);
       col.eachCell({ includeEmpty: false }, (cell, rowNumber) => {
@@ -837,7 +919,7 @@ totalRow33.getCell(14).value = s1TotalBal;
     for (let c = 5; c <= 9; c++) ws.getCell(2, c).border = thinBorder;
 
     // 3. Blue divider banner
-    ws.mergeCells('A3:O3');
+    ws.mergeCells('A3:P3');
     const divCell = ws.getCell('A3');
     divCell.value = `${section.name}                                                                        NEW`;
     divCell.fill = cyanDivider;
@@ -857,17 +939,17 @@ totalRow33.getCell(14).value = s1TotalBal;
     const hRow = ws.getRow(5);
     hRow.values = [
       'SL.NO', 'LR No', 'DC No', 'Date', 'Vehicle Number', 'From', 'TO',
-      'Quantity', 'M/TAX', 'Amount', 'ToPay', 'ToPay-paid', 'ToPay-Balc', 'Note'
+      'Quantity', 'M/TAX', 'Amount', 'ToPay', 'ToPay-paid', 'ToPay-Balc', 'Note', 'Failed Amt.'
     ];
     hRow.height = 25;
-    for (let c = 1; c <= 14; c++) {
+    for (let c = 1; c <= 15; c++) {
       const cell = hRow.getCell(c);
       cell.border = thinBorder;
       cell.alignment = { horizontal: 'center', vertical: 'middle' };
       if (c === 1) {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
         cell.font = boldBlack11;
-      } else if ([11, 12, 13].includes(c)) {
+      } else if ([11, 12, 13, 15].includes(c)) {
         cell.fill = navyHeaderFill;
         cell.font = headerFontRed;
       } else {
@@ -885,11 +967,9 @@ totalRow33.getCell(14).value = s1TotalBal;
       const toPay = Number(r.toPay) || 0;
       const bal = Number(r.balance) || 0;
 
-      const isPaid = (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid' || r.status === 'Paid' || (toPay > 0 && bal === 0 && (r.status === 'Paid' || Number(r.paid) >= toPay)));
-      let paidVal = isPaid ? 'Paid' : r.paid;
-      if (typeof paidVal === 'number' && paidVal > 0) {
-        paidVal = (paidVal === toPay) ? 'Paid' : paidVal.toLocaleString('en-IN');
-      }
+      const isPaid = this.isFullyPaid(r);
+      const paidNum = this.paidAmountOf(r);
+      const failedNum = this.failedAmountOf(r);
 
       const tripDateStr = r.date ? (window.formatDateForDisplay ? window.formatDateForDisplay(r.date) : r.date) : '';
 
@@ -905,19 +985,20 @@ totalRow33.getCell(14).value = s1TotalBal;
         r.mTax || '',
         amt > 0 ? amt : '',
         toPay > 0 ? toPay : '',
-        paidVal || '',
+        paidNum > 0 ? paidNum : '',
         bal > 0 ? bal : '',
-        r.note || ''
+        r.note || '',
+        failedNum > 0 ? failedNum : ''
       ];
 
-      for (let c = 1; c <= 14; c++) {
+      for (let c = 1; c <= 15; c++) {
         const cell = row.getCell(c);
         cell.border = thinBorder;
         cell.font = regular10;
         if (c === 1) cell.alignment = { horizontal: 'center', vertical: 'middle' };
         else if ([2, 3, 4, 5, 8, 9].includes(c)) cell.alignment = { horizontal: 'center', vertical: 'middle' };
         else if ([6, 7, 14].includes(c)) cell.alignment = { horizontal: 'left', vertical: 'middle' };
-        else if ([10, 11, 12, 13].includes(c)) {
+        else if ([10, 11, 12, 13, 15].includes(c)) {
           cell.alignment = { horizontal: 'right', vertical: 'middle' };
           if (typeof cell.value === 'number') cell.numFmt = '#,##,##0';
         }
@@ -927,17 +1008,20 @@ totalRow33.getCell(14).value = s1TotalBal;
         row.getCell(14).fill = yellowFill;
       }
 
-      // Mirror the on-screen view: green "Paid" cell, red bold outstanding balance
-      const isPaidCell = isPaid || (paidVal === 'Paid' || String(paidVal).toLowerCase() === 'paid');
-      if (isPaidCell) {
+      // Mirror the on-screen view: green paid cell, red bold outstanding balance
+      if (isPaid) {
         const paidCell = row.getCell(12);
         paidCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC6EFCE' } };
         paidCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF006100' } };
-        paidCell.alignment = { horizontal: 'center', vertical: 'middle' };
       }
       if (bal > 0) {
         const balCell = row.getCell(13);
         balCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFDC2626' } };
+      }
+      if (failedNum > 0) {
+        const failCell = row.getCell(15);
+        failCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF0000' } };
+        failCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
       }
       curDataRow++;
     });
@@ -959,9 +1043,26 @@ totalRow33.getCell(14).value = s1TotalBal;
     secTotalRow.getCell(10).numFmt = '#,##,##0';
     secTotalRow.getCell(10).alignment = { horizontal: 'right', vertical: 'middle' };
 
-    // Auto-sum ToPay and ToPay-Balance (matches the on-screen Live Sheet total row)
+    // Auto-sum ToPay, Paid, ToPay-Balance and Failed money
     const toPaySum = trips.reduce((s, r) => s + window.parseAmount(r.toPay), 0);
     const balSum = trips.reduce((s, r) => s + window.parseAmount(r.balance), 0);
+    const paidSum = trips.reduce((s, r) => s + this.paidAmountOf(r), 0);
+    const failedSum = trips.reduce((s, r) => s + this.failedAmountOf(r), 0);
+
+    secTotalRow.getCell(12).value = paidSum;
+    secTotalRow.getCell(12).fill = yellowFill;
+    secTotalRow.getCell(12).font = boldBlack11;
+    secTotalRow.getCell(12).border = thinBorder;
+    secTotalRow.getCell(12).numFmt = '#,##,##0';
+    secTotalRow.getCell(12).alignment = { horizontal: 'right', vertical: 'middle' };
+
+    secTotalRow.getCell(15).value = failedSum;
+    secTotalRow.getCell(15).fill = yellowFill;
+    secTotalRow.getCell(15).font = boldBlack11;
+    secTotalRow.getCell(15).border = thinBorder;
+    secTotalRow.getCell(15).numFmt = '#,##,##0';
+    secTotalRow.getCell(15).alignment = { horizontal: 'right', vertical: 'middle' };
+
     secTotalRow.getCell(11).value = toPaySum;
     secTotalRow.getCell(11).fill = yellowFill;
     secTotalRow.getCell(11).font = boldBlack11;
@@ -1156,9 +1257,10 @@ totalRow33.getCell(14).value = s1TotalBal;
         "M/TAX": r.mTax || '',
         "Amount": Number(r.amount) || 0,
         "ToPay": Number(r.toPay) || 0,
-        "ToPay-paid": (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid' || r.status === 'Paid' || (Number(r.toPay) > 0 && Number(r.balance) === 0)) ? 'Paid' : (r.paid || ''),
+        "ToPay-paid": this.paidAmountOf(r) || 0,
         "ToPay-Balc": Number(r.balance) || 0,
-        "Note": r.note || ''
+        "Note": r.note || '',
+        "Failed Amt.": this.failedAmountOf(r) || 0
       })));
       // AutoFit Column Widths for SheetJS
       wsTransport['!cols'] = [
@@ -1176,7 +1278,8 @@ totalRow33.getCell(14).value = s1TotalBal;
         { wch: 14 }, // ToPay
         { wch: 13 }, // ToPay-paid
         { wch: 14 }, // ToPay-Balc
-        { wch: 52 }  // Note
+        { wch: 52 }, // Note
+        { wch: 14 }  // Failed Amt.
       ];
       XLSX.utils.book_append_sheet(wb, wsTransport, "Transport Records");
 

@@ -459,15 +459,16 @@ body.employee-mode .admin-only,
   border-radius: 6px;
   font-size: 0.88rem;
   font-weight: 600;
-  background: rgba(239, 68, 68, 0.12);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: #dc2626;
+  color: #ffffff;
+  border: 1px solid #b91c1c;
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.4);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .sidebar-logout-btn:hover {
-  background: #dc2626;
+  background: #b91c1c;
   color: #ffffff;
 }
 
@@ -558,12 +559,17 @@ body.employee-mode .admin-only,
 }
 
 .mobile-top-bar .mobile-logout-btn {
-  background: rgba(239, 68, 68, 0.2);
-  color: #fca5a5;
-  border-color: rgba(239, 68, 68, 0.4);
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #b91c1c;
   font-weight: 600;
   font-size: 0.78rem;
   padding: 3px 8px;
+}
+
+.mobile-top-bar .mobile-logout-btn:hover {
+  background: #b91c1c;
+  color: #ffffff;
 }
 
 .main-content-scroll {

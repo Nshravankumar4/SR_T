@@ -176,11 +176,11 @@ const AdvancesModule = {
     document.getElementById('advanceModalTitle').innerText = '➕ Record Advance Payment';
     this.setDefaultDate();
 
-    // Never leave the Save button stuck disabled from a previous failed submit
+    // Add mode shows "Submit"; edit mode shows "Save"
     const submitBtn = document.querySelector('#advanceForm button[type="submit"]');
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.innerText = 'Save Advance Record';
+      submitBtn.innerText = 'Submit';
     }
 
     // If preselectedSection not specified, check currently active section filter
@@ -207,6 +207,11 @@ const AdvancesModule = {
     document.getElementById('advanceAmount').value = adv.amount || '';
     document.getElementById('advanceDescription').value = adv.description || adv.note || '';
     document.getElementById('advanceReference').value = adv.reference || '';
+    const submitBtn = document.querySelector('#advanceForm button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerText = 'Save';
+    }
     document.getElementById('advanceModal').classList.add('active');
   },
 
@@ -283,7 +288,7 @@ const AdvancesModule = {
       this.isSubmitting = false;
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.innerText = 'Save Advance Record';
+        submitBtn.innerText = document.getElementById('advanceId')?.value ? 'Save' : 'Submit';
       }
     }
   },

@@ -155,30 +155,13 @@ const AuthService = {
         loggedInAt: new Date().toISOString()
       };
 
-      // Also obtain a server-issued session token so privileged cloud actions
-      // (delete / restore / password change / sections) are authorized.
-      // Alias passwords (Rudra / Shravan@1 / EShravan@2) are mapped to the
-      // canonical credentials so the cloud always issues a valid token.
-      const cloudUrl = typeof ApiService !== 'undefined' ? ApiService.getApiUrl() : '';
-      const cloudPassword = (u === 'rudra') ? 'RudraSarika@2505' : 'Shravan';
-      if (cloudUrl) {
-        try {
-          const tokenResp = await fetch(cloudUrl, {
-            method: 'POST',
-            // text/plain avoids the CORS preflight Apps Script cannot answer
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'login', username: u, password: cloudPassword })
-          });
-          const tokenResult = await tokenResp.json();
-          if (tokenResult && tokenResult.success && tokenResult.token) {
-            user.token = tokenResult.token;
-          }
-        } catch (tokenErr) {
-          console.warn("Could not obtain cloud session token (will retry on next login):", tokenErr);
-        }
-      }
-
+      // Session is created and returned immediately so the user lands in the app
+      // without waiting on Apps Script (which can take several seconds).
       sessionStorage.setItem(this.sessionKey, JSON.stringify(user));
+
+      // Server-issued session token (authorizes delete / restore / password change /
+      // sections) is upgraded in the BACKGROUND once the UI is already usable.
+      this.upgradeCloudSessionToken(u);
       return { success: true, user };
     }
 
@@ -239,6 +222,37 @@ const AuthService = {
       }
       return { success: false, message: 'Invalid username or password.' };
     }
+  },
+
+  // Fire-and-forget cloud token upgrade. Alias passwords (Rudra / Shravan@1 /
+  // EShravan@2) are mapped to the canonical credentials so the cloud always
+  // issues a valid token. Patches the live session once it arrives.
+  upgradeCloudSessionToken(username) {
+    const cloudUrl = typeof ApiService !== 'undefined' ? ApiService.getApiUrl() : '';
+    if (!cloudUrl) return;
+    const u = String(username || '').toLowerCase();
+    const cloudPassword = (u === 'rudra') ? 'RudraSarika@2505' : 'Shravan';
+
+    (async () => {
+      try {
+        const resp = await fetch(cloudUrl, {
+          method: 'POST',
+          // text/plain avoids the CORS preflight Apps Script cannot answer
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'login', username: u, password: cloudPassword })
+        });
+        const result = await resp.json();
+        if (result && result.success && result.token) {
+          const current = this.getCurrentUser();
+          if (current) {
+            current.token = result.token;
+            sessionStorage.setItem(this.sessionKey, JSON.stringify(current));
+          }
+        }
+      } catch (err) {
+        console.warn('Cloud session token will be requested on next login:', err);
+      }
+    })();
   },
 
   logout() {

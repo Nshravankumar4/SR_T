@@ -116,8 +116,8 @@ const TransportModule = {
       // paid is either a number or the literal string 'Paid' (fully settled trips).
       // Number('Paid') is NaN, which used to render as a misleading ₹0 in this column.
       const isPaidFlag = (status === 'Paid' || r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid' || (Number(r.toPay) > 0 && Number(r.balance) === 0 && (r.status === 'Paid' || Number(r.paid) >= Number(r.toPay))));
-      const paidNum = isPaidFlag ? (Number(r.toPay) || 0) : (Number(r.paid) || 0);
-      const formattedPaid = isPaidFlag ? 'Paid' : paidNum.toLocaleString('en-IN');
+      const paidNum = isPaidFlag ? (Number(r.toPay) || 0) : (window.parseAmount(r.paid));
+      const formattedPaid = paidNum.toLocaleString('en-IN');
       const formattedBalance = (Number(r.balance) || 0).toLocaleString('en-IN');
 
       return `
@@ -134,7 +134,7 @@ const TransportModule = {
           <td>${window.escapeHtml(r.mTax || '-')}</td>
           <td>₹${formattedAmount}</td>
           <td><strong>₹${formattedToPay}</strong></td>
-          <td style="color: var(--success); font-weight: ${isPaidFlag ? '700' : '400'};">${isPaidFlag ? formattedPaid : `₹${formattedPaid}`}</td>
+          <td style="color: var(--success); font-weight: ${isPaidFlag ? '700' : '400'};">${paidNum > 0 ? `₹${formattedPaid}` : ''}</td>
           <td style="color: ${r.balance > 0 ? 'var(--danger)' : 'var(--text-muted)'}; font-weight: bold;">₹${formattedBalance}</td>
           <td><span class="badge ${badgeClass}">${window.escapeHtml(status)}</span></td>
           <td>
@@ -209,11 +209,11 @@ const TransportModule = {
     document.getElementById('transportId').value = '';
     document.getElementById('transportModalTitle').innerText = '➕ Add Transport Record';
 
-    // Never leave the Save button stuck disabled from a previous failed submit
+    // Add mode shows "Submit"; edit mode shows "Save" (never stuck disabled either)
     const submitBtn = document.querySelector('#transportForm button[type="submit"]');
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.innerText = 'Save Transport Record';
+      submitBtn.innerText = 'Submit';
     }
     
     let sec = preselectedSection;
@@ -258,6 +258,12 @@ const TransportModule = {
     setVal('transportPaid', paidVal);
     setVal('transportBalance', isPaid ? 0 : (Number(record.balance) || 0));
     setVal('transportNote', record.note || '');
+
+    const submitBtn = document.querySelector('#transportForm button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerText = 'Save';
+    }
 
     const titleEl = document.getElementById('transportModalTitle');
     if (titleEl) titleEl.innerText = `✏️ Edit Record (LR: ${record.lrNo || id})`;
@@ -381,7 +387,8 @@ const TransportModule = {
       this.isSubmitting = false;
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.innerText = 'Save Transport Record';
+        const isEdit = Boolean(document.getElementById('transportId')?.value);
+        submitBtn.innerText = isEdit ? 'Save' : 'Submit';
       }
     }
   },

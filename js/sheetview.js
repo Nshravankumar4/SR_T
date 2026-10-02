@@ -259,7 +259,9 @@ const SheetViewModule = {
       const isPaid = (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid' || r.status === 'Paid' || (toPayVal > 0 && toPayBal === 0 && (r.status === 'Paid' || Number(r.paid) >= toPayVal)));
       const paidStyle = isPaid ? 'background: #c6efce; color: #006100; font-weight: bold;' : '';
       const balStyle = toPayBal > 0 ? 'color: #dc2626; font-weight: bold;' : '';
-      const paidDisplay = isPaid ? 'Paid' : (r.paid ? (typeof r.paid === 'number' ? r.paid.toLocaleString('en-IN') : r.paid) : '');
+      // Show the real money that was paid (not the word "Paid")
+      const paidAmount = isPaid ? toPayVal : (r.paid ? window.parseAmount(r.paid) : 0);
+      const paidDisplay = paidAmount > 0 ? paidAmount.toLocaleString('en-IN') : '';
 
       rowsHtml += `
         <tr onclick="TransportModule.openEditModal('${window.escapeAttr(r.id)}')" style="cursor: pointer;" title="✏️ Click to edit trip (LR: ${window.escapeHtml(r.lrNo || r.id)})">
@@ -463,7 +465,9 @@ const SheetViewModule = {
 
       const isPaid = (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid' || r.status === 'Paid' || (toPay > 0 && bal === 0 && (r.status === 'Paid' || Number(r.paid) >= toPay)));
       const paidStyle = isPaid ? 'background: #c6efce; color: #006100; font-weight: bold;' : '';
-      const paidDisplay = isPaid ? 'Paid' : (r.paid ? (typeof r.paid === 'number' ? r.paid.toLocaleString('en-IN') : r.paid) : '');
+      // Show the real money that was paid (not the word "Paid")
+      const paidAmount = isPaid ? toPay : (r.paid ? window.parseAmount(r.paid) : 0);
+      const paidDisplay = paidAmount > 0 ? paidAmount.toLocaleString('en-IN') : '';
 
       rowsHtml += `
         <tr onclick="TransportModule.openEditModal('${window.escapeAttr(r.id)}')" style="cursor: pointer;" title="✏️ Click to edit trip (LR: ${window.escapeHtml(r.lrNo || r.id)})">
