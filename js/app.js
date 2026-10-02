@@ -184,6 +184,22 @@ window.App = {
     }
   },
 
+  // Mobile drawer: single source of truth for open/close + dim backdrop
+  toggleSidebar() {
+    const sb = document.querySelector('.app-sidebar');
+    if (!sb) return;
+    const open = !sb.classList.contains('open');
+    sb.classList.toggle('open', open);
+    document.getElementById('sidebarBackdrop')?.classList.toggle('show', open);
+    document.body.classList.toggle('sidebar-open', open);
+  },
+
+  closeSidebar() {
+    document.querySelector('.app-sidebar')?.classList.remove('open');
+    document.getElementById('sidebarBackdrop')?.classList.remove('show');
+    document.body.classList.remove('sidebar-open');
+  },
+
   logout() {
     if (typeof AuthService !== 'undefined') {
       AuthService.logout();
@@ -191,7 +207,7 @@ window.App = {
       sessionStorage.removeItem('transport_user_session_v2');
       try { sessionStorage.clear(); } catch (e) {}
     }
-    document.querySelector('.app-sidebar')?.classList.remove('open');
+    this.closeSidebar();
     this.checkAuth();
     this.showToast("Logged out successfully.", "info");
   },
@@ -763,7 +779,7 @@ window.App = {
 
         // Mobile: close the slide-in menu after a tab is chosen (actions feel dead otherwise)
         if (window.innerWidth <= 900) {
-          document.querySelector('.app-sidebar')?.classList.remove('open');
+          window.App.closeSidebar();
         }
 
         if (target === 'sheetview' && typeof SheetViewModule !== 'undefined') {

@@ -44,8 +44,41 @@ body.employee-mode .admin-only,
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  padding: 1rem;
+  padding: 1rem 1rem 3.5rem; /* leave room for the footer bar */
+  position: relative;
   background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+}
+
+/* Login page footer bar — same branding on every page */
+.auth-footer-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.7rem 1.25rem;
+  background: rgba(2, 6, 23, 0.45);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.auth-footer-bar strong {
+  color: #e2e8f0;
+}
+
+@media (max-width: 640px) {
+  .auth-footer-bar {
+    justify-content: center;
+    text-align: center;
+    font-size: 0.66rem;
+    padding: 0.6rem 0.75rem;
+  }
 }
 
 .auth-card {
@@ -196,6 +229,11 @@ body.employee-mode .admin-only,
 .sidebar-header {
   padding: 1.25rem 1.25rem 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Drawer close button — hidden on desktop (sidebar always visible), shown on phones */
+.sidebar-close-btn {
+  display: none;
 }
 
 .sidebar-brand {
@@ -433,6 +471,35 @@ body.employee-mode .admin-only,
   color: #ffffff;
 }
 
+/* Global footer bar — identical branding on every tab/page (Admin & Rudra) */
+.app-footer {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.55rem 1.5rem;
+  background: #0f172a;
+  border-top: 1px solid #1e293b;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.app-footer strong {
+  color: #e2e8f0;
+}
+
+@media (max-width: 640px) {
+  .app-footer {
+    justify-content: center;
+    text-align: center;
+    font-size: 0.64rem;
+    padding: 0.5rem 0.75rem;
+  }
+}
+
 /* Main Viewport & Scrollable Content */
 .app-main-viewport {
   flex: 1;
@@ -440,6 +507,7 @@ body.employee-mode .admin-only,
   flex-direction: column;
   min-width: 0;
   height: 100vh;
+  height: 100dvh; /* real visible height on phones (browser URL bar) */
   overflow: hidden;
 }
 
@@ -455,20 +523,47 @@ body.employee-mode .admin-only,
 }
 
 /* Brand text truncates instead of pushing Menu/Logout buttons off-screen */
-.mobile-top-bar > div:first-child {
+.mobile-top-bar .mobile-top-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   min-width: 0;
-  flex: 1;
+  flex: 1 1 0;
   overflow: hidden;
 }
 
-.mobile-top-bar > div:first-child strong {
+.mobile-top-bar .mobile-top-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.mobile-top-bar .mobile-top-brand strong {
+  font-size: 1rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.mobile-top-bar > div:last-child {
+.mobile-top-bar .mobile-top-actions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
   flex-shrink: 0;
+}
+
+.mobile-top-bar .mobile-menu-btn,
+.mobile-top-bar .mobile-logout-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.mobile-top-bar .mobile-logout-btn {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.4);
+  font-weight: 600;
+  font-size: 0.78rem;
+  padding: 3px 8px;
 }
 
 .main-content-scroll {
@@ -519,16 +614,112 @@ body.employee-mode .admin-only,
     bottom: 0;
     width: 280px;
     z-index: 1000;
+    /*
+      Base rule sets height:100vh which OVERRIDES top+bottom. On phones 100vh can be
+      taller than the visible screen (URL bar / gesture bar), so Logout + copyright
+      ended up below the fold with overflow:hidden making them unreachable.
+      Cap to the real visible screen and allow scrolling as a fallback.
+    */
+    max-height: 100vh;
+    max-height: 100dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   .app-sidebar.open {
     transform: translateX(290px);
     box-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
   }
+
+  /* Compact the drawer so header + user card + menu + Logout fit one phone screen */
+  .sidebar-header {
+    padding: 1rem 1rem 0.75rem;
+    position: relative;
+  }
+  .sidebar-brand {
+    padding-right: 44px; /* room for the ✕ close button */
+  }
+  .sidebar-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0.7rem;
+    right: 0.7rem;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #e2e8f0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .sidebar-close-btn:hover,
+  .sidebar-close-btn:active {
+    background: rgba(239, 68, 68, 0.3);
+    border-color: rgba(239, 68, 68, 0.45);
+  }
+  .sidebar-user-card {
+    margin: 0.65rem 0.75rem 0.25rem;
+    padding: 0.6rem 0.8rem;
+    gap: 0.7rem;
+  }
+  .sidebar-menu {
+    padding: 0.6rem 0.6rem;
+    gap: 0.15rem;
+  }
+  .sidebar-menu .nav-tab {
+    padding: 0.62rem 0.85rem;
+    gap: 0.7rem;
+  }
+  .sidebar-footer {
+    padding: 0.7rem 0.85rem;
+    gap: 0.55rem;
+  }
+  .sidebar-footer > div:first-child {
+    margin-bottom: 0 !important;
+  }
+
   .mobile-top-bar {
     display: flex;
+    padding: 0.65rem 0.85rem;
+    gap: 0.5rem;
   }
   .main-content-scroll {
     padding: 1rem;
+  }
+  /* Lock page scroll while the drawer is open */
+  body.sidebar-open {
+    overflow: hidden;
+  }
+}
+
+/* Very narrow phones: shrink the buttons so brand + Menu + Logout all fit, never overlap */
+@media (max-width: 480px) {
+  .mobile-top-bar {
+    padding: 0.55rem 0.65rem;
+    gap: 0.4rem;
+  }
+  .mobile-top-bar .mobile-top-brand {
+    gap: 0.4rem;
+  }
+  .mobile-top-bar .mobile-top-brand strong {
+    font-size: 0.88rem;
+  }
+  .mobile-top-bar .mobile-top-icon {
+    font-size: 1.1rem;
+  }
+  .mobile-top-bar .mobile-top-actions {
+    gap: 0.3rem;
+  }
+  .mobile-top-bar .mobile-menu-btn,
+  .mobile-top-bar .mobile-logout-btn {
+    font-size: 0.72rem;
+    padding: 4px 7px;
   }
 }
 
@@ -537,6 +728,21 @@ body.employee-mode .admin-only,
   max-width: 100%;
   margin: 0 auto;
   padding: 0;
+}
+
+/* Mobile drawer dim overlay — covers the page (incl. the top-bar Logout button)
+   so it can never look like it overlaps the menu, and a tap anywhere outside
+   the drawer closes (deselects) it. Drawer sits above at z-index 1000. */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.55);
+  z-index: 999;
+}
+
+.sidebar-backdrop.show {
+  display: block;
 }
 
 /* Metric Cards */

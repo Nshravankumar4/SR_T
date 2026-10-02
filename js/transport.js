@@ -110,7 +110,11 @@ const TransportModule = {
       const badgeClass = status === 'Paid' ? 'badge-success' : (status === 'Partially Paid' ? 'badge-warning' : (status === 'Billed' ? 'badge-primary' : 'badge-danger'));
       const formattedAmount = (Number(r.amount) || 0).toLocaleString('en-IN');
       const formattedToPay = (Number(r.toPay) || 0).toLocaleString('en-IN');
-      const formattedPaid = (Number(r.paid) || 0).toLocaleString('en-IN');
+      // paid is either a number or the literal string 'Paid' (fully settled trips).
+      // Number('Paid') is NaN, which used to render as a misleading ₹0 in this column.
+      const isPaidFlag = (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid');
+      const paidNum = isPaidFlag ? (Number(r.toPay) || 0) : (Number(r.paid) || 0);
+      const formattedPaid = isPaidFlag ? 'Paid' : paidNum.toLocaleString('en-IN');
       const formattedBalance = (Number(r.balance) || 0).toLocaleString('en-IN');
 
       return `
@@ -127,7 +131,7 @@ const TransportModule = {
           <td>${window.escapeHtml(r.mTax || '-')}</td>
           <td>₹${formattedAmount}</td>
           <td><strong>₹${formattedToPay}</strong></td>
-          <td style="color: var(--success);">₹${formattedPaid}</td>
+          <td style="color: var(--success); font-weight: ${isPaidFlag ? '700' : '400'};">${isPaidFlag ? formattedPaid : `₹${formattedPaid}`}</td>
           <td style="color: ${r.balance > 0 ? 'var(--danger)' : 'var(--text-muted)'}; font-weight: bold;">₹${formattedBalance}</td>
           <td><span class="badge ${badgeClass}">${window.escapeHtml(status)}</span></td>
           <td>
@@ -292,6 +296,17 @@ const TransportModule = {
       window.App?.showToast?.('⏳ Still saving the previous request…', 'info');
       return;
     }
+
+    // Defense-in-depth: programmatic submits bypass native HTML5 validation,
+    // which previously let an empty record reach Google Sheets. Block junk here.
+    const guardForm = document.getElementById('transportForm');
+    if (guardForm && typeof guardForm.checkValidity === 'function' && !guardForm.checkValidity()) {
+      // reportValidity() highlights the first bad field and fires the shared
+      // "fill required fields" toast listener — no duplicate toast from here.
+      if (typeof guardForm.reportValidity === 'function') guardForm.reportValidity();
+      return;
+    }
+
     this.isSubmitting = true;
 
     // Instant visual feedback so the first tap never feels "dead"

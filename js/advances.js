@@ -221,6 +221,17 @@ const AdvancesModule = {
       window.App?.showToast?.('⏳ Still saving the previous request…', 'info');
       return;
     }
+
+    // Defense-in-depth: programmatic submits bypass native HTML5 validation —
+    // never let an empty advance reach Google Sheets.
+    const guardForm = document.getElementById('advanceForm');
+    if (guardForm && typeof guardForm.checkValidity === 'function' && !guardForm.checkValidity()) {
+      // reportValidity() highlights the first bad field and fires the shared
+      // "fill required fields" toast listener — no duplicate toast from here.
+      if (typeof guardForm.reportValidity === 'function') guardForm.reportValidity();
+      return;
+    }
+
     this.isSubmitting = true;
 
     // Instant visual feedback so the first tap never feels "dead"

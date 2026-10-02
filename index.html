@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Transport Management & Ledger System</title>
-  <link rel="stylesheet" href="css/styles.css?v=4.6">
+  <link rel="stylesheet" href="css/styles.css?v=13.2">
   <!-- High-Performance Spreadsheet Engines (Local for 100% Offline & Private Repo Support) -->
   <script src="libs/exceljs.min.js?v=3.0"></script>
   <script src="libs/FileSaver.min.js?v=3.0"></script>
@@ -57,10 +57,16 @@
         <button type="submit" id="loginSubmitBtn" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-weight: 600; font-size: 1rem; border-radius: 8px;">🚀 Secure Login</button>
       </form>
 
-      <div style="margin-top: 1.25rem; padding-top: 0.85rem; border-top: 1px solid rgba(255,255,255,0.12); text-align: center; font-size: 0.72rem; color: #94a3b8; line-height: 1.6;">
-        🚛 Shinex Ledger • Transport &amp; Accounts<br>
-        © 2026 Shinex UQ Genetic Seeds Pvt. Ltd. All rights reserved.
+      <div style="margin-top: 1.25rem; padding-top: 0.85rem; border-top: 1px solid rgba(255,255,255,0.12); text-align: center; font-size: 0.74rem; color: #94a3b8; line-height: 1.7;">
+        Developed by <strong style="color: #1e40af; font-size: 0.8rem;">Shravan Kumar</strong><br>
+        Enterprise Freight &amp; Fleet Management • 2026
       </div>
+    </div>
+
+    <!-- Login page footer bar (same branding as every other page) -->
+    <div class="auth-footer-bar">
+      <span>🚛 <strong>SHINEX LEDGER</strong> • Enterprise Freight &amp; Fleet Management System</span>
+      <span>© 2026 Shinex UQ Genetic Seeds Pvt. Ltd. • Developed by <strong>Shravan Kumar</strong> • All Rights Reserved</span>
     </div>
   </div>
 
@@ -76,6 +82,8 @@
             <span>Transport & Accounts</span>
           </div>
         </div>
+        <!-- Visible only on phones: unselect/close the slide-in menu -->
+        <button class="sidebar-close-btn" onclick="window.App ? App.closeSidebar() : document.querySelector('.app-sidebar').classList.remove('open')" aria-label="Close menu">✕</button>
       </div>
 
       <!-- User Profile Card -->
@@ -130,23 +138,23 @@
         <button id="logoutBtn" class="sidebar-logout-btn" onclick="window.App ? window.App.logout() : AuthService.logout()">
           <span>🚪</span> Logout
         </button>
-        <div style="text-align: center; font-size: 0.66rem; color: #64748b; line-height: 1.5;">
-          © 2026 Shinex UQ Genetic Seeds Pvt. Ltd.<br>All rights reserved.
-        </div>
       </div>
     </aside>
+
+    <!-- Dim overlay for the mobile drawer: tap anywhere outside the menu to close (deselect) it -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="window.App ? App.closeSidebar() : document.querySelector('.app-sidebar').classList.remove('open')"></div>
 
     <!-- RIGHT MAIN CONTENT VIEWPORT -->
     <div class="app-main-viewport">
       <!-- Mobile Bar (Shown only on small screens) -->
       <div class="mobile-top-bar">
-        <div style="display: flex; align-items: center; gap: 0.6rem;">
-          <span style="font-size: 1.3rem;">🚛</span>
+        <div class="mobile-top-brand">
+          <span class="mobile-top-icon">🚛</span>
           <strong>Shinex Transport Ledger</strong>
         </div>
-        <div style="display: flex; gap: 0.4rem; align-items: center;">
-          <button class="btn btn-sm btn-secondary" onclick="document.querySelector('.app-sidebar').classList.toggle('open')">☰ Menu</button>
-          <button class="btn btn-sm btn-secondary" onclick="window.App ? window.App.logout() : AuthService.logout()" style="background: rgba(239,68,68,0.2); color: #fca5a5; border-color: rgba(239,68,68,0.4); font-weight: 600; font-size: 0.78rem; padding: 3px 8px;">🚪 Logout</button>
+        <div class="mobile-top-actions">
+          <button class="btn btn-sm btn-secondary mobile-menu-btn" onclick="window.App ? App.toggleSidebar() : document.querySelector('.app-sidebar').classList.toggle('open')">☰ Menu</button>
+          <button class="btn btn-sm btn-secondary mobile-logout-btn" onclick="window.App ? window.App.logout() : AuthService.logout()">🚪 Logout</button>
         </div>
       </div>
 
@@ -581,6 +589,12 @@
         </div>
       </section>
       </main>
+
+      <!-- Global footer bar: identical branding on every tab/page (Admin & Rudra) -->
+      <footer class="app-footer">
+        <span class="app-footer-brand">🚛 <strong>SHINEX LEDGER</strong> • Enterprise Freight &amp; Fleet Management System</span>
+        <span>© 2026 Shinex UQ Genetic Seeds Pvt. Ltd. • Developed by <strong>Shravan Kumar</strong> • All Rights Reserved</span>
+      </footer>
     </div>
   </div>
 
@@ -840,14 +854,14 @@
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Application Scripts with Cache Busters -->
-  <script src="js/auth.js?v=12.0"></script>
-  <script src="js/api.js?v=12.0"></script>
-  <script src="js/transport.js?v=12.0"></script>
-  <script src="js/advances.js?v=12.0"></script>
-  <script src="js/excel.js?v=12.1"></script>
-  <script src="js/sheetview.js?v=12.1"></script>
-  <script src="js/backup.js?v=12.0"></script>
-  <script src="js/app.js?v=12.1"></script>
+  <script src="js/auth.js?v=13.2"></script>
+  <script src="js/api.js?v=13.2"></script>
+  <script src="js/transport.js?v=13.2"></script>
+  <script src="js/advances.js?v=13.2"></script>
+  <script src="js/excel.js?v=13.2"></script>
+  <script src="js/sheetview.js?v=13.2"></script>
+  <script src="js/backup.js?v=13.2"></script>
+  <script src="js/app.js?v=13.2"></script>
 </body>
 </html>
 

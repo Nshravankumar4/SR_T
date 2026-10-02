@@ -544,6 +544,19 @@ const ExcelModule = {
           row.getCell(14).fill = yellowFill;
         }
 
+        // Mirror the on-screen view: green "Paid" cell, red bold outstanding balance
+        const isPaidCell = (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid');
+        if (isPaidCell) {
+          const paidCell = row.getCell(12);
+          paidCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC6EFCE' } };
+          paidCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF006100' } };
+          paidCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        }
+        if (bal > 0) {
+          const balCell = row.getCell(13);
+          balCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFDC2626' } };
+        }
+
         curDataRow++;
       });
 
@@ -563,6 +576,23 @@ const ExcelModule = {
       secTotalRow.getCell(10).border = thinBorder;
       secTotalRow.getCell(10).numFmt = '#,##,##0';
       secTotalRow.getCell(10).alignment = { horizontal: 'right', vertical: 'middle' };
+
+      // Auto-sum ToPay and ToPay-Balance (matches the on-screen Live Sheet total row)
+      const toPaySum = trips.reduce((s, r) => s + window.parseAmount(r.toPay), 0);
+      const balSum = trips.reduce((s, r) => s + window.parseAmount(r.balance), 0);
+      secTotalRow.getCell(11).value = toPaySum;
+      secTotalRow.getCell(11).fill = yellowFill;
+      secTotalRow.getCell(11).font = boldBlack11;
+      secTotalRow.getCell(11).border = thinBorder;
+      secTotalRow.getCell(11).numFmt = '#,##,##0';
+      secTotalRow.getCell(11).alignment = { horizontal: 'right', vertical: 'middle' };
+
+      secTotalRow.getCell(13).value = balSum;
+      secTotalRow.getCell(13).fill = yellowFill;
+      secTotalRow.getCell(13).font = boldBlack11;
+      secTotalRow.getCell(13).border = thinBorder;
+      secTotalRow.getCell(13).numFmt = '#,##,##0';
+      secTotalRow.getCell(13).alignment = { horizontal: 'right', vertical: 'middle' };
 
       // 6. Advances Table on Left
       const reconRow = totalRowIndex + 3;
@@ -879,6 +909,19 @@ const ExcelModule = {
       if (r.note && String(r.note).toLowerCase().includes('halting')) {
         row.getCell(14).fill = yellowFill;
       }
+
+      // Mirror the on-screen view: green "Paid" cell, red bold outstanding balance
+      const isPaidCell = (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid');
+      if (isPaidCell) {
+        const paidCell = row.getCell(12);
+        paidCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC6EFCE' } };
+        paidCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF006100' } };
+        paidCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      }
+      if (bal > 0) {
+        const balCell = row.getCell(13);
+        balCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFDC2626' } };
+      }
       curDataRow++;
     });
 
@@ -898,6 +941,23 @@ const ExcelModule = {
     secTotalRow.getCell(10).border = thinBorder;
     secTotalRow.getCell(10).numFmt = '#,##,##0';
     secTotalRow.getCell(10).alignment = { horizontal: 'right', vertical: 'middle' };
+
+    // Auto-sum ToPay and ToPay-Balance (matches the on-screen Live Sheet total row)
+    const toPaySum = trips.reduce((s, r) => s + window.parseAmount(r.toPay), 0);
+    const balSum = trips.reduce((s, r) => s + window.parseAmount(r.balance), 0);
+    secTotalRow.getCell(11).value = toPaySum;
+    secTotalRow.getCell(11).fill = yellowFill;
+    secTotalRow.getCell(11).font = boldBlack11;
+    secTotalRow.getCell(11).border = thinBorder;
+    secTotalRow.getCell(11).numFmt = '#,##,##0';
+    secTotalRow.getCell(11).alignment = { horizontal: 'right', vertical: 'middle' };
+
+    secTotalRow.getCell(13).value = balSum;
+    secTotalRow.getCell(13).fill = yellowFill;
+    secTotalRow.getCell(13).font = boldBlack11;
+    secTotalRow.getCell(13).border = thinBorder;
+    secTotalRow.getCell(13).numFmt = '#,##,##0';
+    secTotalRow.getCell(13).alignment = { horizontal: 'right', vertical: 'middle' };
 
     // 8. Advances Table on Left & Reconciliation Box on Right
     const reconRow = totalRowIndex + 3;
