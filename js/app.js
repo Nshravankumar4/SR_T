@@ -167,6 +167,8 @@ window.App = {
       }
       
       const isAdmin = user.role === 'Admin';
+      // Body flag for CSS rules that hide admin-only UI for Rudra
+      document.body.classList.toggle('employee-mode', !isAdmin);
       // Toggle admin-only elements (e.g. changing Admin password, Settings & API tab)
       const adminOnlyElements = document.querySelectorAll('.admin-only');
       adminOnlyElements.forEach(el => {

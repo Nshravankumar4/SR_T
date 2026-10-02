@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Transport Management & Ledger System</title>
-  <link rel="stylesheet" href="css/styles.css?v=13.2">
+  <link rel="stylesheet" href="css/styles.css?v=13.3">
   <!-- High-Performance Spreadsheet Engines (Local for 100% Offline & Private Repo Support) -->
   <script src="libs/exceljs.min.js?v=3.0"></script>
   <script src="libs/FileSaver.min.js?v=3.0"></script>
@@ -253,9 +253,9 @@
 
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
               <button class="btn btn-secondary" onclick="App.openSectionModal()" style="background: #fef3c7; color: #92400e; border-color: #fde68a; font-weight: 600;">➕ Add Section</button>
-              <button class="btn btn-secondary" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
+              <button class="btn btn-secondary admin-only" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
               <button class="btn btn-secondary" onclick="App.openSheetView()" style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd; font-weight: 600;">📑 View Excel Sheet</button>
-              <button class="btn btn-secondary" onclick="window.App.restoreExactExcelSheetData()" title="Reset database to exact Shinex records">📋 Load Exact Excel Data</button>
+              <button class="btn btn-secondary admin-only" onclick="window.App.restoreExactExcelSheetData()" title="Reset database to exact Shinex records">📋 Load Exact Excel Data</button>
               <button class="btn btn-secondary" onclick="window.App.refreshData()">🔄 Refresh</button>
               <button id="btnTabAddTransport" class="btn btn-primary" onclick="window.TransportModule ? window.TransportModule.openAddModal() : TransportModule.openAddModal()">➕ Add Transport Record</button>
             </div>
@@ -315,7 +315,7 @@
 
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
               <button id="btnTabAddSection" class="btn btn-secondary" onclick="window.App ? window.App.openSectionModal() : App.openSectionModal()" style="background: #fef3c7; color: #92400e; border-color: #fde68a; font-weight: 600;">➕ Add Section</button>
-              <button class="btn btn-secondary" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
+              <button class="btn btn-secondary admin-only" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
               <button id="btnTabAddAdvance" class="btn btn-primary" onclick="window.AdvancesModule ? window.AdvancesModule.openAddModal() : AdvancesModule.openAddModal()">➕ Record New Advance</button>
             </div>
           </div>
@@ -368,7 +368,7 @@
               <button id="btnSheetAddTransport" class="btn btn-sm btn-primary" onclick="window.TransportModule ? window.TransportModule.openAddModal() : TransportModule.openAddModal()">➕ Add Transport</button>
               <button id="btnSheetAddAdvance" class="btn btn-sm btn-secondary" onclick="window.AdvancesModule ? window.AdvancesModule.openAddModal() : AdvancesModule.openAddModal()" style="background: #f0fdf4; color: #166534; border-color: #bbf7d0; font-weight: 600;">➕ Record Advance</button>
               <button id="btnAddSectionSheet" class="btn btn-sm btn-secondary" onclick="window.App ? window.App.openSectionModal() : App.openSectionModal()" style="font-weight: 600; background: #fef3c7; color: #92400e; border-color: #fde68a;" title="Create Section 3 or next sequence">➕ Add Section</button>
-              <button id="btnManageSections" class="btn btn-sm btn-secondary" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
+              <button id="btnManageSections" class="btn btn-sm btn-secondary admin-only" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
             </div>
 
             <!-- Zoom Controls -->
@@ -854,14 +854,14 @@
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Application Scripts with Cache Busters -->
-  <script src="js/auth.js?v=13.2"></script>
-  <script src="js/api.js?v=13.2"></script>
-  <script src="js/transport.js?v=13.2"></script>
-  <script src="js/advances.js?v=13.2"></script>
-  <script src="js/excel.js?v=13.2"></script>
-  <script src="js/sheetview.js?v=13.2"></script>
-  <script src="js/backup.js?v=13.2"></script>
-  <script src="js/app.js?v=13.2"></script>
+  <script src="js/auth.js?v=13.3"></script>
+  <script src="js/api.js?v=13.3"></script>
+  <script src="js/transport.js?v=13.3"></script>
+  <script src="js/advances.js?v=13.3"></script>
+  <script src="js/excel.js?v=13.3"></script>
+  <script src="js/sheetview.js?v=13.3"></script>
+  <script src="js/backup.js?v=13.3"></script>
+  <script src="js/app.js?v=13.3"></script>
 </body>
 </html>
 
