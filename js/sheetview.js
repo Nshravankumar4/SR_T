@@ -306,7 +306,7 @@ const SheetViewModule = {
         <!-- Section Header Bar with Admin Controls -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; background: #e0f2fe; padding: 6px 12px; border-radius: 6px; border: 1px solid #bae6fd;">
           <div style="font-weight: 700; color: #0369a1; font-size: 0.95rem;">
-            📑 ${window.escapeHtml(section.name)}: ${window.escapeHtml(section.title || (section.isArchive ? 'Archive' : 'Active Ledger'))}
+            📑 ${window.escapeHtml(section.name)}: ${window.escapeHtml(window.getSectionLabel(section, 'Active Ledger'))}
           </div>
           <div style="display: flex; gap: 0.5rem; align-items: center;">
             <div style="background: #ffff00; border: 1px solid #000; padding: 3px 12px; font-weight: 600; font-size: 0.82rem;">

@@ -19,7 +19,7 @@ const TransportModule = {
     let opts = '<option value="ALL">📋 All Sections (Complete 2026-2027)</option>';
     sections.forEach(s => {
       const isAct = !s.isArchive;
-      opts += `<option value="${s.name}">${isAct ? '🟢' : '📁'} ${s.name}: ${s.title || (isAct ? 'Active' : 'Archive')}</option>`;
+      opts += `<option value="${s.name}">${isAct ? '🟢' : '📁'} ${s.name}: ${window.escapeHtml(window.getSectionLabel(s))}</option>`;
     });
     filterEl.innerHTML = opts;
     if (currentVal && Array.from(filterEl.options).some(o => o.value === currentVal)) {
@@ -165,7 +165,7 @@ const TransportModule = {
 
     secSelect.innerHTML = sections.map(s => `
       <option value="${s.name}" ${s.name.toLowerCase() === target.toLowerCase() ? 'selected' : ''}>
-        ${s.name} (${s.title || (s.isArchive ? 'Archive' : 'Active')})
+        ${s.name} (${window.escapeHtml(window.getSectionLabel(s))})
       </option>
     `).join('');
   },

@@ -161,17 +161,30 @@ never the word "Paid". Fully-paid cells keep their green highlight. The word sur
 | `netOutstanding` | `totalPayable − advSum` |
 | `latestDate` | newest trip date in the section |
 
-### Failed amount (export only)
+### Display-only derivations
+
+Nothing below is stored; it exists so the sheet, the table and the downloaded workbook agree.
+
+**Downloaded sheet:**
 
 ```text
-failed if note/status contains any of:
-  fail · cancel · shortage · returned · rejected · lost
-
-failedAmount = max(0, toPay − paidAmount)   when failed, else 0
-sectionFailed = Σ failedAmount               (shown in the export total row)
+ToPay-paid value = paidAmount     (the money, never the word "Paid")
+ToPay-Balc value = balance        (a real 0 is printed, not left blank)
+a row shows paid + balance whenever toPay > 0
+total row = Σ of each money column, highlighted yellow
 ```
 
-Display-only. It never changes `balance`, `status` or anything written back to Sheets.
+**Note cell colour** (identical to the on-screen view):
+
+| Note contains | Fill | Text |
+| :--- | :--- | :--- |
+| `shortage`, `damage` | pink `FFC7CE` | dark red `9C0006` |
+| `u&s`, `truck place` | cyan `44B3E1` | white |
+| any other remark | yellow `FFFF00` | black |
+| empty | none | — |
+
+A fully-paid trip keeps its green `C6EFCE` paid cell; an outstanding balance is bold red text.
+None of this changes `balance`, `status` or anything written back to Sheets.
 
 ---
 

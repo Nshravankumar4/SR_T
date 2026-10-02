@@ -889,6 +889,77 @@ window.parseDateToTimestamp = function(dStr) {
   return isNaN(parsed) ? 0 : parsed;
 };
 
+// Auto section period label.
+//
+// Only titles the app generated itself (those starting with "NEW") are recomputed;
+// a title typed by hand in Manage Sections is always preserved.
+//
+//	Section 2 with trips from August, viewed in October
+//	  → "NEW August – October 2026"
+//	New empty section created in October
+//	  → "NEW October 2026"
+//
+// The END month is always the CURRENT month, so the ledger label keeps pace with
+// today's date without anyone editing anything.
+window.getSectionDisplayTitle = function(section) {
+  if (!section) return '';
+  const stored = String(section.title || '').trim();
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+                  'August', 'September', 'October', 'November', 'December'];
+
+  // Manual / archive titles are never touched (e.g. "April 2026 to August 2026")
+  if (!/^new\b/i.test(stored)) return stored;
+
+  const name = section.name;
+  const trips = (window.App && window.App.transportRecords) || [];
+  const advances = (window.App && window.App.advanceRecords) || [];
+
+  const stamps = [];
+  trips.forEach(r => {
+    if (window.getTripSection(r) === name) {
+      const t = window.parseDateToTimestamp(r.date);
+      if (t) stamps.push(t);
+    }
+  });
+  advances.forEach(a => {
+    if (window.getAdvanceSection(a) === name) {
+      const t = window.parseDateToTimestamp(a.date);
+      if (t) stamps.push(t);
+    }
+  });
+
+  const now = new Date();
+  const endM = now.getMonth();
+  const endY = now.getFullYear();
+
+  let startM = endM;
+  let startY = endY;
+  if (stamps.length) {
+    const oldest = new Date(Math.min.apply(null, stamps));
+    startM = oldest.getMonth();
+    startY = oldest.getFullYear();
+  }
+
+  let period;
+  if (startY === endY) {
+    period = (startM === endM)
+      ? `${MONTHS[startM]} ${endY}`
+      : `${MONTHS[startM]} – ${MONTHS[endM]} ${endY}`;
+  } else {
+    period = `${MONTHS[startM]} ${startY} – ${MONTHS[endM]} ${endY}`;
+  }
+
+  return `NEW ${period}`;
+};
+
+// Convenience wrapper: the auto label, or a sensible fallback when there is none.
+window.getSectionLabel = function(section, fallback = 'Active Period') {
+  const label = window.getSectionDisplayTitle(section);
+  if (label) return label;
+  if (section && section.isArchive) return 'Archive';
+  return fallback;
+};
+
 window.getNoteStyle = function(note) {
   if (!note) return '';
   const s = String(note).toLowerCase().trim();

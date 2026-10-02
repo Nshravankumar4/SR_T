@@ -216,15 +216,19 @@ ExcelModule.exportToExcel(transport, advances, openingBalance, sectionFilter)
                                      (used by the backup module)
 ```
 
-Amount helpers live on `ExcelModule`: `num()`, `isFullyPaid()`, `paidAmountOf()`, `failedAmountOf()`.
-They only **read** records, so the exporter can never alter data.
+Amount helpers live on `ExcelModule`: `num()`, `isFullyPaid()`, `paidAmountOf()`, plus
+`noteStyleFor()` / `applyNoteStyle()` which reproduce the on-screen Note colours. They only **read**
+records, so the exporter can never alter data.
+
+Row rules: a trip with `toPay > 0` always prints its paid amount **and** its balance (a real `0`
+included), so `42,000 − 42,000 = 0` is visible. Rows with no ToPay stay blank.
 
 Column layout per block:
 
-| Block | Amount | ToPay | Paid | Balance | Note | Failed |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| Section 1 | 11 | 12 | 13 | 14 | 15 | 16 |
-| Later sections / single section | 10 | 11 | 12 | 13 | 14 | 15 |
+| Block | Amount | ToPay | Paid | Balance | Note |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| Section 1 | 11 | 12 | 13 | 14 | 15 |
+| Later sections / single section | 10 | 11 | 12 | 13 | 14 |
 
 ---
 

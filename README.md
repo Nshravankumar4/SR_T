@@ -197,17 +197,18 @@ The dashboard title is always the **last trip date of the active section**, e.g.
 `01-10-2026 Net Outstanding`. If an advance is dated *later* than the last trip, it is shown
 alongside as a secondary note (`01-10-2026 • adv 29-09-2026`) rather than replacing the trip date.
 
-### Failed amount (export only)
+### What the downloaded sheet shows
 
-A trip counts as *failed* when its Note or Status contains
-`fail`, `cancel`, `shortage`, `returned`, `rejected` or `lost`.
+| Column | Rule |
+| :--- | :--- |
+| Amount | `Σ amount`, freight billed |
+| ToPay | `Σ toPay` |
+| **ToPay-paid** | `Σ paid` — the money actually received, **never the word "Paid"** |
+| ToPay-Balc | `Σ balance` |
+| Note | Yellow for any remark, pink for `shortage`/`damage`, cyan for `u&s`/`truck place` — identical to the on-screen view |
 
-```text
-Failed Amount = max(0, ToPay − paid amount)   for failed trips, 0 otherwise
-```
-
-This is a **display-only** figure added in the exported workbook; it never changes a balance or any
-stored record. On the current data it flags LR 185 (`29 bags shortage`) at ₹1,21,500.
+A trip that has a ToPay always shows **all three** numbers, including a genuine `0` balance, so
+`42,000 − 42,000 = 0` is visible instead of a blank cell. Rows with no ToPay stay blank.
 
 ---
 
@@ -282,14 +283,15 @@ Downloaded workbooks are produced with **ExcelJS** (bundled locally in `libs/`) 
   Section 2, *Full Sheet* exports everything.
 * Three writers produce the layouts: Section 1 (canonical Shinex layout), the "later sections"
   blocks, and `writeSingleGenericSection()` for a single-section export.
-* Every section block ends with an **auto-sum total row** covering Amount, ToPay, Paid, Balance and
-  Failed.
+* Every section block ends with an **auto-sum total row** covering Amount, ToPay, **ToPay-paid** and
+  ToPay-Balc — all four money columns are summed and highlighted yellow.
 * Columns are auto-fitted character by character (Excel's `Alt + H + O + I`), so no `###` or
   truncated headings.
 * Dates are always `DD-MM-YYYY`.
 * **Paid** is written as a number (green fill when fully paid); the word "Paid" never appears in the
-  workbook.
-* **Failed Amt.** column, shaded red when non-zero.
+  workbook, and a `0` balance is printed rather than left blank.
+* **Note colours match the on-screen sheet view exactly** — bright yellow for any remark, pink for
+  `shortage`/`damage`, cyan for `u&s`/`truck place`.
 
 **Import** accepts a `.xlsx` whose **first sheet** has these headers (case as shown, blanks allowed):
 
@@ -428,7 +430,7 @@ Local storage keys used by the app:
 | `shinex_backup_snapshots_v1` | device-local snapshots |
 | `shinex_sections_dirty` | set while local section edits await push |
 
-Script and stylesheet URLs carry a cache buster (`?v=13.6`). **Bump it after every deploy** or
+Script and stylesheet URLs carry a cache buster (`?v=13.7`). **Bump it after every deploy** or
 browsers may keep serving an old file.
 
 ---
@@ -468,7 +470,7 @@ Full checklists and troubleshooting are in [`docs/DEPLOYMENT.md`](docs/DEPLOYMEN
 | Everything looks local/stale | Web app access is `Only myself` | Deploy with **Anyone**, then *Test Cloud Connection* |
 | `Failed to fetch` / CORS error | Wrong web app URL, or preflight triggered | Use the full `/exec` URL; never send `application/json` |
 | Dates show as `Mon Apr 20 2026 …` | Raw sheet date leaked through | Already fixed by `formatSheetDate()` + `parseLegacyDateString()`; redeploy the backend |
-| Export shows "Paid" text | Stale cached `excel.js` | Bump cache busters and hard-refresh |
+| Export shows "Paid" text, or a missing total | Stale cached `excel.js` | Bump cache busters and hard-refresh |
 | Delete button missing | You are signed in as Rudra | Expected — Admin only |
 | Changes vanish after reload | Cloud unreachable, working from cache | Check `⚡ Test Cloud Connection` in Settings |
 | Extra junk trip row appears | Old build without the empty-form guard | Redeploy; the current build blocks empty submits |

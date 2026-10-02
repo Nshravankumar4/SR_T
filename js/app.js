@@ -471,7 +471,7 @@ window.App = {
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.85rem;">
                   <div>
                     <h4 style="color: var(--primary); font-size: 1.05rem; margin-bottom: 2px;">${sec.name} Reconciliation</h4>
-                    <div style="font-size: 0.8rem; color: var(--text-muted);">${sec.title || (isS1 ? 'April – August 2026' : 'Active Period')}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">${window.escapeHtml(window.getSectionLabel(sec, isS1 ? 'April – August 2026' : 'Active Period'))}</div>
                   </div>
                   <span class="badge ${badgeClass}">${badgeText}</span>
                 </div>
@@ -528,10 +528,12 @@ window.App = {
     }
     const sections = ApiService.getSections();
     const nextNum = sections.length + 1;
+    const newName = `Section ${nextNum}`;
     const nameInput = document.getElementById('newSectionName');
-    if (nameInput) nameInput.value = `Section ${nextNum}`;
+    if (nameInput) nameInput.value = newName;
     const titleInput = document.getElementById('newSectionTitle');
-    if (titleInput) titleInput.value = `NEW`;
+    // Pre-fill the period from today's month; it then auto-extends month by month
+    if (titleInput) titleInput.value = window.getSectionDisplayTitle({ name: newName, title: 'NEW' }) || 'NEW';
     document.getElementById('sectionModal')?.classList.add('active');
   },
 
@@ -600,7 +602,7 @@ window.App = {
               <span class="badge ${s.isArchive ? 'badge-secondary' : 'badge-success'}" style="font-size: 0.72rem;">${s.isArchive ? 'Archive' : 'Active'}</span>
             </div>
             <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
-              ${window.escapeHtml(s.title || 'Standard Section')} • ${tripCount} trips, ${advCount} advances
+              ${window.escapeHtml(window.getSectionLabel(s, 'Standard Section'))} • ${tripCount} trips, ${advCount} advances
             </div>
           </div>
           <div style="display: flex; gap: 0.4rem;">
