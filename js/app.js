@@ -276,6 +276,8 @@ window.App = {
     if (apiUrlInput) apiUrlInput.value = ApiService.getApiUrl();
     const openBalInput = document.getElementById('settingsOpeningBal');
     if (openBalInput) openBalInput.value = this.openingBalance;
+    const secretInput = document.getElementById('settingsApiSecret');
+    if (secretInput) secretInput.value = ApiService.getApiSecret ? ApiService.getApiSecret() : '';
   },
 
   async testCloudConnectionUI() {
@@ -860,9 +862,11 @@ window.App = {
     document.getElementById('saveSettingsBtn')?.addEventListener('click', () => {
       const url = document.getElementById('settingsApiUrl').value.trim();
       const openBal = Number(document.getElementById('settingsOpeningBal').value) || 0;
+      const secret = document.getElementById('settingsApiSecret')?.value || '';
       ApiService.setApiUrl(url);
       ApiService.setOpeningBalance(openBal);
-      this.showToast("Settings updated successfully!", "success");
+      if (ApiService.setApiSecret) ApiService.setApiSecret(secret);
+      this.showToast(secret.trim() ? 'Settings saved — API secret is now active.' : 'Settings updated successfully!', "success");
       this.refreshData();
     });
 

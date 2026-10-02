@@ -160,11 +160,54 @@ function sessionInvalidResponse() {
 }
 
 // =========================================================================
+// OPTIONAL SHARED API SECRET
+// =========================================================================
+//
+// The web app URL is the only thing protecting the sheet: anyone who has it can
+// read and write the ledger without logging in. Adding a shared secret closes
+// that door.
+//
+// HOW TO ENABLE (in this exact order, to avoid locking yourself out):
+//   1. Apps Script -> Project Settings -> Script Properties -> add
+//        Key: API_SECRET      Value: <any long random string>
+//   2. Deploy -> Manage deployments -> pencil -> Version: New version -> Deploy
+//   3. In the app: Settings & API -> "API Secret" -> paste the SAME string -> Save
+//
+// SAFETY: while the API_SECRET property does not exist this function returns
+// null and the API behaves exactly as it does today. Nothing breaks until you
+// explicitly add the property. To disable protection again, delete the property
+// and redeploy a new version.
+function getApiSecret() {
+  return String(PropertiesService.getScriptProperties().getProperty('API_SECRET') || '').trim();
+}
+
+// Returns null when the request may proceed, or an error response to send back.
+function checkApiSecret(params) {
+  var expected = getApiSecret();
+  if (!expected) return null; // protection not enabled
+
+  var provided = String((params && params.secret) || '').trim();
+  if (provided !== expected) {
+    return jsonResponse({
+      success: false,
+      error: 'API_SECRET_INVALID',
+      message: 'API secret is missing or incorrect. Open Settings & API and enter the API secret.'
+    });
+  }
+  return null;
+}
+
+// =========================================================================
 // 1. GET REQUEST HANDLER (LIGHTWEIGHT VERSION POLLING & FULL DATASET RETRIEVAL)
 // =========================================================================
 
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) ? e.parameter.action : 'getAll';
+
+  // Optional shared secret gate (no-op until the API_SECRET property is set)
+  var getSecretErr = checkApiSecret((e && e.parameter) ? e.parameter : {});
+  if (getSecretErr) return getSecretErr;
+
   var ss = getSpreadsheet();
 
   try {
@@ -272,6 +315,11 @@ function doPost(e) {
     var rawText = (e && e.postData && e.postData.contents) ? e.postData.contents : '{}';
     var envelope = JSON.parse(rawText);
     var action = envelope.action;
+
+    // Optional shared secret gate (no-op until the API_SECRET property is set)
+    var postSecretErr = checkApiSecret(envelope);
+    if (postSecretErr) return postSecretErr;
+
     var user = String(envelope.user || envelope.username || 'System').trim();
     var role = String(envelope.role || 'Guest').trim();
     var payload = envelope.data || envelope;

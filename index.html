@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Transport Management & Ledger System</title>
-  <link rel="stylesheet" href="css/styles.css?v=13.8">
+  <link rel="stylesheet" href="css/styles.css?v=13.9">
   <!-- High-Performance Spreadsheet Engines (Local for 100% Offline & Private Repo Support) -->
   <script src="libs/exceljs.min.js?v=3.0"></script>
   <script src="libs/FileSaver.min.js?v=3.0"></script>
@@ -539,6 +539,16 @@
           </div>
 
           <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label for="settingsApiSecret">🔐 API Secret (optional security lock)</label>
+            <input type="password" id="settingsApiSecret" class="form-control" autocomplete="off" placeholder="Leave blank unless the backend has an API_SECRET property">
+            <small>
+              Anyone who knows the web app URL can read and write the ledger. Paste here the
+              <strong>same value</strong> as the <code>API_SECRET</code> Script Property in Apps Script
+              (Project Settings → Script Properties). Leave blank to keep the API open.
+            </small>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1.5rem;">
             <label for="settingsOpeningBal">March 2026 Opening Balance (₹)</label>
             <input type="number" id="settingsOpeningBal" class="form-control" placeholder="120000">
             <small>Carry forward balance from previous financial year.</small>
@@ -854,14 +864,14 @@
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Application Scripts with Cache Busters -->
-  <script src="js/auth.js?v=13.8"></script>
-  <script src="js/api.js?v=13.8"></script>
-  <script src="js/transport.js?v=13.8"></script>
-  <script src="js/advances.js?v=13.8"></script>
-  <script src="js/excel.js?v=13.8"></script>
-  <script src="js/sheetview.js?v=13.8"></script>
-  <script src="js/backup.js?v=13.8"></script>
-  <script src="js/app.js?v=13.8"></script>
+  <script src="js/auth.js?v=13.9"></script>
+  <script src="js/api.js?v=13.9"></script>
+  <script src="js/transport.js?v=13.9"></script>
+  <script src="js/advances.js?v=13.9"></script>
+  <script src="js/excel.js?v=13.9"></script>
+  <script src="js/sheetview.js?v=13.9"></script>
+  <script src="js/backup.js?v=13.9"></script>
+  <script src="js/app.js?v=13.9"></script>
 </body>
 </html>
 

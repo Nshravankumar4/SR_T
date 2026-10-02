@@ -1117,13 +1117,39 @@ const API_CONFIG = {
 };
 
 const ApiService = {
+  // --- Optional shared API secret -------------------------------------------
+  // Lives only in this browser's localStorage. The backend rejects every request
+  // when its API_SECRET Script Property is set and this value does not match.
+  // While the backend property is empty this is ignored, so nothing breaks.
+  getApiSecret() {
+    return localStorage.getItem('shinex_api_secret') || '';
+  },
+
+  setApiSecret(secret) {
+    const value = String(secret || '').trim();
+    if (value) {
+      localStorage.setItem('shinex_api_secret', value);
+    } else {
+      localStorage.removeItem('shinex_api_secret');
+    }
+    return value;
+  },
+
+  // Appends ?secret=… to a GET URL when a secret is configured
+  withSecret(url) {
+    const secret = this.getApiSecret();
+    if (!secret) return url;
+    return `${url}${url.includes('?') ? '&' : '?'}secret=${encodeURIComponent(secret)}`;
+  },
+
   // Current device session identity + server-issued token for authorized envelopes
   getSessionEnvelope() {
     const u = typeof AuthService !== 'undefined' ? AuthService.getCurrentUser() : null;
     return {
       user: u ? u.name : '',
       role: u ? u.role : '',
-      token: u ? u.token : ''
+      token: u ? u.token : '',
+      secret: this.getApiSecret()
     };
   },
 
@@ -1135,7 +1161,7 @@ const ApiService = {
     const url = this.getApiUrl();
     if (!url) return [];
     const sep = url.includes('?') ? '&' : '?';
-    const reqUrl = `${url}${sep}action=listBackups&user=${encodeURIComponent(u.name || '')}&token=${encodeURIComponent(u.token || '')}&_=${Date.now()}`;
+    const reqUrl = this.withSecret(`${url}${sep}action=listBackups&user=${encodeURIComponent(u.name || '')}&token=${encodeURIComponent(u.token || '')}&_=${Date.now()}`);
     const response = await fetch(reqUrl, { method: 'GET', redirect: 'follow' });
     const text = await response.text();
     const data = JSON.parse(text);
@@ -1469,7 +1495,7 @@ const ApiService = {
     const url = this.getApiUrl();
     if (url) {
       try {
-        const response = await fetch(`${url}?action=getAll`, { method: 'GET' });
+        const response = await fetch(this.withSecret(`${url}?action=getAll`), { method: 'GET' });
         const text = await response.text();
         let result = null;
         try {
@@ -1479,6 +1505,11 @@ const ApiService = {
             console.warn("⚠️ Google Apps Script requires deployment permission set to 'Anyone'.");
             if (window.App) window.App.cloudSyncWarning = "API Permission: Set to 'Anyone' in Apps Script";
           }
+        }
+
+        if (result && result.error === 'API_SECRET_INVALID') {
+          console.warn('⚠️ Backend rejected the API secret.');
+          if (window.App) window.App.cloudSyncWarning = 'API secret missing or incorrect — open Settings & API';
         }
 
         if (result && result.success && result.data) {
@@ -1573,13 +1604,13 @@ const ApiService = {
       return { success: false, message: "No Google Apps Script Web App URL provided." };
     }
     try {
-      const response = await fetch(`${url}?action=getAll`, { method: 'GET' });
-      const text = await response.text();
-      let data = null;
-      try {
-        data = JSON.parse(text);
-      } catch (jsonErr) {
-        if (text.includes('accounts.google.com') || text.includes('ServiceLogin')) {
+    const response = await fetch(this.withSecret(`${url}?action=getAll`), { method: 'GET' });
+    const text = await response.text();
+    let data = null;
+    try {
+      data = JSON.parse(text);
+    } catch (jsonErr) {
+      if (text.includes('accounts.google.com') || text.includes('ServiceLogin')) {
           return {
             success: false,
             isAuthRedirect: true,
@@ -1656,7 +1687,7 @@ const ApiService = {
     const url = this.getApiUrl();
     if (!url) return null;
     try {
-      const response = await fetch(`${url}?action=getVersion`, {
+      const response = await fetch(this.withSecret(`${url}?action=getVersion`), {
         method: 'GET',
         headers: { 'Accept': 'application/json' }
       });
