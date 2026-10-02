@@ -50,6 +50,44 @@ function getSpreadsheet() {
 var CLIENT_PASSWORD_SALT = 'SHINEX_SEED_SECURE_SALT_2026_@#!';
 
 // Parses '55,000' / '₹1,20,000' / '1,20,000' / 55000 / '' safely to a number.
+/**
+ * Google Sheets hands real Date cells back as JS Date objects. String(Date) yields
+ * "Mon Apr 20 2026 00:00:00 GMT+0530 (India Standard Time)", which leaked into the app,
+ * the Live Sheet view and downloaded Excel files (and is unparseable on iOS Safari).
+ * Always emit plain DD-MM-YYYY text.
+ */
+function formatSheetDate(value) {
+  if (value === null || value === undefined || value === '') return '';
+
+  if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime())) {
+    return ('0' + value.getDate()).slice(-2) + '-' + ('0' + (value.getMonth() + 1)).slice(-2) + '-' + value.getFullYear();
+  }
+
+  var s = String(value).trim();
+  if (!s) return '';
+
+  var mIn = s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})/);
+  if (mIn) return ('0' + mIn[1]).slice(-2) + '-' + ('0' + mIn[2]).slice(-2) + '-' + mIn[3];
+
+  var mIso = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+  if (mIso) return ('0' + mIso[3]).slice(-2) + '-' + ('0' + mIso[2]).slice(-2) + '-' + mIso[1];
+
+  // "Mon Apr 20 2026 00:00:00 GMT+0530 (India Standard Time)"
+  var mWords = s.match(/([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2})\s+(\d{4})/);
+  if (mWords) {
+    var months = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+    var mi = months[mWords[1].toLowerCase()];
+    if (mi) return ('0' + mWords[2]).slice(-2) + '-' + ('0' + mi).slice(-2) + '-' + mWords[3];
+  }
+
+  var parsed = new Date(s);
+  if (!isNaN(parsed.getTime())) {
+    return ('0' + parsed.getDate()).slice(-2) + '-' + ('0' + (parsed.getMonth() + 1)).slice(-2) + '-' + parsed.getFullYear();
+  }
+
+  return s;
+}
+
 function parseAmount(value) {
   if (typeof value === 'number') return isFinite(value) ? value : 0;
   var cleaned = String(value === null || value === undefined ? '' : value).replace(/[^0-9.\-]/g, '');
@@ -1034,7 +1072,7 @@ function getTransportRows(sheet) {
       slNo: Number(d[1]) || i,
       lrNo: String(d[2] || '').trim(),
       dcNo: String(d[3] || '').trim(),
-      date: String(d[4] || '').trim(),
+      date: formatSheetDate(d[4]),
       vehicleNumber: String(d[5] || '').toUpperCase().trim(),
       fromCity: String(d[6] || '').trim(),
       toCity: String(d[7] || '').trim(),
@@ -1065,7 +1103,7 @@ function getAdvanceRows(sheet) {
     if (!d[0]) continue;
     rows.push({
       id: String(d[0]).trim(),
-      date: String(d[1] || '').trim(),
+      date: formatSheetDate(d[1]),
       amount: parseAmount(d[2]),
       description: String(d[3] || 'Advance Payment').trim(),
       note: String(d[3] || '').trim(),

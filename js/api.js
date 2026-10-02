@@ -816,6 +816,15 @@ window.getLatestTripDate = function(trips, defaultDate = '23-09-2026') {
       month = mIn[2].padStart(2, '0');
       year = mIn[3];
     } else {
+      // Sheets Date cells stringify as "Mon Apr 20 2026 00:00:00 GMT+0530 (...)".
+      // Parse explicitly — iOS Safari cannot Date.parse() that form.
+      const legacy = (typeof window.parseLegacyDateString === 'function') ? window.parseLegacyDateString(s) : null;
+      if (legacy) {
+        const dLegacy = new Date(Number(legacy.year), Number(legacy.month) - 1, Number(legacy.day));
+        if (!isNaN(dLegacy.getTime())) {
+          return { ts: dLegacy.getTime(), str: `${legacy.day}-${legacy.month}-${legacy.year}` };
+        }
+      }
       const parsed = Date.parse(s);
       if (!isNaN(parsed)) {
         const dObj = new Date(parsed);
@@ -839,6 +848,23 @@ window.getLatestTripDate = function(trips, defaultDate = '23-09-2026') {
   return latest.str || defaultDate;
 };
 
+/**
+ * Parses the legacy Google-Sheets Date.toString() form, e.g.
+ * "Mon Apr 20 2026 00:00:00 GMT+0530 (India Standard Time)".
+ * Date.parse() handles this on Chrome but returns NaN on iOS/Safari,
+ * which previously leaked raw garbage into the table, sheet view and exports.
+ */
+window.parseLegacyDateString = function(s) {
+  if (!s) return null;
+  // Sheets format: "Mon Apr 20 2026 00:00:00 GMT+0530 (...)" -> month, day, year
+  const m = String(s).match(/([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2})\s+(\d{4})/);
+  if (!m) return null;
+  const months = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+  const mi = months[m[1].toLowerCase()];
+  if (!mi) return null;
+  return { day: String(m[2]).padStart(2, '0'), month: String(mi).padStart(2, '0'), year: m[3] };
+};
+
 window.parseDateToTimestamp = function(dStr) {
   if (!dStr) return 0;
   const s = String(dStr).trim().replace(/--+/g, '-').replace(/\/\/+/g, '/');
@@ -850,6 +876,13 @@ window.parseDateToTimestamp = function(dStr) {
   const mIn = s.match(/^(\d{1,2})[-/. ](\d{1,2})[-/. ](\d{4})/);
   if (mIn) {
     const d = new Date(Number(mIn[3]), Number(mIn[2]) - 1, Number(mIn[1]));
+    return isNaN(d.getTime()) ? 0 : d.getTime();
+  }
+  // Google Sheets Date objects arrive as "Mon Apr 20 2026 ..." — parse explicitly
+  // (iOS/Safari cannot parse the trailing "GMT+0530 (India Standard Time)" part).
+  const legacy = window.parseLegacyDateString(s);
+  if (legacy) {
+    const d = new Date(Number(legacy.year), Number(legacy.month) - 1, Number(legacy.day));
     return isNaN(d.getTime()) ? 0 : d.getTime();
   }
   const parsed = Date.parse(s);
@@ -966,6 +999,11 @@ window.formatDateForDisplay = function(dStr) {
     const day = mIso[3].padStart(2, '0');
     return `${day}-${month}-${year}`;
   }
+
+  // "Mon Apr 20 2026 00:00:00 GMT+0530 (India Standard Time)" — parse explicitly
+  // so iPhone/iPad (Safari) shows DD-MM-YYYY instead of the raw string.
+  const legacy = (typeof window.parseLegacyDateString === 'function') ? window.parseLegacyDateString(s) : null;
+  if (legacy) return `${legacy.day}-${legacy.month}-${legacy.year}`;
 
   const parsed = new Date(s);
   if (!isNaN(parsed.getTime())) {

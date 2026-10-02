@@ -254,10 +254,12 @@ const SheetViewModule = {
       const amt = Number(r.amount) || 0;
       const noteStyle = (typeof window.getNoteStyle === 'function') ? window.getNoteStyle(r.note) : '';
 
-      const isPaid = (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid');
-      const paidStyle = isPaid ? 'background: #c6efce; color: #006100; font-weight: bold;' : '';
+      const toPayVal = Number(r.toPay) || 0;
       const toPayBal = Number(r.balance) || 0;
+      const isPaid = (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid' || r.status === 'Paid' || (toPayVal > 0 && toPayBal === 0 && (r.status === 'Paid' || Number(r.paid) >= toPayVal)));
+      const paidStyle = isPaid ? 'background: #c6efce; color: #006100; font-weight: bold;' : '';
       const balStyle = toPayBal > 0 ? 'color: #dc2626; font-weight: bold;' : '';
+      const paidDisplay = isPaid ? 'Paid' : (r.paid ? (typeof r.paid === 'number' ? r.paid.toLocaleString('en-IN') : r.paid) : '');
 
       rowsHtml += `
         <tr onclick="TransportModule.openEditModal('${window.escapeAttr(r.id)}')" style="cursor: pointer;" title="✏️ Click to edit trip (LR: ${window.escapeHtml(r.lrNo || r.id)})">
@@ -273,7 +275,7 @@ const SheetViewModule = {
           <td class="excel-cell center">${window.escapeHtml(r.mTax || '')}</td>
           <td class="excel-cell right font-mono">${amt > 0 ? amt.toLocaleString('en-IN') : ''}</td>
           <td class="excel-cell right font-mono">${r.toPay ? window.parseAmount(r.toPay).toLocaleString('en-IN') : ''}</td>
-          <td class="excel-cell center font-mono" style="${paidStyle}">${window.escapeHtml(r.paid || '')}</td>
+          <td class="excel-cell center font-mono" style="${paidStyle}">${window.escapeHtml(paidDisplay)}</td>
           <td class="excel-cell right font-mono" style="${balStyle}">${toPayBal > 0 ? toPayBal.toLocaleString('en-IN') : ''}</td>
           <td class="excel-cell left" style="${noteStyle}">${window.escapeHtml(r.note || '')}</td>
         </tr>
@@ -459,6 +461,10 @@ const SheetViewModule = {
       const noteStyle = (typeof window.getNoteStyle === 'function') ? window.getNoteStyle(r.note) : '';
       const balStyle = bal > 0 ? 'color: #dc2626 !important; font-weight: bold;' : '';
 
+      const isPaid = (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid' || r.status === 'Paid' || (toPay > 0 && bal === 0 && (r.status === 'Paid' || Number(r.paid) >= toPay)));
+      const paidStyle = isPaid ? 'background: #c6efce; color: #006100; font-weight: bold;' : '';
+      const paidDisplay = isPaid ? 'Paid' : (r.paid ? (typeof r.paid === 'number' ? r.paid.toLocaleString('en-IN') : r.paid) : '');
+
       rowsHtml += `
         <tr onclick="TransportModule.openEditModal('${window.escapeAttr(r.id)}')" style="cursor: pointer;" title="✏️ Click to edit trip (LR: ${window.escapeHtml(r.lrNo || r.id)})">
           <td class="excel-cell center excel-row-num">${5 + idx}</td>
@@ -473,7 +479,7 @@ const SheetViewModule = {
           <td class="excel-cell center">${window.escapeHtml(r.mTax || '')}</td>
           <td class="excel-cell right font-mono">${amt > 0 ? amt.toLocaleString('en-IN') : ''}</td>
           <td class="excel-cell right font-mono">${toPay > 0 ? toPay.toLocaleString('en-IN') : ''}</td>
-          <td class="excel-cell center" style="${paid === 'Paid' ? 'background: #c6efce; color: #006100; font-weight: bold;' : ''}">${window.escapeHtml(paid || '')}</td>
+          <td class="excel-cell center font-mono" style="${paidStyle}">${window.escapeHtml(paidDisplay)}</td>
           <td class="excel-cell right font-mono" style="${balStyle}">${bal > 0 ? bal.toLocaleString('en-IN') : ''}</td>
           <td class="excel-cell left" style="${noteStyle}">${window.escapeHtml(r.note || '')}</td>
         </tr>

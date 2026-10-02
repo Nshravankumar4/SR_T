@@ -107,12 +107,15 @@ const TransportModule = {
         else if (Number(r.amount) > 0 && Number(r.toPay) === 0) status = 'Billed';
         else status = 'Pending';
       }
+      if (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid') {
+        status = 'Paid';
+      }
       const badgeClass = status === 'Paid' ? 'badge-success' : (status === 'Partially Paid' ? 'badge-warning' : (status === 'Billed' ? 'badge-primary' : 'badge-danger'));
       const formattedAmount = (Number(r.amount) || 0).toLocaleString('en-IN');
       const formattedToPay = (Number(r.toPay) || 0).toLocaleString('en-IN');
       // paid is either a number or the literal string 'Paid' (fully settled trips).
       // Number('Paid') is NaN, which used to render as a misleading ₹0 in this column.
-      const isPaidFlag = (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid');
+      const isPaidFlag = (status === 'Paid' || r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid' || (Number(r.toPay) > 0 && Number(r.balance) === 0 && (r.status === 'Paid' || Number(r.paid) >= Number(r.toPay))));
       const paidNum = isPaidFlag ? (Number(r.toPay) || 0) : (Number(r.paid) || 0);
       const formattedPaid = isPaidFlag ? 'Paid' : paidNum.toLocaleString('en-IN');
       const formattedBalance = (Number(r.balance) || 0).toLocaleString('en-IN');

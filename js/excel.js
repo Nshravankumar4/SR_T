@@ -178,17 +178,20 @@ const ExcelModule = {
       s1TotalToPay += toPay;
       s1TotalBal += bal;
 
-      let paidVal = r.paid;
+      const isPaid = (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid' || r.status === 'Paid' || (toPay > 0 && bal === 0 && (r.status === 'Paid' || Number(r.paid) >= toPay)));
+      let paidVal = isPaid ? 'Paid' : r.paid;
       if (typeof paidVal === 'number' && paidVal > 0) {
         paidVal = (paidVal === toPay) ? 'Paid' : paidVal.toLocaleString('en-IN');
       }
+
+      const tripDateStr = r.date ? (window.formatDateForDisplay ? window.formatDateForDisplay(r.date) : r.date) : '';
 
       row.values = [
         r.slNo || (idx + 1),
         r.lrNo || '',
         '',
         r.dcNo || '',
-        r.date || '',
+        tripDateStr,
         r.vehicleNumber || '',
         r.fromCity || '',
         r.toCity || '',
@@ -220,9 +223,9 @@ const ExcelModule = {
         }
 
         // Paid cell green background
-        if (c === 13 && String(cell.value).toLowerCase() === 'paid') {
-          cell.fill = greenPaidFill;
-          cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+        if (c === 13 && (isPaid || String(cell.value).toLowerCase() === 'paid')) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC6EFCE' } };
+          cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF006100' } };
         }
 
         // Note highlights
@@ -264,14 +267,22 @@ const ExcelModule = {
     totalRow33.getCell(10).border = thinBorder;
     totalRow33.getCell(10).alignment = { horizontal: 'center', vertical: 'middle' };
 
-    totalRow33.getCell(11).value = s1TotalAmount;
-    totalRow33.getCell(11).fill = yellowFill;
-    totalRow33.getCell(11).font = boldBlack11;
-    totalRow33.getCell(11).border = thinBorder;
-    totalRow33.getCell(11).numFmt = '#,##,##0';
-    totalRow33.getCell(11).alignment = { horizontal: 'right', vertical: 'middle' };
+totalRow33.getCell(11).value = s1TotalAmount;
+totalRow33.getCell(11).fill = yellowFill;
+totalRow33.getCell(11).font = boldBlack11;
+totalRow33.getCell(11).border = thinBorder;
+totalRow33.getCell(11).numFmt = '#,##,##0';
+totalRow33.getCell(11).alignment = { horizontal: 'right', vertical: 'middle' };
 
-    totalRow33.getCell(14).value = s1TotalBal;
+// Auto-sum ToPay (column 12) — matches the on-screen Live Sheet total row
+totalRow33.getCell(12).value = s1TotalToPay;
+totalRow33.getCell(12).fill = yellowFill;
+totalRow33.getCell(12).font = boldBlack11;
+totalRow33.getCell(12).border = thinBorder;
+totalRow33.getCell(12).numFmt = '#,##,##0';
+totalRow33.getCell(12).alignment = { horizontal: 'right', vertical: 'middle' };
+
+totalRow33.getCell(14).value = s1TotalBal;
     totalRow33.getCell(14).fill = yellowFill;
     totalRow33.getCell(14).font = boldBlack11;
     totalRow33.getCell(14).border = thinBorder;
@@ -504,16 +515,19 @@ const ExcelModule = {
         const paid = Number(r.paid) || 0;
         const bal = Number(r.balance) || 0;
 
-        let paidVal = r.paid;
+        const isPaid = (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid' || r.status === 'Paid' || (toPay > 0 && bal === 0 && (r.status === 'Paid' || paid >= toPay)));
+        let paidVal = isPaid ? 'Paid' : r.paid;
         if (typeof paidVal === 'number' && paidVal > 0) {
           paidVal = (paidVal === toPay) ? 'Paid' : paidVal.toLocaleString('en-IN');
         }
+
+        const tripDateStr = r.date ? (window.formatDateForDisplay ? window.formatDateForDisplay(r.date) : r.date) : '';
 
         row.values = [
           r.slNo ? Number(r.slNo) : (idx + 1),
           r.lrNo || '',
           r.dcNo || '',
-          r.date || '',
+          tripDateStr,
           r.vehicleNumber || '',
           r.fromCity || '',
           r.toCity || '',
@@ -545,7 +559,7 @@ const ExcelModule = {
         }
 
         // Mirror the on-screen view: green "Paid" cell, red bold outstanding balance
-        const isPaidCell = (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid');
+        const isPaidCell = isPaid || (paidVal === 'Paid' || String(paidVal).toLowerCase() === 'paid');
         if (isPaidCell) {
           const paidCell = row.getCell(12);
           paidCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC6EFCE' } };
@@ -871,16 +885,19 @@ const ExcelModule = {
       const toPay = Number(r.toPay) || 0;
       const bal = Number(r.balance) || 0;
 
-      let paidVal = r.paid;
+      const isPaid = (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid' || r.status === 'Paid' || (toPay > 0 && bal === 0 && (r.status === 'Paid' || Number(r.paid) >= toPay)));
+      let paidVal = isPaid ? 'Paid' : r.paid;
       if (typeof paidVal === 'number' && paidVal > 0) {
         paidVal = (paidVal === toPay) ? 'Paid' : paidVal.toLocaleString('en-IN');
       }
+
+      const tripDateStr = r.date ? (window.formatDateForDisplay ? window.formatDateForDisplay(r.date) : r.date) : '';
 
       row.values = [
         r.slNo ? Number(r.slNo) : (idx + 1),
         r.lrNo || '',
         r.dcNo || '',
-        r.date || '',
+        tripDateStr,
         r.vehicleNumber || '',
         r.fromCity || '',
         r.toCity || '',
@@ -911,7 +928,7 @@ const ExcelModule = {
       }
 
       // Mirror the on-screen view: green "Paid" cell, red bold outstanding balance
-      const isPaidCell = (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid');
+      const isPaidCell = isPaid || (paidVal === 'Paid' || String(paidVal).toLowerCase() === 'paid');
       if (isPaidCell) {
         const paidCell = row.getCell(12);
         paidCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC6EFCE' } };
@@ -1139,7 +1156,7 @@ const ExcelModule = {
         "M/TAX": r.mTax || '',
         "Amount": Number(r.amount) || 0,
         "ToPay": Number(r.toPay) || 0,
-        "ToPay-paid": r.paid || '',
+        "ToPay-paid": (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid' || r.status === 'Paid' || (Number(r.toPay) > 0 && Number(r.balance) === 0)) ? 'Paid' : (r.paid || ''),
         "ToPay-Balc": Number(r.balance) || 0,
         "Note": r.note || ''
       })));
