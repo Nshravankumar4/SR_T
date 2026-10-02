@@ -1493,10 +1493,15 @@ const ApiService = {
   // Fetch all transport and advance records
   async fetchAll() {
     const url = this.getApiUrl();
-    if (url) {
+    this.cloudSyncWarning = null;
+    if (!url) {
+      throw new Error('Cloud database URL is not configured. Open Settings & API and paste the Apps Script Web App URL.');
+    }
+    {
+      let text = '';
       try {
         const response = await fetch(this.withSecret(`${url}?action=getAll`), { method: 'GET' });
-        const text = await response.text();
+        text = await response.text();
         let result = null;
         try {
           result = JSON.parse(text);
@@ -1509,7 +1514,7 @@ const ApiService = {
 
         if (result && result.error === 'API_SECRET_INVALID') {
           console.warn('⚠️ Backend rejected the API secret.');
-          if (window.App) window.App.cloudSyncWarning = 'API secret missing or incorrect — open Settings & API';
+          throw new Error('API secret is missing or incorrect — open Settings & API and re-enter it.');
         }
 
         if (result && result.success && result.data) {
@@ -1562,40 +1567,35 @@ const ApiService = {
             };
           }
         }
-      } catch (err) {
-        console.warn("Cloud fetch failed, using local storage fallback:", err);
-        if (window.App) {
-          window.App.cloudSyncWarning = "API Permission: Set to 'Anyone' in Apps Script";
+
+        if (result && result.success !== true) {
+          // Cloud answered, but with a failure (bad secret, server busy, etc.)
+          throw new Error(result.message || result.error || 'Google Sheets rejected the request.');
         }
+      } catch (err) {
+        console.warn("Cloud fetch failed:", err);
+        const raw = String(err.message || '');
+        const isNetworkError = /failed to fetch|networkerror|load failed|network request failed/i.test(raw);
+        throw new Error(isNetworkError || !raw ? this.describeCloudFailure(text) : raw);
       }
     }
 
-    // Local fallback
-    this.initLocalData();
-    let transport = [];
-    let advances = [];
-    try { transport = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyTransport) || '[]'); } catch(e) {}
-    try { advances = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyAdvances) || '[]'); } catch(e) {}
+    // CLOUD-ONLY: Google Sheets is the single source of truth. There is deliberately
+    // NO localStorage / browser-cache fallback here — if the cloud cannot be reached
+    // the app says so instead of quietly showing stale numbers from this device.
+    throw new Error(this.describeCloudFailure(''));
+  },
 
-    if (!transport || !Array.isArray(transport) || transport.length === 0) {
-      transport = REAL_SHINEX_TRANSPORT;
-      localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(REAL_SHINEX_TRANSPORT));
-    } else {
-      const deduped = this.deduplicateTransportRecords(transport);
-      if (deduped.length !== transport.length) {
-        transport = deduped;
-        localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(transport));
-      }
+  // Turns a failed cloud response into a message the user can act on
+  describeCloudFailure(responseText) {
+    if (responseText && (responseText.includes('accounts.google.com') || responseText.includes('ServiceLogin'))) {
+      return "Google redirected to a sign-in page. In Apps Script set 'Who has access' to Anyone, then redeploy.";
     }
-    if (!advances || !Array.isArray(advances) || advances.length === 0) {
-      advances = REAL_SHINEX_ADVANCES;
-      localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(REAL_SHINEX_ADVANCES));
+    if (!this.getApiUrl()) {
+      return 'Cloud database URL is not configured. Open Settings & API and paste the Apps Script Web App URL.';
     }
-
-    // Normalize local records exactly like cloud records (comma parsing, balance, status)
-    const cleanLocalT = transport.map(t => this.normalizeTransportRecord(t)).filter(Boolean);
-    const cleanLocalA = advances.map(a => this.normalizeAdvanceRecord(a)).filter(Boolean);
-    return { transport: cleanLocalT, advances: cleanLocalA, source: 'local' };
+    if (this.cloudSyncWarning) return this.cloudSyncWarning;
+    return 'Cannot reach the Google Sheets cloud database. Check your internet connection and try again.';
   },
 
   async testConnection(customUrl) {

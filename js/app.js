@@ -226,6 +226,7 @@ window.App = {
 
     try {
       const result = await ApiService.fetchAll();
+      this.hideCloudBlock();
       this.transportRecords = result.transport || [];
       this.advanceRecords = result.advances || [];
       this.openingBalance = ApiService.getOpeningBalance();
@@ -257,12 +258,13 @@ window.App = {
         if (banner) banner.style.display = 'block';
       } else {
         // Cloud reachable-but-not-returned (or no URL): never claim "Live Database"
-        this.updateCloudStatus('⚠ Cloud Unreachable • Local Cache', 'offline');
+        this.updateCloudStatus('☁ Cloud unreachable', 'offline');
         if (banner) banner.style.display = 'none';
       }
     } catch (err) {
       console.error("refreshData error:", err);
-      this.updateCloudStatus('⚠ Cloud Unreachable • Local Cache', 'offline');
+      this.showCloudBlock(err.message || 'Cannot reach the cloud database.');
+      this.updateCloudStatus('☁ Cloud unreachable', 'offline');
     } finally {
       this.isSyncing = false;
       if (this._refreshQueued) {
@@ -913,8 +915,34 @@ window.App = {
       this.refreshData();
     });
     window.addEventListener('offline', () => {
-      this.updateCloudStatus('Offline (Device Storage)', 'offline');
+      this.updateCloudStatus('Offline — cloud unreachable', 'offline');
     });
+  },
+
+  // ---- Cloud-only enforcement -------------------------------------------
+  // The app is cloud-only: nothing is ever rendered from this device's cache.
+  // When the very first cloud load fails we block the whole UI so no stale
+  // number can be mistaken for live data.
+  showCloudBlock(reason) {
+    const screen = document.getElementById('cloudBlockScreen');
+    const reasonEl = document.getElementById('cloudBlockReason');
+    if (reasonEl) reasonEl.innerText = reason || 'Unknown error.';
+    if (screen && !this._hasLoadedFromCloud) {
+      screen.style.display = 'flex';
+    }
+  },
+
+  hideCloudBlock() {
+    const screen = document.getElementById('cloudBlockScreen');
+    if (screen) screen.style.display = 'none';
+    this._hasLoadedFromCloud = true;
+  },
+
+  async retryCloudLoad() {
+    const screen = document.getElementById('cloudBlockScreen');
+    if (screen) screen.style.display = 'none';
+    this.showToast('🔄 Retrying cloud database…', 'info');
+    await this.refreshData();
   },
 
   showToast(message, type = 'info') {

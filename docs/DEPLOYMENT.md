@@ -86,11 +86,11 @@ advance counts; a green result means the URL, the permissions and the CORS path 
 Every asset URL carries a version query:
 
 ```html
-<link rel="stylesheet" href="css/styles.css?v=13.9">
-<script src="js/app.js?v=13.9"></script>
+<link rel="stylesheet" href="css/styles.css?v=14.0">
+<script src="js/app.js?v=14.0"></script>
 ```
 
-Browsers cache aggressively. After changing any file, bump `v=13.9` to the next value (e.g. `13.8`)
+Browsers cache aggressively. After changing any file, bump `v=14.0` to the next value (e.g. `13.8`)
 in `index.html`, otherwise users can keep running the previous build for days.
 
 A hard refresh (`Ctrl+Shift+R`) hides the symptom, never the cause.
@@ -179,7 +179,7 @@ for the origin — all cached data is rebuilt from the cloud on the next load.
 | Apps Script web app | `https://script.google.com/macros/s/AKfycbwnxIOGOYUzCfrdcbsw1kvD1x_bWwHp57Y_KJBnHBJB9pxK9d8SOhjufYwBHh3R0Dro/exec` |
 | Drive backup folder | `Shinex_Backups` |
 | Password salt (client + server must match) | `SHINEX_SEED_SECURE_SALT_2026_@#!` |
-| Front-end cache version | `v=13.9` |
+| Front-end cache version | `v=14.0` |
 
 > **Changing the salt in one place only** breaks password verification everywhere. If the salt
 > changes, both `js/auth.js` (`AuthService.salt`) and `backend/Code.gs`

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Transport Management & Ledger System</title>
-  <link rel="stylesheet" href="css/styles.css?v=13.9">
+  <link rel="stylesheet" href="css/styles.css?v=14.0">
   <!-- High-Performance Spreadsheet Engines (Local for 100% Offline & Private Repo Support) -->
   <script src="libs/exceljs.min.js?v=3.0"></script>
   <script src="libs/FileSaver.min.js?v=3.0"></script>
@@ -67,6 +67,21 @@
     <div class="auth-footer-bar">
       <span>🚛 <strong>SHINEX LEDGER</strong> • Enterprise Freight &amp; Fleet Management System</span>
       <span>© 2026 Shinex UQ Genetic Seeds Pvt. Ltd. • Developed by <strong>Shravan Kumar</strong> • All Rights Reserved</span>
+    </div>
+  </div>
+
+  <!-- CLOUD-ONLY BLOCKER: shown when Google Sheets cannot be reached.
+       The ledger NEVER falls back to this device's browser cache. -->
+  <div id="cloudBlockScreen" style="display: none; position: fixed; inset: 0; z-index: 5000; background: #0f172a; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div style="max-width: 520px; background: #fff; border-radius: 12px; padding: 2rem; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.4);">
+      <div style="font-size: 2.5rem; line-height: 1;">☁️</div>
+      <h2 style="margin: 0.5rem 0 0.25rem; color: #0f172a;">Cannot load the ledger</h2>
+      <p style="color: #475569; font-size: 0.92rem; margin: 0 0 1rem; line-height: 1.6;">
+        This app reads <strong>only</strong> from the Google Sheets cloud database — it never shows
+        numbers saved in this browser. Fix the connection and try again.
+      </p>
+      <div id="cloudBlockReason" style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; border-radius: 8px; padding: 0.75rem; font-size: 0.86rem; margin-bottom: 1.25rem; line-height: 1.5;"></div>
+      <button class="btn btn-primary" onclick="window.App.retryCloudLoad()" style="padding: 0.7rem 1.5rem; font-weight: 700;">🔄 Retry now</button>
     </div>
   </div>
 
@@ -864,14 +879,14 @@
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Application Scripts with Cache Busters -->
-  <script src="js/auth.js?v=13.9"></script>
-  <script src="js/api.js?v=13.9"></script>
-  <script src="js/transport.js?v=13.9"></script>
-  <script src="js/advances.js?v=13.9"></script>
-  <script src="js/excel.js?v=13.9"></script>
-  <script src="js/sheetview.js?v=13.9"></script>
-  <script src="js/backup.js?v=13.9"></script>
-  <script src="js/app.js?v=13.9"></script>
+  <script src="js/auth.js?v=14.0"></script>
+  <script src="js/api.js?v=14.0"></script>
+  <script src="js/transport.js?v=14.0"></script>
+  <script src="js/advances.js?v=14.0"></script>
+  <script src="js/excel.js?v=14.0"></script>
+  <script src="js/sheetview.js?v=14.0"></script>
+  <script src="js/backup.js?v=14.0"></script>
+  <script src="js/app.js?v=14.0"></script>
 </body>
 </html>
 
