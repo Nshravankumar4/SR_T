@@ -68,8 +68,9 @@ overwrites a password that is already set.
    record and writes the result to `localStorage`.
 3. If the sheet comes back empty it seeds the canonical baseline once
    (`seedCloudDatabaseWithMasterBaseline()`).
-4. Any failure falls back to `localStorage`, and `App.updateCloudStatus()` shows
-   `⚠ Cloud Unreachable • Local Cache`.
+4. **There is no local fallback.** A failure throws, and the app shows the blocking
+   ☁️ *"Cannot load the ledger"* screen (`App.showCloudBlock()`) with the real reason and a
+   **Retry now** button. Nothing from `localStorage` is ever displayed as data.
 
 Normalisation (`normalizeTransportRecord` / `normalizeAdvanceRecord`) is applied to **both** cloud and
 local data so the app never renders two different shapes of the same record.
@@ -100,9 +101,9 @@ Form submit
   ├─ button → "⏳ Saving to Google Sheets…"
   ├─ read fields, derive status/balance      (client rules, identical to the server)
   ├─ ApiService.saveTransport() / saveAdvance()
-  │    ├─ POST text/plain envelope { action, user, role, token, data }
+  │    ├─ POST text/plain envelope { action, user, role, token, secret, data }
   │    ├─ cloud write is REQUIRED (throws if no URL configured)
-  │    └─ on success: local cache updated, version stored
+  │    └─ on success: cache copy written for diagnostics, version stored
   ├─ close modal, toast
   ├─ App.refreshData()                      ← authoritative re-read
   └─ BackupModule.onRecordMutated(...)      ← snapshot + Drive backup (non-blocking)
@@ -124,11 +125,36 @@ the exact failure mode this system was rebuilt to eliminate.
 | Same-machine tabs | `BroadcastChannel('shinex_sync_channel')` | instant |
 | Storage event | fallback `storage` listener | instant |
 
+Every request also carries the optional `secret` (`ApiService.withSecret()` for GETs,
+`getSessionEnvelope()` for POSTs) once an API secret is configured on that device.
+
 `checkCloudVersionAndSync()` compares the cloud `DATA_VERSION` with `shinex_data_version`. On a
 mismatch it triggers a full `refreshData(true)`.
 
 `refreshData()` is re-entrancy safe: concurrent calls set `_refreshQueued` and the queued refresh
 runs in the `finally` block, so a save is never left showing pre-save data.
+
+### Cloud-only enforcement
+
+```text
+fetchAll()                       ← throws on ANY failure, never falls back
+  └─ App.refreshData()
+       ├─ success → App.hideCloudBlock()  → render
+       └─ failure → App.showCloudBlock(reason)
+                      └─ shown only until the first successful cloud load
+                         (an outage later in the session just turns the status dot red)
+```
+
+| Situation | Result |
+| :--- | :--- |
+| Cloud reachable | Normal operation, `_hasLoadedFromCloud = true` |
+| Cloud down before first load | Full-screen block + Retry now |
+| Cloud drops later | Data on screen stays (it came from the cloud), status dot turns red, saves fail loudly |
+| No URL configured | Block screen: *"Cloud database URL is not configured…"* |
+| Wrong API secret | Block screen: *"API secret is missing or incorrect…"* |
+| Web app set to *Only myself* | Block screen: *"Google redirected to a sign-in page…"* |
+
+`ApiService.describeCloudFailure()` turns the raw response into one of those messages.
 
 ---
 
@@ -165,6 +191,7 @@ closing balance — no configuration needed.
 `index.html` holds every screen; JS only swaps `active` classes.
 
 ```text
+#cloudBlockScreen            ☁️ blocking "cannot load the ledger" panel (cloud-only mode)
 #authWrapper                 login card, user switcher, password, footer bar
 #mainApp
  ├── aside.app-sidebar       brand · user card · nav tabs · status · logout

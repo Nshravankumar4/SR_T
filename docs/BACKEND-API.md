@@ -37,9 +37,39 @@ redirect to a sign-in page and the browser blocks it (CORS).
   "user":   "Administrator",    // display name, used for audit + session lookup
   "role":   "Admin",            // "Admin" | "Employee" | "Guest"
   "token":  "uuid-…",           // session token issued by the login action
+  "secret": "…",                // optional shared API secret (see §2.1)
   "data":   { /* action payload */ }
 }
 ```
+
+### 2.1 Optional shared API secret
+
+The web app URL is the only thing protecting the sheet by default. Set a script property named
+**`API_SECRET`** and every request must then carry the same value:
+
+| Transport | Where the secret travels |
+| :--- | :--- |
+| GET | `?secret=…` query parameter |
+| POST | `secret` field of the JSON envelope |
+
+`checkApiSecret()` is called at the top of both `doGet()` and `doPost()`.
+
+* **Property absent** → the function returns `null` and the API behaves exactly as it always has.
+* **Property present, value matches** → request proceeds.
+* **Property present, value missing/wrong** → refused:
+
+```jsonc
+{ "success": false, "error": "API_SECRET_INVALID",
+  "message": "API secret is missing or incorrect. Open Settings & API and enter the API secret." }
+```
+
+Enabling it takes three steps (order matters — see [`DEPLOYMENT.md`](DEPLOYMENT.md)):
+
+1. Apps Script → Project Settings → Script Properties → Add `API_SECRET`.
+2. Redeploy a new version.
+3. Paste the same value in the app's **⚙️ Settings & API → 🔐 API Secret** on every device.
+
+Disabling: delete the property and redeploy.
 
 > ⚠️ **Always send `Content-Type: text/plain;charset=utf-8`.**
 > `application/json` triggers a CORS preflight (`OPTIONS`) that Apps Script cannot answer, and every
@@ -232,6 +262,16 @@ A missing or stale token returns:
 { "success": false, "error": "SESSION_INVALID", "message": "Session not authorized for this action. Please log out and log in again." }
 ```
 
+A wrong (or missing) shared API secret is checked even earlier and returns `API_SECRET_INVALID`.
+
+| Error code | Meaning | What the user sees |
+| :--- | :--- | :--- |
+| `API_SECRET_INVALID` | `API_SECRET` property is set and the value did not match | *"API secret is missing or incorrect — open Settings & API"* |
+| `SESSION_INVALID` | No valid session token for a privileged action | *"Please log out and log in again"* |
+| `DELETE_NOT_ALLOWED` / `RESTORE_NOT_ALLOWED` | Non-Admin attempted a destructive action | *"Only Administrator can…"* |
+| `SERVER_BUSY` | The write lock was held for 30 s | *"Please retry in a few seconds"* |
+| `advance amount must be greater than zero` | Invalid advance payload | Form-level toast |
+
 ---
 
 ## 5. Automatic side effects of every write
@@ -259,6 +299,7 @@ a change with a single cheap GET.
 | Function | Purpose |
 | :--- | :--- |
 | `calculateTransportRow(item)` | Single source of truth for `amount / toPay / paid / balance / status / section` on the server |
+| `checkApiSecret(params)` | Optional shared-secret gate; returns `null` when protection is disabled |
 | `recalculateFinancials(ss)` | Sweeps the whole `Transport` sheet and repairs any drifted row |
 | `calculateSummary(ss, transport, advances)` | Per-section and grand totals returned in `getAll` |
 | `formatSheetDate(value)` | Any sheet value → `DD-MM-YYYY` (the iOS Safari date fix) |

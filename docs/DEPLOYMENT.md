@@ -90,7 +90,7 @@ Every asset URL carries a version query:
 <script src="js/app.js?v=14.0"></script>
 ```
 
-Browsers cache aggressively. After changing any file, bump `v=14.0` to the next value (e.g. `13.8`)
+Browsers cache aggressively. After changing any file, bump `v=14.0` to the next value (e.g. `14.1`)
 in `index.html`, otherwise users can keep running the previous build for days.
 
 A hard refresh (`Ctrl+Shift+R`) hides the symptom, never the cause.
@@ -103,7 +103,39 @@ root are also published — keep that in mind if the repo ever contains sensitiv
 
 ---
 
-## 4. Deployment checklist (front-end change)
+## 4. Enabling the API secret (optional but recommended)
+
+The Apps Script URL is a public, unauthenticated endpoint: **anyone who has it can read and write the
+whole ledger without logging in.** A shared secret closes that.
+
+```text
+STEP 1  Apps Script -> ⚙️ Project Settings -> Script Properties -> Add script property
+            Key:   API_SECRET
+            Value: <any long random string>
+
+STEP 2  Deploy -> Manage deployments -> ✏️ -> Version: NEW VERSION -> Deploy
+
+STEP 3  On EVERY device: ⚙️ Settings & API -> 🔐 API Secret -> paste the SAME value
+        -> Save Configuration
+
+STEP 4  Press "⚡ Test Cloud Connection & Live Sync" on each device
+            ✅ "Connected successfully! 36 trips…"  = locked
+            🔴 "API secret is missing or incorrect"  = repaste and save
+```
+
+**Order matters.** Doing step 3 before step 2 makes the app reject every device until they are
+updated. A stray new device can therefore look "broken" — that is the secret working.
+
+**Emergency unlock:** Apps Script → Project Settings → Script Properties → delete `API_SECRET` →
+Deploy → New version. The API immediately returns to open (URL-only) protection.
+
+**Where this does *not* go:** GitHub Actions secrets. Nothing in a static Vercel site reads them;
+a secret added there protects nothing. It is fine to keep a copy there as documentation, but it is
+not the lock.
+
+---
+
+## 5. Deployment checklist (front-end change)
 
 ```text
 [ ] Edit the file(s)
@@ -117,7 +149,7 @@ root are also published — keep that in mind if the repo ever contains sensitiv
 
 ---
 
-## 5. Deployment checklist (backend change)
+## 6. Deployment checklist (backend change)
 
 ```text
 [ ] Edit backend/Code.gs
@@ -131,7 +163,7 @@ root are also published — keep that in mind if the repo ever contains sensitiv
 
 ---
 
-## 6. Recovery procedures
+## 7. Recovery procedures
 
 ### "Someone deleted a record"
 
@@ -156,11 +188,22 @@ The backend repairs rows on every write. To force a full sweep:
 3. If the cloud itself is stale, the last write did not land: check the browser console for
    `Cloud connection unavailable`.
 
+### "Everyone sees ☁️ Cannot load the ledger"
+
+The app is **cloud-only** — it never shows browser-cached numbers, so this is expected behaviour
+whenever the cloud cannot be reached. The block screen names the cause:
+
+| Message | Cause | Fix |
+| :--- | :--- | :--- |
+| *Cannot reach the Google Sheets cloud database* | no internet / wrong URL | check network, retry |
+| *Google redirected to a sign-in page* | web app set to *Only myself* | Deploy → Manage deployments → **Anyone** |
+| *Cloud database URL is not configured* | Settings empty on this device | paste the `/exec` URL, Save |
+| *API secret is missing or incorrect* | secret mismatch | repaste the same value, Save |
+
 ### "Everything is local-only again"
 
 That is the Apps Script access-permission regression. Redo §2 with **Anyone**, then press
-**⚡ Test Cloud Connection**. While it is broken the app deliberately keeps working from cache rather
-than losing data — so the ledger stays readable, it just stops syncing.
+**⚡ Test Cloud Connection**.
 
 ### "The app is fine but old code is running"
 
@@ -169,7 +212,7 @@ for the origin — all cached data is rebuilt from the cloud on the next load.
 
 ---
 
-## 7. Environment reference
+## 8. Environment reference
 
 | Item | Value |
 | :--- | :--- |
@@ -187,7 +230,7 @@ for the origin — all cached data is rebuilt from the cloud on the next load.
 
 ---
 
-## 8. Security operations
+## 9. Security operations
 
 * **Rotate a password:** in-app (Change button, or Admin → Settings). It propagates to every device
   at the next login. No redeploy needed.
@@ -196,11 +239,15 @@ for the origin — all cached data is rebuilt from the cloud on the next load.
   property in Apps Script → Project Settings → Script Properties.
 * **Lock someone out:** change the password in `ScriptProperties` (`ADMIN_PASS`, `EMP_PASS`) — the
   client cannot override it, because the server re-verifies every privileged action.
-* **Rotate the session salt:** see the warning in §7.
+* **Rotate the session salt:** see the warning in §8.
+* **Change the API secret:** Apps Script → replace `API_SECRET` → Deploy → New version → then
+  update every device. Devices that still hold the old value are locked out until updated.
+* **Shut down access entirely:** set the web app access back to *Only myself*, or undeploy it —
+  the app will then correctly refuse to load for everyone.
 
 ---
 
-## 9. Pre-flight checklist before any release
+## 10. Pre-flight checklist before any release
 
 ```text
 [ ] Trip count, advance count and DATA_VERSION unchanged (or intentionally changed)
@@ -211,4 +258,9 @@ for the origin — all cached data is rebuilt from the cloud on the next load.
 [ ] Export totals equal the on-screen totals
 [ ] Mobile drawer opens, closes and never clips the Logout button at 360 px
 [ ] Cache busters bumped
+[ ] Branch check: is the code on the branch Vercel actually deploys? (Vercel → Settings → Git)
 ```
+
+> **The most common false alarm:** pushing to a branch that Vercel is not watching. Confirm
+> **Vercel → Settings → Git → Production Branch** matches the branch you push to, or the live site
+> keeps serving old code no matter how many times you push.

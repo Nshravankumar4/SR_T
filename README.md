@@ -7,7 +7,7 @@ Built as a **vanilla-JavaScript single-page app** (no framework, no build step, 
 * **Live app:** <https://xtransport.vercel.app>
 * **Repository:** <https://github.com/Nshravankumar4/SR_T> (private)
 * **Backend:** Google Apps Script web app → Google Sheets
-* **Live ledger snapshot (02-10-2026):** 36 trips · 16 advances · `DATA_VERSION` 239
+* **Live ledger snapshot (02-10-2026):** 36 trips · 16 advances · cloud `DATA_VERSION` 241
 
 ---
 
@@ -345,9 +345,10 @@ Additional triggers, for instant updates:
 * **`storage` event** — fallback for multi-tab / incognito cases.
 * **Online/offline events** — going back online triggers a refresh.
 
-`localStorage` is a **cache**, never the database. If the cloud is unreachable the app says
-`⚠ Cloud Unreachable • Local Cache` and keeps showing the last known data instead of silently
-diverging.
+`localStorage` is a **write-only cache**, never a source of truth. If the cloud is unreachable the app
+**blocks** with a full-screen ☁️ *"Cannot load the ledger"* panel and a **Retry now** button. It never
+shows numbers from the browser, so a stale total can never be mistaken for live data. See
+[Cloud-only mode](#cloud-only-mode).
 
 ---
 
@@ -370,8 +371,24 @@ diverging.
 * **CORS.** All POSTs use `Content-Type: text/plain;charset=utf-8`. `application/json` triggers a
   preflight that Apps Script cannot answer — do not change this.
 * **Web app permission must be `Anyone`.** If it is `Only myself`, Google redirects to
-  `accounts.google.com`, CORS blocks it, and the app silently falls back to local cache. The app
-  detects this and shows an Admin-only banner with the fix.
+  `accounts.google.com`, CORS blocks it, and the app cannot load the ledger at all. The blocking
+  screen names the exact cause, and an Admin-only banner in Settings offers the fix.
+
+### Cloud-only mode
+
+The app has **no offline mode**. This is deliberate: two devices showing different numbers is worse
+than one device showing nothing.
+
+| Rule | Behaviour |
+| :--- | :--- |
+| Reads | 100% from Google Sheets on every load and every 3.5 s poll |
+| Browser cache | Written for diagnostics only — **never read back** as data |
+| Cloud down at start-up | Full-screen ☁️ block with the reason + **Retry now** |
+| Cloud down mid-session | Status dot turns red (`☁ Cloud unreachable`); a blocked save fails loudly and **never** pretends to succeed |
+| Empty Google Sheet | Seeded once from the canonical baseline, then always read back from the cloud |
+
+Practical effect: **the app needs a working internet connection to open.** A phone in a lift with no
+signal will show the block screen, not yesterday's totals.
 
 ### Changing a password
 
@@ -379,6 +396,30 @@ diverging.
 2. Admin → **⚙️ Settings & API** → new password for Admin and/or Rudra.
 
 The new hash is pushed to the cloud immediately; other devices pick it up on their next login.
+
+### 🔐 API secret — locking the door on the web app URL
+
+The Apps Script URL is the only thing that normally protects the sheet: **anyone who has it can read
+and write the entire ledger without logging in**, because the web app must be deployed as
+`Anyone` for cross-device sync to work.
+
+An optional shared secret closes that hole. Every request must then carry the same value.
+
+| Where | What to do |
+| :--- | :--- |
+| **Apps Script** | ⚙️ Project Settings → Script Properties → Add → Key `API_SECRET`, Value = your secret → **Deploy → Manage deployments → ✏️ → New version → Deploy** |
+| **The app** (per device) | ⚙️ Settings & API → 🔐 **API Secret** → paste the same value → **Save Configuration** |
+| GitHub | Not used. GitHub Actions secrets never reach a static site. |
+
+Design safety: while the `API_SECRET` script property **does not exist**, `checkApiSecret()` returns
+`null` and the API behaves exactly as before. Nothing breaks until you explicitly add the property.
+To disable protection, delete the property and redeploy.
+
+Wrong or missing secret → every request is refused with `API_SECRET_INVALID`, and the app shows
+*"API secret is missing or incorrect — open Settings & API"*.
+
+> **Order matters:** do Apps Script (property + redeploy) **first**, then save the secret in each
+> device's Settings. Doing it the other way round stops every device from syncing.
 
 ---
 
@@ -388,6 +429,7 @@ The new hash is pushed to the cloud immediately; other devices pick it up on the
 SR_T/
 ├── index.html                    # SPA shell: login screen, sidebar, 6 tabs, 6 modals
 ├── README.md                     # this file
+├── CHANGELOG.md                  # every fix, newest first
 │
 ├── css/
 │   └── styles.css                # layout, sidebar/drawer, tables, modals, print
@@ -411,6 +453,11 @@ SR_T/
 │   └── Code.gs                   # Google Apps Script API (the cloud database layer)
 │
 ├── docs/                         # deeper documentation (see section 14)
+│   ├── ARCHITECTURE.md           # modules, data flow, sync engine, cloud-only rules
+│   ├── DATA-MODEL.md             # sheet schemas, field semantics, calculations
+│   ├── BACKEND-API.md            # every Apps Script action and permission rule
+│   ├── DEPLOYMENT.md             # deploy, redeploy, API secret, recovery
+│   └── SECURITY.md               # threat model and hardening checklist
 │
 ├── .github/workflows/pages.yml   # GitHub Pages static deploy
 └── reference xlsx / json files   # original Shinex workbook + extracted seed data
@@ -420,17 +467,18 @@ Local storage keys used by the app:
 
 | Key | Purpose |
 | :--- | :--- |
-| `transport_records_shinex_v9` | cached transport rows |
-| `transport_advances_shinex_v9` | cached advance rows |
-| `transport_sections_shinex_v9` | cached section definitions |
+| `transport_records_shinex_v9` | transport rows (write-only cache, never read back as data) |
+| `transport_advances_shinex_v9` | advances (write-only cache) |
+| `transport_sections_shinex_v9` | section definitions (cloud-authoritative) |
 | `transport_opening_bal_shinex_v9` | opening balance |
 | `shinex_data_version` | last seen cloud `DATA_VERSION` |
 | `transport_user_session_v2` | **sessionStorage**, current user + token |
 | `transport_auth_users_v2` | salted password hashes |
 | `shinex_backup_snapshots_v1` | device-local snapshots |
+| `shinex_api_secret` | optional shared API secret for this device |
 | `shinex_sections_dirty` | set while local section edits await push |
 
-Script and stylesheet URLs carry a cache buster (`?v=13.7`). **Bump it after every deploy** or
+Script and stylesheet URLs carry a cache buster (`?v=14.0`). **Bump it after every deploy** or
 browsers may keep serving an old file.
 
 ---
@@ -467,12 +515,14 @@ Full checklists and troubleshooting are in [`docs/DEPLOYMENT.md`](docs/DEPLOYMEN
 | :--- | :--- | :--- |
 | Login spinner feels slow | Apps Script round-trip on the login path | Already fixed — token upgrade is backgrounded |
 | Data not appearing on the other device | Cloud version not picked up | Check the sidebar status dot; press 🔄 Sync |
-| Everything looks local/stale | Web app access is `Only myself` | Deploy with **Anyone**, then *Test Cloud Connection* |
+| ☁️ "Cannot load the ledger" block screen | No internet, wrong URL, wrong permission, or wrong secret | The message names the cause; fix it and press **Retry now** |
+| "API secret is missing or incorrect" | Secret set on one device but not another | Re-paste the same value in ⚙️ Settings & API on every device |
+| Everyone locked out at once | `API_SECRET` added but devices not updated | Apps Script → Project Settings → delete `API_SECRET` → redeploy |
 | `Failed to fetch` / CORS error | Wrong web app URL, or preflight triggered | Use the full `/exec` URL; never send `application/json` |
 | Dates show as `Mon Apr 20 2026 …` | Raw sheet date leaked through | Already fixed by `formatSheetDate()` + `parseLegacyDateString()`; redeploy the backend |
 | Export shows "Paid" text, or a missing total | Stale cached `excel.js` | Bump cache busters and hard-refresh |
 | Delete button missing | You are signed in as Rudra | Expected — Admin only |
-| Changes vanish after reload | Cloud unreachable, working from cache | Check `⚡ Test Cloud Connection` in Settings |
+| Saves rejected with "NOT saved" | Cloud write failed (app is cloud-only) | Nothing was saved; fix the connection and submit again |
 | Extra junk trip row appears | Old build without the empty-form guard | Redeploy; the current build blocks empty submits |
 
 ---
@@ -481,10 +531,12 @@ Full checklists and troubleshooting are in [`docs/DEPLOYMENT.md`](docs/DEPLOYMEN
 
 | Document | What it covers |
 | :--- | :--- |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Module map, data flow, sync engine, UI structure, mobile behaviour |
-| [`docs/DATA-MODEL.md`](docs/DATA-MODEL.md) | Google Sheets schema, every field, dates, money, status, sections, Failed rule |
-| [`docs/BACKEND-API.md`](docs/BACKEND-API.md) | Every Apps Script action, request envelope, response shape, permission rules |
-| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Apps Script and Vercel deployment, redeploys, verification, recovery |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Module map, data flow, sync engine, cloud-only enforcement, UI structure, mobile behaviour |
+| [`docs/DATA-MODEL.md`](docs/DATA-MODEL.md) | Google Sheets schema, every field, dates, money, status, sections, auto section period |
+| [`docs/BACKEND-API.md`](docs/BACKEND-API.md) | Every Apps Script action, request envelope, API secret gate, permission rules |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Apps Script and Vercel deployment, API secret setup, redeploys, verification, recovery |
+| [`docs/SECURITY.md`](docs/SECURITY.md) | Threat model, what is protected and what is not, hardening checklist |
+| [`CHANGELOG.md`](CHANGELOG.md) | Every fix in order, with what broke and what changed |
 
 ---
 
