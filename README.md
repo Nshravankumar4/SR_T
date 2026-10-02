@@ -1,381 +1,543 @@
-# 🚛 Shinex Transport Management & Financial Ledger System
+# 🚛 Shinex Ledger — Transport & Accounts
 
-A production-ready, cloud-synchronized Transport Management & Financial Reconciliation application built specifically for transport operations, based on the exact **Shinex Excel data models** (April 2026 to March 2027 and beyond).
+A cloud-synchronised transport and accounts ledger for **Shinex UQ Genetic Seeds Pvt. Ltd.**
+Built as a **vanilla-JavaScript single-page app** (no framework, no build step, no CDN) on top of a
+**Google Sheets** database reached through a **Google Apps Script** web app.
 
----
-
-## 🌐 Live Web Deployment
-
-* **Production URL:** [https://xtransport.vercel.app](https://xtransport.vercel.app/)
-* **Hosting Platform:** Vercel (Auto-deploys securely from private GitHub repository `main` branch)
-* **GitHub Repository:** [https://github.com/Nshravankumar4/SR_T](https://github.com/Nshravankumar4/SR_T)
-* **Status:** 🟢 Active, Real-time & SSL Secured
+* **Live app:** <https://xtransport.vercel.app>
+* **Repository:** <https://github.com/Nshravankumar4/SR_T> (private)
+* **Backend:** Google Apps Script web app → Google Sheets
+* **Live ledger snapshot (02-10-2026):** 36 trips · 16 advances · cloud `DATA_VERSION` 241
 
 ---
 
-## 🔐 Credentials & 1-Click Login
+## Table of contents
 
-The login screen features an intuitive **1-Click Left / Right User Selector** with no manual username typing required. Users click their profile card, enter their password, and log in.
+1. [What this app does](#1-what-this-app-does)
+2. [Quick start](#2-quick-start)
+3. [Accounts and permissions](#3-accounts-and-permissions)
+4. [How the system is put together](#4-how-the-system-is-put-together)
+5. [The calculation engine](#5-the-calculation-engine)
+6. [Features, tab by tab](#6-features-tab-by-tab)
+7. [Excel export and import](#7-excel-export-and-import)
+8. [Backup and recovery](#8-backup-and-recovery)
+9. [Cross-device synchronisation](#9-cross-device-synchronisation)
+10. [Security model](#10-security-model)
+11. [Project structure](#11-project-structure)
+12. [Deployment](#12-deployment)
+13. [Troubleshooting](#13-troubleshooting)
+14. [Further documentation](#14-further-documentation)
 
-```text
-┌────────────────────────────────────────────────────────┐
-│             Shinex Transport Ledger                    │
-│                                                        │
-│       ┌──────────────┐         ┌──────────────┐        │
-│       │      👑      │         │      👤      │        │
-│       │    ADMIN     │         │    RUDRA     │        │
-│       │Administrator │         │     User     │        │
-│       └──────────────┘         └──────────────┘        │
-│                                                        │
-│                    🔑 Password                         │
-│       ┌───────────────────────────────────────┐        │
-│       │ ••••••••••••••••••••••••••••••••••••• │        │
-│       └───────────────────────────────────────┘        │
-│                                                        │
-│                 🚀 SECURE LOGIN                        │
-└────────────────────────────────────────────────────────┘
+---
+
+## 1. What this app does
+
+Shinex runs freight trips between its plants and destinations. Each trip creates:
+
+* a **freight bill** (the *Amount*), and
+* sometimes an **amount still to be paid** (*ToPay*), which is later settled *Paid*, partly paid, or left outstanding.
+
+Advances (money paid to transporters up-front) are recorded separately and are deducted from what the
+company owes. Because the ledger is a chain, everything is split into **Sections** — closed periods
+(Section 1) and the live period (Section 2, Section 3, …). Each section opens with the previous
+section's closing **Net Outstanding**, so the whole year reconciles without any file juggling.
+
+The app is used by two people:
+
+| Person | Role | What they do |
+| :--- | :--- | :--- |
+| **Shravan** | 👑 Administrator | Everything, plus deletes, section management, cloud settings |
+| **Rudra** | 👤 Employee | Daily data entry and viewing, no deletes |
+
+---
+
+## 2. Quick start
+
+### Use the live app
+
+Open <https://xtransport.vercel.app> on any phone, tablet or PC, pick your user card, type your
+password, press **🚀 Secure Login**.
+
+### Run it locally
+
+There is no build step and no `npm install`. Any static server works:
+
+```bash
+# option A — just open the file
+start index.html                 # Windows
+open  index.html                 # macOS
+
+# option B — small local server (recommended, matches production)
+python -m http.server 8123 --bind 127.0.0.1
+# then browse http://127.0.0.1:8123/index.html
 ```
 
-| Account Type | Selector Card | Username ID | Password | Access & Permissions |
-| :--- | :--- | :--- | :--- | :--- |
-| **👑 Administrator** | **Left Card** | `Admin` | **`Shravan`** | Master Administrator: Full access + can change passwords for both Admin and Rudra |
-| **👤 User / Operations** | **Right Card** | `Rudra` | **`RudraSarika@2505`** | Full Operations: Full ledger access + can change Rudra's own password |
-
-> *Backward compatibility note:*
-> `Admin` also accepts password `Shravan@1` or legacy ID `admin1`.
-> 
-> *Security note:*
-> For enhanced account protection, default passwords are not displayed on the login interface.
+The app talks to the same cloud backend when it runs locally, so local and hosted views stay identical.
 
 ---
 
-## 🛡️ Unified Operational Access & Roles
+## 3. Accounts and permissions
 
-Both **Admin** and **Rudra** have operational access to manage day-to-day transport operations, advance disbursements, custom sections, and live Excel sheets.
+### Credentials
 
-The **key restrictions** are:
-* **⚙️ System Settings & Google Sheet API is strictly Admin Only:** The **Settings & API** tab is completely hidden from Rudra's sidebar navigation and locked against non-admin access to safeguard API configurations and master settings.
-* **🗑️ Record & Section Deletion is strictly Admin Only:** Only **👑 Admin** can delete transport trips, advance disbursements, and custom sections. Delete buttons are hidden for Rudra.
-* **🔑 Password Administration is strictly Admin Only:** **👑 Admin** can update passwords for both `Admin` and `Rudra`. **👤 Rudra** can change Rudra's own password.
+| Card | Username | Password | Notes |
+| :--- | :--- | :--- | :--- |
+| 👑 ADMIN | `Admin` | `Shravan` | `Shravan@1` and `admin1` also work |
+| 👤 RUDRA | `Rudra` | `RudraSarika@2505` | `Rudra` and `sarika` also work as aliases |
 
-### Permission Matrix
+Passwords can be changed in-app (see [Security model](#10-security-model)). The change is pushed to
+Apps Script, so it takes effect on **every device** at the next login.
 
-| Operation | Admin | Rudra | Details |
+### Permission matrix
+
+| Capability | Admin | Rudra | Enforced by |
 | :--- | :---: | :---: | :--- |
-| **Dashboard & Metrics** | ✅ | ✅ | Financial metric cards, section badges, real-time KPI totals |
-| **Add Transport** | ✅ | ✅ | Enter new trips with automatic Freight and ToPay calculations |
-| **View Transport** | ✅ | ✅ | Filter, search, and review all transport records |
-| **Edit Transport** | ✅ | ✅ | Modify any trip; changes recalculate live across all connected devices |
-| **Delete Transport** | ✅ | ❌ | **Admin Only**: Delete button hidden and blocked for Rudra |
-| **Add Advance** | ✅ | ✅ | Record company disbursements across any section |
-| **View Advances** | ✅ | ✅ | Filter by section, search by UTR, cheque, or bank notes |
-| **Edit Advance** | ✅ | ✅ | Update advance amount, date, bank, or notes |
-| **Delete Advance** | ✅ | ❌ | **Admin Only**: Delete button hidden and blocked for Rudra |
-| **Create Custom Section** | ✅ | ✅ | Add Section 3, Section 4, etc. for rolling fiscal reconciliation periods |
-| **Edit Section** | ✅ | ✅ | Rename or adjust section start/end dates |
-| **Delete Custom Section** | ✅ | ❌ | **Admin Only**: Delete section action restricted to Admin |
-| **Live Excel Sheet View** | ✅ | ✅ | 1:1 Shinex Excel replica with click-to-edit row and zoom scaling |
-| **Selective Excel Export** | ✅ | ✅ | Exports active section selection (Section 1, Section 2, or Full Sheet) |
-| **Excel Import / Backup** | ✅ | ✅ | Upload historical spreadsheets or restore cloud backup |
-| **Opening Balance Control** | ✅ | ❌ | **Admin Only**: Set initial opening debt balance from Settings tab |
-| **Settings & Cloud API** | ✅ | ❌ | **Admin Only**: Hidden & blocked for Rudra to protect database configuration |
-| **Change Own Password** | ✅ | ✅ | Self-service password change from user profile card |
-| **Change Other User's Password** | ✅ | ❌ | **Admin Only**: Admin can update Admin & Rudra passwords live |
-| **Secure Logout** | ✅ | ✅ | Clear local session and return to 1-Click Login Screen |
+| Dashboard, metrics, reconciliation cards | ✅ | ✅ | — |
+| Add / edit transport records | ✅ | ✅ | — |
+| Add / edit advances | ✅ | ✅ | — |
+| Delete transport or advance records | ✅ | ❌ | Hidden button + JS guard + server check |
+| Create new sections (Section 3, 4, …) | ✅ | ✅ | — |
+| Edit a section title | ✅ | ✅ | — |
+| Delete a custom section | ✅ | ❌ | Protected for Section 1/2; Admin-only button |
+| Live Excel Sheet view | ✅ | ✅ | — |
+| Download `.xlsx` | ✅ | ✅ | — |
+| Excel import | ✅ | ✅ | — |
+| Change own password | ✅ | ✅ | — |
+| Change another user's password | ✅ | ❌ | Admin session token required by the server |
+| Cloud backup list (Google Drive) | ✅ | ❌ | Admin session token required by the server |
+| Restore a snapshot | ✅ | ❌ | Admin guard + server guard |
+| Opening balance | ✅ | ❌ | `_Meta` write requires an admin session |
+| ⚙️ Settings & API tab | ✅ | ❌ | `.admin-only` class + JS route guard |
+
+Employee-mode is applied by adding `employee-mode` to `<body>`; that class hides every admin-only
+control (Settings tab, *Manage Sections*, *Load Exact Excel Data*, Admin password field).
 
 ---
 
-## 🔑 Where & How to Update Passwords (100% Live Sync)
-
-### Method 1: Self-Service Password Change (Both Admin & Rudra)
-1. In the upper-left sidebar, look at your **User Profile Card**.
-2. Click the **`🔑 Change`** button next to your role badge.
-3. Enter your **Current Password**, enter your **New Password** (minimum 6 characters), confirm it, and click **Save New Password**.
-4. The new password is saved locally and pushed live to the cloud backend.
-
-### Method 2: Administrator Settings (Admin Only)
-1. Sign in as `Admin` and open the **⚙️ Settings & API** tab in the sidebar (hidden for Rudra).
-2. Scroll down to the **🔐 Update Account Passwords** section.
-3. Enter a new password for `Admin` or `Rudra` (or both) and click **💾 Update Passwords Securely**.
-
-### ⚡ Live Cross-Device Password Synchronization:
-* When Admin updates Rudra's password, the app immediately dispatches an authenticated cloud request (`action: 'updatePassword'`) to Google Apps Script.
-* Google Apps Script updates `ScriptProperties` in the cloud (`EMP_PASS` or `ADMIN_PASS`).
-* Connected workstations update their credentials via background polling every 3 seconds.
-* When Rudra logs in from **any device (phone, laptop, office workstation)**, the cloud backend instantly verifies the **new password live** and rejects the old password.
-
----
-
-## ☁️ Database Architecture: Google Sheets as the Single Source of Truth
-
-**Google Sheets is the single source of truth for all shared business data.** The application does not use `localStorage` as a primary database. Transport records, advance payments, sections, opening balances, and financial calculations are always loaded from and synchronized with the cloud source.
+## 4. How the system is put together
 
 ```text
-               ┌────────────────────────────────────────────────────────┐
-               │           Google Sheets Master Database                │
-               │     Sheets: "Transport" & "Advances" (Cloud Truth)     │
-               └───────────────────────────┬────────────────────────────┘
-                                           │
-                                ┌──────────┴──────────┐
-                                │  backend/Code.gs    │
-                                │ Google Apps Script  │
-                                │   (REST API Bridge) │
-                                └──────────┬──────────┘
-                                           │
-                     HTTPS POST (Mutation) │ HTTPS GET (3s Poll)
-                                           │
-             ┌─────────────────────────────┴─────────────────────────────┐
-             ▼                                                           ▼
-┌───────────────────────────────┐               ┌───────────────────────────────┐
-│     👑 Admin Workstation       │               │      👤 Rudra Workstation     │
-│   (Chrome / Edge / Mobile)    │               │    (Office / Field Device)    │
-│                               │               │                               │
-│  1. Mutation (Add/Edit/Del)   │               │  1. Mutation (Add/Edit/Del)   │
-│  2. Await Cloud Response      │               │  2. Await Cloud Response      │
-│  3. Pull Latest Dataset       │               │  3. Pull Latest Dataset       │
-│  4. Replace Application State │               │  4. Replace Application State │
-│  5. Re-run Calculation Engine │               │  5. Re-run Calculation Engine │
-│  6. Refresh Dashboard & Views │               │  6. Refresh Dashboard & Views │
-└───────────────────────────────┘               └───────────────────────────────┘
+┌──────────────────────── Browser (any device) ────────────────────────┐
+│  index.html            markup: login, sidebar, 6 tabs, 5 modals     │
+│  css/styles.css        layout, drawer, tables, print styles          │
+│  js/auth.js            login, salted hashing, RBAC, rate limiting    │
+│  js/api.js             cloud data layer + shared helpers             │
+│  js/transport.js       transport table + add/edit modal              │
+│  js/advances.js        advances table + add/edit modal               │
+│  js/sheetview.js       1:1 live Excel replica + section maths        │
+│  js/excel.js           .xlsx export engine (ExcelJS + SheetJS)      │
+│  js/backup.js          snapshots, Drive backups, point-in-time restore│
+│  js/app.js             orchestrator: routing, metrics, live sync     │
+│  libs/                 exceljs.min.js, FileSaver.min.js, xlsx.full…   │
+└───────────────┬──────────────────────────────────────────────────────┘
+                │  HTTPS  (GET ?action=…   |   POST text/plain JSON envelope)
+┌───────────────▼──────────────────────────────────────────────────────┐
+│  backend/Code.gs  —  Google Apps Script web app                     │
+│  LockService guard · session tokens · DATA_VERSION · recalculation │
+└───────────────┬──────────────────────────────────────────────────────┘
+                │
+┌───────────────▼──────────────────────────────────────────────────────┐
+│  Google Sheets (single source of truth)                             │
+│  tabs: Transport · Advances · _Meta                                  │
+│  Google Drive: Shinex_Backups/ (timestamped .xlsx copies)            │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-### End-to-End Cross-Device Synchronization Flow:
-1. **User enters data:** Either Admin or Rudra creates, edits, or deletes a trip or advance on their workstation.
-2. **Cloud Mutation:** The app sends an authenticated HTTPS request to Google Apps Script (`backend/Code.gs`).
-3. **Master Persistence:** Google Apps Script appends or updates the row directly in the master Google Sheet.
-4. **Backend Confirmation:** Upon successful response, the app fetches the latest complete cloud dataset.
-5. **Real-time Recalculation:** The in-memory dataset is replaced, and all financial metric cards and section reconciliations recalculate instantly.
-6. **Other Workstation Polling:** Connected workstations automatically query the cloud backend (3-second background polling cycle + window focus trigger), retrieve the new records, and refresh their views in real time.
-7. *(Same-browser optimization)*: `BroadcastChannel('shinex_sync_channel')` notifies any other tabs open on the exact same computer instantly.
+Detailed design notes live in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ---
 
-## 📊 Live Calculation Engine & Chained Reconciliation
+## 5. The calculation engine
 
-The financial calculation engine derives all balances deterministically from the master cloud dataset:
+All money is parsed with one helper (`parseAmount`), which strips `₹`, commas and spaces, so
+`"₹1,73,500"`, `"1,73,500"` and `173500` are all the same number.
+
+### Per-trip rules
 
 ```text
-Google Sheet Master Data
-          ↓
-Transport Trips + Advances + Sections
-          ↓
-Calculation Engine
-          ↓
-Section 1 Reconciliation (Closed Period: April – August 2026)
-  • Freight Billed = ₹16,09,850
-  • ToPay Balance  = ₹2,83,500
-  • Total Payable  = Billed + ToPay Balance = ₹18,93,350
-  • Advances Paid  = ₹18,83,350
-  • Net Outstanding (14-08-2026) = Total Payable - Advances = ₹10,000
-          ↓
-Section 2 Reconciliation (Active Period: August – September 2026)
-  • Section 1 Old Balance = ₹10,000 (Chained from Section 1 Closing)
-  • Section 2 Freight Billed
-  • Section 2 ToPay Balance
-  • Total Payable = Section 2 Billed + S1 Old Balance + ToPay Balance
-  • Section 2 Net Outstanding = Total Payable - Section 2 Advances
-          ↓
-Section 3, Section 4... (Recursive Chaining)
-  • Each subsequent section automatically inherits the preceding section's closing Net Outstanding and latest date as its starting Old Balance.
-          ↓
-Executive Dashboard & 1:1 Live Excel Sheet View
+Paid (as stored)  = the literal text "Paid"  OR  a number
+paid amount       = ToPay                       when stored as "Paid"
+                  = ToPay  when number ≥ ToPay  (clamped, never above ToPay)
+                  = number                      otherwise
+
+Balance           = max(0, ToPay − paid amount)
+Balance           = 0                           when stored as "Paid"
 ```
 
-### Balance Derivation Rule:
-In Transport trips, `Balance = Math.max(0, ToPay - Paid)`.
-When payment changes, the balance is derived dynamically, triggering full section totals and net outstanding recalculation across all chained periods.
-
----
-
-## 🛠️ Issues Identified & Fully Resolved
-
-### 1. Record Edit Value Not Updating
-* **Root Cause:**
-  When editing a trip or advance in the edit modal, HTML5 `<input type="date">` strictly requires `YYYY-MM-DD`. Stored records used `DD-MM-YYYY`. The browser rejected the date format, leaving the required input empty and silently blocking form submissions. Payment values entered as `"Paid"` also caused `NaN` calculations.
-* **Fix Applied:**
-  - Added bidirectional date formatting utilities (`formatDateForInput` and `formatDateForDisplay`) in `js/api.js`.
-  - Ensured edit forms accurately populate `<input type="date">` and format back to `DD-MM-YYYY` upon saving.
-  - Sanitized payment calculations so `"Paid"` sets payment to full ToPay amount without calculation errors.
-
-### 2. Synchronization & Real-time Calculations
-* **Root Cause:**
-  The project originally relied on browser `localStorage` and a "Smart Merge" algorithm. Because `localStorage` is isolated to a single browser profile, changes on Rudra's computer were invisible to Admin's computer, causing stale numbers. "Smart Merge" also risked merging older local cache back into fresh cloud datasets.
-* **Fix Applied:**
-  - Eliminated "Smart Merge" and established Google Sheets as the single source of truth via `backend/Code.gs`.
-  - Added automatic 3-second background polling and window-focus synchronization in `js/app.js`.
-  - Added `BroadcastChannel` for instant same-machine multi-tab notification.
-  - Rewrote `backend/Code.gs` to support the `Section` column and uppercase header normalization across `Transport` and `Advances` sheets.
-
-### 3. Add Buttons Not Responding
-* **Root Cause:**
-  - Modules declared with `const` were not explicitly exposed on `window`, leading to potential `ReferenceError` during inline `onclick` handler execution.
-  - Form submit events were not directly bound to modal forms.
-* **Fix Applied:**
-  - Attached all modules to `window` (`window.TransportModule`, `window.AdvancesModule`, `window.ApiService`, `window.AuthService`, `window.SheetViewModule`, `window.ExcelModule`).
-  - Added dual-guarantee DOM event listeners (`addEventListener`) in `js/app.js` alongside inline `onclick` handlers on all Add buttons across the Dashboard, Transport tab, Advances tab, and Live Sheet View.
-  - Added direct `onsubmit` handlers on all modals (`transportForm`, `advanceForm`, `sectionForm`, `changePasswordForm`).
-
-### 4. Rudra Login Card & Task Access
-* **Root Cause:**
-  - When clicking the **👤 RUDRA** card, the form submit handler was looking for older input fields (`loginUserSelect`/`loginUsername`) and fell back to `Admin1`. This caused the form to submit `Admin1` with Rudra's password, failing with `Invalid username or password`.
-  - In `js/auth.js`, local verification required an existing `users['rudra']` object before evaluating master credentials.
-* **Fix Applied:**
-  - The login submit handler now directly checks which card is active (`btnRudra.classList.contains('active') ? 'Rudra' : 'Admin'`).
-  - `AuthService.login` validates master credentials (`Admin: Shravan`, `Rudra: RudraSarika@2505`) as **Step 1** before any local storage lookup or external cloud calls, guaranteeing 100% reliable login.
-  - Script cache busters bumped to `v=5.0`.
-
-### 5. GitHub Pages Deployment Action Failure
-* **Root Cause:**
-  - `actions/configure-pages@v4` was configured with `enablement: true`, which failed because the default `GITHUB_TOKEN` does not have admin permissions to create Pages sites via API (`HttpError: Resource not accessible by integration`).
-  - Redundant Jekyll workflows (`jekyll-docker.yml`, `jekyll-gh-pages.yml`) were failing because this is a static web application, not a Jekyll site.
-* **Fix Applied:**
-  - Removed unnecessary Jekyll and template workflows.
-  - Updated [`.github/workflows/pages.yml`](.github/workflows/pages.yml) to `actions/configure-pages@v5` without the unauthorized `enablement: true` flag.
-
-### 6. Dynamic Net Outstanding Date & Duplicate Trip Entry Prevention
-* **Root Cause:**
-  - When submitting a new transport trip or advance, both inline `onsubmit` attributes and JavaScript `addEventListener('submit')` were active concurrently, triggering duplicate API calls and double submissions (e.g., duplicate Trip 7 entries).
-  - Date sorting in `getLatestTripDate` did not reliably parse multi-format dates (`YYYY-MM-DD`, `DD-MM-YYYY`, `DD/MM/YYYY`), causing newly added trips to not update the latest cut-off date.
-* **Fix Applied:**
-  - Removed duplicate inline form submissions and added an `isSubmitting` debounce flag in both `TransportModule` and `AdvancesModule`.
-  - Added trip deduplication guards in `ApiService.saveTransport` and automatic data deduplication.
-  - Implemented multi-format regex timestamp sorting in `window.getLatestTripDate` so every newly entered trip or advance immediately and automatically updates the Net Outstanding title (`DD-MM-YYYY Net Outstanding`) and closing balance in real-time.
-
-### 7. Multi-User Cross-Device Data Sync & Google Apps Script Permission Requirement
-* **Root Cause:**
-  - Google Apps Script web apps deployed with `"Who has access: Only myself"` return HTTP 302 redirects to `accounts.google.com/ServiceLogin`. Browsers block cross-origin authentication redirects via CORS, causing silent fallback to browser `localStorage` and split-brain data (Admin saw 6 trips, Rudra saw a separate 7th test trip).
-* **Fix Applied:**
-  - Updated Google Apps Script deployment requirement to **"Who has access: Anyone"**.
-  - Added an in-app **"⚡ Test Cloud Connection & Live Sync"** diagnostic tool in Settings.
-  - Added a prominent top alert banner that notifies users if the Google Apps Script deployment requires permission adjustments.
-  - Auto-seeded the master Google Sheet with the exact 34 Shinex trips and 15 advances on first connection.
-
-### 8. Strict Admin-Only Security for Settings & Google Sheet API
-* **Root Cause:**
-  - Non-admin users (Rudra) could access the Settings & API tab, exposing sensitive Google Sheet Web App URLs and credential reset panels.
-* **Fix Applied:**
-  - Added `.admin-only` security classes and JavaScript route guards to hide and block the **⚙️ Settings & API** tab for Rudra.
-  - Unauthorized direct attempts to open Settings redirect automatically to the Dashboard.
-
-### 9. Automatic Sequential SL Numbering & Elimination of Undefined Status Badges
-* **Root Cause:**
-  - Trips without ToPay obligations displayed `undefined` status badges.
-  - Re-submitting or adding new records without entering an SL number caused duplicate SL numbers in the same section.
-* **Fix Applied:**
-  - Sanitized status assignment in `normalizeTransportRecord` and `transport.js` to automatically badge freight trips with ₹0 ToPay as **`Billed`** (never `undefined`).
-  - Added an auto-incrementing sequential SL generator (`max(SL in section) + 1`) in `saveTransport` to guarantee strictly unique SL numbers.
-
-### 10. 1:1 Authoritative Excel Ledger Calculation & Reconciliation Alignment
-* **Root Cause:**
-  - Section 2 trips had missing LR numbers for Trip 1 & Trip 2, and Trip 6 had `"35"` instead of `"35MT"`.
-  - An extraneous test advance was present in Section 2, inflating advances beyond ₹4,50,000 and skewing net outstanding.
-  - Exported Excel and HTML Sheet View lacked exact intermediate formula labels (`TotalB=ToBilled+TopayBAl` and `TotalB-Less Adv`), producing discrepancies against the authoritative Shinex physical workbook.
-  - Fallback logic in Excel export used outdated hardcoded values instead of dynamically computing the 7 Section 2 trips.
-* **Fix Applied:**
-  - Synchronized baseline in `js/api.js`: Trip 1 LR No set to `207`, Trip 2 LR No set to `208`, Trip 6 quantity set to `35MT`.
-  - Cleaned Section 2 advances to the exact authoritative total of **₹4,50,000** (29-08-2026: ₹50,000 + 10-09-2026: ₹4,00,000).
-  - Aligned all reconciliation table rows and cells in `js/excel.js` and `js/sheetview.js` with exact Excel coordinates and formula labels: `TotalB=ToBilled+TopayBAl` and `TotalB-Less Adv`.
-  - Fully dynamic financial computations: Section 1 Net Outstanding closed at **₹10,000** (`17-06-2026`); Section 2 Freight Billed: **₹10,58,750** + S1 Old Balance: **₹10,000** (`14-08-2026`) = TotalB: **₹10,68,750** - Advances: **₹4,50,000** = Net Outstanding: **₹6,18,750** as of **23-09-2026**.
-  - Upgraded storage version keys to `_v9` and bumped browser script cache busters to `v=9.0`.
-
----
-
-## 🚀 Core Application Modules
-
-### 1. Modern Left Sidebar Navigation
-- Sleek dark slate vertical sidebar (`270px`) replacing top horizontal tabs.
-- User profile card with avatar, role badge, quick **`🔑 Change`** password button, and 1-click logout.
-- Live database status indicator (`🟢 Online • Live Database Active`) with manual **`🔄 Sync`** button.
-- Mobile drawer with hamburger toggle.
-
-### 2. Personalized Executive Dashboard (Tab #1)
-- Personalized greeting: `👋 Hello, Admin / Rudra! Welcome to Shinex Transport Ledger & Dashboard`.
-- Quick action buttons: `➕ Add Transport Record`, `➕ Record Advance`, `📑 View Excel Sheet`, `💾 Export Excel`.
-- **Dynamic Net Outstanding Status Banner:** Prominent live closing ledger card displaying automatically updating cut-off date (`DD-MM-YYYY Net Outstanding`) and live recalculated outstanding amount.
-- **Multi-Section Financial Reconciliation Cards:** Clear, dedicated chained breakdown cards for Section 1, Section 2, and any newly added fiscal sections with active/archive status badges.
-
-### 3. Exact 1:1 Live Excel Spreadsheet Replica (Tab #3)
-- Visual clone of the physical Shinex workbook directly inside the browser.
-- Displays all 15 operational columns: `SL`, `LR No`, `DC No`, `Date`, `Vehicle No`, `From`, `To`, `Qty`, `M.TAX`, `Amount`, `ToPay`, `Paid`, `Balance`, `Status`, `Note`.
-- **Click-to-Edit:** Click any row in the spreadsheet to edit that record and watch the ledger recalculate live.
-- Display controls: Fullscreen presentation mode (`⛶`) and zoom scaling (`80% Fit`, `90%`, `100%`, `115%`).
-- Toolbar Add buttons for quick entry.
-
-### 4. Section-Divided Advances Ledger (Tab #4)
-- Dedicated advance tracker with section filters (`All Sections`, `Section 1`, `Section 2`, `Section 3`...).
-- Search by UTR reference, cheque number, or bank details.
-- Real-time advance statistics bar showing total entry count and aggregate advance disbursement.
-
-### 5. Section-Selective Excel (.xlsx) Downloads with AutoFit
-- **Selective Downloads Based on Active Tab:** Clicking `Download Excel (.xlsx)` in the Live Sheet View exports only the currently selected section:
-  - If **Section 1 (Archive)** is active $\rightarrow$ downloads only Section 1 (`Shinex_Transport_Section_1_Report.xlsx`).
-  - If **Section 2 (Active)** is active $\rightarrow$ downloads only Section 2 (`Shinex_Transport_SECTION_2_Report.xlsx`).
-  - If **Full Sheet (All Sections)** is active $\rightarrow$ downloads the complete chained workbook (`Shinex_Transport_Full_Report.xlsx`).
-- Bundled offline engines in `libs/` (`libs/exceljs.min.js`, `libs/FileSaver.min.js`, `libs/xlsx.full.min.js`).
-- Computes exact cell-by-cell character AutoFit widths (**equivalent to Excel shortcut `Alt + H + O + I`**).
-- Zero external CDN dependencies.
-
-### 6. ☁️ Database Backup & Point-in-Time Recovery Hub (Tab #5)
-- **Automatic Cloud Snapshots:** Every time a trip or advance is added, modified, or deleted in the Vercel app, a point-in-time recovery snapshot is archived.
-- **Server-Side Google Drive Auto-Backup:** `backend/Code.gs` creates an automated timestamped backup copy of the master Google Sheet in your Google Drive folder (`Shinex_Backups/`).
-- **1-Click Point-in-Time Restore on Vercel:** Browse snapshot history with timestamps, record counts, and net outstanding totals, and restore the database to any past state with a single click from any device.
-- **Dated Excel Workbooks:** Download `Shinex_Backup_YYYY-MM-DD_HH-mm-ss.xlsx` with all sections and advances anytime.
-
----
-
-## 📁 Source Code Directory Structure
+### Status badge
 
 ```text
-D:\Repo\SR_T\
-├── index.html            # Main SPA dashboard, 1-click user switcher, modals & templates
-├── css\
-│   └── styles.css        # Responsive layout, left sidebar, user switch cards & UI styles
-├── js\
-│   ├── api.js            # Cloud data layer, date formatting bridges, and CRUD sync
-│   ├── auth.js           # Web Crypto SHA-256 salted password hashing, rate limiting, and RBAC
-│   ├── transport.js      # Transport table rendering, column search, pagination, and edit modal
-│   ├── advances.js       # Section-divided advances ledger, filters, and modal handler
-│   ├── sheetview.js      # Exact 1:1 Live Excel sheet replica, click-to-edit rows & zoom controls
-│   ├── excel.js          # True 1:1 Excel export engine with Alt+H+O+I AutoFit column widths
-│   ├── backup.js         # Cloud-native snapshot engine & point-in-time recovery module
-│   └── app.js            # Central application orchestrator, realtime sync listeners & reconciliation
-├── libs\                 # Bundled offline vendor libraries
-│   ├── exceljs.min.js    # Excel workbook generator & cell formatting engine
-│   ├── FileSaver.min.js  # Cross-browser file download handler
-│   └── xlsx.full.min.js  # SheetJS parser and fallback export engine
-├── backend\
-│   └── Code.gs           # Google Apps Script master backend with auto Drive backup and restore API
-├── .github\
-│   └── workflows\
-│       └── pages.yml     # GitHub Pages static deployment workflow
-└── README.md             # Complete project documentation and guide
+ToPay > 0  and Balance = 0        → "Paid"
+Paid > 0   and Balance > 0        → "Partially Paid"
+ToPay = 0  and Amount > 0        → "Billed"
+otherwise                         → "Pending"
 ```
 
+This runs in three places and must agree: the browser (`js/api.js`), the Apps Script
+`recalculateFinancials()` sweep, and the sheet the user actually sees.
+
+### Section reconciliation (chained)
+
+For **Section 1** (the closed period):
+
+```text
+Total Payable    = Σ Amount + Σ Balance
+Net Outstanding  = Total Payable − Σ Advances
+```
+
+For **Section 2, 3, 4 …** (each chained from the previous section):
+
+```text
+Old Balance      = previous section's Net Outstanding
+Total Payable    = Σ Amount + Old Balance + Σ Balance
+Net Outstanding  = Total Payable − Σ Advances
+```
+
+The dashboard title is always the **last trip date of the active section**, e.g.
+`01-10-2026 Net Outstanding`. If an advance is dated *later* than the last trip, it is shown
+alongside as a secondary note (`01-10-2026 • adv 29-09-2026`) rather than replacing the trip date.
+
+### What the downloaded sheet shows
+
+| Column | Rule |
+| :--- | :--- |
+| Amount | `Σ amount`, freight billed |
+| ToPay | `Σ toPay` |
+| **ToPay-paid** | `Σ paid` — the money actually received, **never the word "Paid"** |
+| ToPay-Balc | `Σ balance` |
+| Note | Yellow for any remark, pink for `shortage`/`damage`, cyan for `u&s`/`truck place` — identical to the on-screen view |
+
+A trip that has a ToPay always shows **all three** numbers, including a genuine `0` balance, so
+`42,000 − 42,000 = 0` is visible instead of a blank cell. Rows with no ToPay stay blank.
+
 ---
 
-## 🛠️ Usage Instructions
+## 6. Features, tab by tab
 
-### Running Locally from your PC
-Double-click `index.html` to run in any browser.
+### 📊 Dashboard
 
-### Using the Live Web App (Vercel)
-Open [https://xtransport.vercel.app](https://xtransport.vercel.app) on any PC, tablet, or mobile phone.
+* Greeting with the signed-in user's name.
+* Quick actions: Add Transport, Record Advance, View Excel Sheet, Export Excel.
+* Big **Net Outstanding** banner titled with the active section's latest trip date.
+* One reconciliation card per section showing To Billed → (+) Old Balance → (+) ToPay Balance →
+  (=) Total Payable → (−) Less Advances → (=) out standing.
+* Written business rules, always visible under the cards.
+
+### 🚛 Transport Records
+
+* Section filter, free-text search, status filter and month filter.
+* Columns: SL, Section, LR No, DC No, Date, Vehicle, From, TO, Quantity, M/TAX, Amount, ToPay,
+  **Paid (real amount)**, Balance, Status badge, Note, Actions.
+* Inline stats bar: trips in view, active-section billed, advances, current outstanding.
+* The **Paid** column always shows money — never the word "Paid" — and stays green when a trip is
+  fully settled.
+
+### 📑 Live Excel Sheet
+
+* A 1:1 browser replica of the Shinex workbook: banners, navy header row, red ToPay headers, yellow
+  highlighting on "Before <date>" notes and the auto-sum total row.
+* View switcher: any section, or **Full Sheet** (all sections stacked).
+* Zoom `80% Fit / 90% / 100% / 115%`, full-screen mode, print button.
+* **Click any row to edit it** — opens the same modal as the table.
+* Reconciliation box per section: `To Billed`, `ToPay bal`, `TotalB=ToBilled+TopayBAl`, `less adv`,
+  and the closing `TotalB-Less Adv` outstanding.
+
+### 💰 Advance Payments
+
+* Section filter + search across description / UTR / cheque.
+* Columns: SL, Section, Date, Amount, Description, Reference, Entered By, Actions.
+* Stats bar: count in view, section total, Section 1 and Section 2 totals.
+
+### 📥 Excel Backup & Import
+
+* Manual **BACKUP FULL DATABASE NOW**, automatic snapshots after every save/delete, optional
+  auto-download of a dated workbook.
+* Snapshot history table with 1-click restore (Admin only).
+* Google Drive backup list (Admin only).
+* Full workbook export and `.xlsx` import.
+
+### ⚙️ Settings & API (Admin only)
+
+* Google Apps Script Web App URL.
+* March 2026 opening balance.
+* **⚡ Test Cloud Connection & Live Sync** diagnostic with the 30-second permission fix.
+* Password update fields for Admin and Rudra.
+
+### Modals — Add vs Edit
+
+The submit button follows the mode: **Submit** when adding a new record, **Save** when editing an
+existing one. Both modals also guard against empty submits (HTML5 validation is enforced before any
+cloud call) and prevent double submits with an `isSubmitting` flag.
+
+**Auto-dating:** when you open *Add*, the date defaults to the last trip of the selected section, so
+new trips land on the correct cut-off date. Editing always keeps the record's own date.
 
 ---
 
-## ☁️ Google Sheets Cloud Sync Setup
+## 7. Excel export and import
 
-To connect the application to your master Google Sheet:
+Downloaded workbooks are produced with **ExcelJS** (bundled locally in `libs/`) and fall back to
+**SheetJS** if ExcelJS is unavailable.
 
-1. Open [Google Sheets](https://sheets.new) and create a spreadsheet named **"Transport Management Data"**.
-2. Rename the first tab to **`Transport`** and create a second tab named **`Advances`**.
-3. In Google Sheets, click **Extensions** ➔ **Apps Script**.
-4. Replace all code with the contents of `backend/Code.gs`.
-5. Click **Deploy** ➔ **New deployment**:
-   - **Type:** Web app
-   - **Description:** Shinex Transport API v5.0
-   - **Execute as:** `Me`
-   - **Who has access:** `Anyone`
-6. Click **Deploy**, authorize permissions, and copy the generated **Web App URL** (`https://script.google.com/macros/s/.../exec`).
-7. Sign in to your Transport Management app as `Admin`, open **⚙️ Settings & API**, paste your Web App URL into the **Google Apps Script Web App URL** field, and click **Save Configuration**.
-8. Click **🔄 Sync Database Now**. All data is now live and synchronized across Admin and Rudra workstations!
+* Section-scoped downloads follow the active view — `Download SECTION 2 (xlsx)` exports only
+  Section 2, *Full Sheet* exports everything.
+* Three writers produce the layouts: Section 1 (canonical Shinex layout), the "later sections"
+  blocks, and `writeSingleGenericSection()` for a single-section export.
+* Every section block ends with an **auto-sum total row** covering Amount, ToPay, **ToPay-paid** and
+  ToPay-Balc — all four money columns are summed and highlighted yellow.
+* Columns are auto-fitted character by character (Excel's `Alt + H + O + I`), so no `###` or
+  truncated headings.
+* Dates are always `DD-MM-YYYY`.
+* **Paid** is written as a number (green fill when fully paid); the word "Paid" never appears in the
+  workbook, and a `0` balance is printed rather than left blank.
+* **Note colours match the on-screen sheet view exactly** — bright yellow for any remark, pink for
+  `shortage`/`damage`, cyan for `u&s`/`truck place`.
+
+**Import** accepts a `.xlsx` whose **first sheet** has these headers (case as shown, blanks allowed):
+
+```text
+SL.NO · LR No · DC No · Date · Vehicle Number · From · TO · Quantity · M/TAX
+Amount · ToPay · ToPay-paid (or "paid") · Note
+```
+
+Balance and Status are **recalculated** on import (`balance = ToPay − paid`; Status becomes `Paid`,
+`Partially Paid` or `Pending`) rather than read from the file, so an imported sheet can never inject
+an inconsistent balance. A `Paid` text cell is treated as *paid in full* (`paid = ToPay`). Records get
+temporary ids `TR-IMP-xxxx-n`, are stamped `createdBy: "Excel Import"`, and the app shows a confirm
+dialog with the parsed count before anything is written to the cloud.
+
+---
+
+## 8. Backup and recovery
+
+| Layer | Where | Who sees it | Trigger |
+| :--- | :--- | :--- | :--- |
+| Device-local snapshots | `localStorage` key `shinex_backup_snapshots_v1` | The device that took them | Every save/delete (if auto-backup is on) |
+| Google Drive copies | `Shinex_Backups/` folder | Everyone (list is Admin-gated) | Same trigger, via Apps Script |
+| Manual workbook | Downloads as `Shinex_Backup_YYYY-MM-DD_HH-mm-ss.xlsx` | Whoever downloads | "Back up now" button |
+
+A snapshot stores the full dataset (transport, advances, sections, opening balance) plus the net
+outstanding at that moment. Restoring writes the dataset back to Google Sheets — the backend takes a
+`Pre-Restore-Safety-Backup` copy first, so a restore is always reversible.
+
+---
+
+## 9. Cross-device synchronisation
+
+```text
+Save on device A
+   └─► POST to Apps Script (cloud-first; the save FAILS if no cloud URL is configured)
+        └─► row written to Google Sheets
+             └─► recalculateFinancials() + DATA_VERSION++
+                  └─► response returns new version
+                       └─► device A re-fetches and re-renders
+
+Device B (any other device, any browser)
+   └─► polls ?action=getVersion every 3.5 s
+        └─► cloud version ≠ local version
+             └─► full ?action=getAll fetch → local storage replaced → all views recalculate
+```
+
+Additional triggers, for instant updates:
+
+* **Window focus** — switching back to the tab checks the cloud version immediately.
+* **BroadcastChannel** (`shinex_sync_channel`) — other tabs on the same machine update instantly.
+* **`storage` event** — fallback for multi-tab / incognito cases.
+* **Online/offline events** — going back online triggers a refresh.
+
+`localStorage` is a **write-only cache**, never a source of truth. If the cloud is unreachable the app
+**blocks** with a full-screen ☁️ *"Cannot load the ledger"* panel and a **Retry now** button. It never
+shows numbers from the browser, so a stale total can never be mistaken for live data. See
+[Cloud-only mode](#cloud-only-mode).
+
+---
+
+## 10. Security model
+
+* **Passwords are never stored in plain text in the browser.** The client stores
+  `SHA-256(salt + password)` with salt `SHINEX_SEED_SECURE_SALT_2026_@#!`; the backend stores the
+  password in `ScriptProperties` and only ever returns its hash.
+* **Server session tokens.** `login` returns a UUID token stored in `ScriptProperties`
+  (`SESSIONS_admin` / `SESSIONS_rudra`, newest 5 per account). Every write — add/update/backup/
+  `saveSections` — and every privileged action (`deleteRecord`, `restoreFullDataset`,
+  `setOpeningBalance`, `recalculateFinancials`, `listBackups`) is checked against that token.
+* **Login is instant.** The session is created locally first (≈5 ms) and the server token is
+  upgraded in the background, so the UI never waits on Apps Script.
+* **Rate limiting.** Client: 8 failed attempts → 30 s lockout. Server: 8 failures in 5 minutes →
+  temporary rejection.
+* **Sessions expire after 8 hours.**
+* **XSS guarding.** `escapeHtml()` / `escapeAttr()` are used for every user-controlled string that
+  reaches `innerHTML`.
+* **CORS.** All POSTs use `Content-Type: text/plain;charset=utf-8`. `application/json` triggers a
+  preflight that Apps Script cannot answer — do not change this.
+* **Web app permission must be `Anyone`.** If it is `Only myself`, Google redirects to
+  `accounts.google.com`, CORS blocks it, and the app cannot load the ledger at all. The blocking
+  screen names the exact cause, and an Admin-only banner in Settings offers the fix.
+
+### Cloud-only mode
+
+The app has **no offline mode**. This is deliberate: two devices showing different numbers is worse
+than one device showing nothing.
+
+| Rule | Behaviour |
+| :--- | :--- |
+| Reads | 100% from Google Sheets on every load and every 3.5 s poll |
+| Browser cache | Written for diagnostics only — **never read back** as data |
+| Cloud down at start-up | Full-screen ☁️ block with the reason + **Retry now** |
+| Cloud down mid-session | Status dot turns red (`☁ Cloud unreachable`); a blocked save fails loudly and **never** pretends to succeed |
+| Empty Google Sheet | Seeded once from the canonical baseline, then always read back from the cloud |
+
+Practical effect: **the app needs a working internet connection to open.** A phone in a lift with no
+signal will show the block screen, not yesterday's totals.
+
+### Changing a password
+
+1. Sidebar user card → **🔑 Change** (own password, either user), or
+2. Admin → **⚙️ Settings & API** → new password for Admin and/or Rudra.
+
+The new hash is pushed to the cloud immediately; other devices pick it up on their next login.
+
+### 🔐 API secret — locking the door on the web app URL
+
+The Apps Script URL is the only thing that normally protects the sheet: **anyone who has it can read
+and write the entire ledger without logging in**, because the web app must be deployed as
+`Anyone` for cross-device sync to work.
+
+An optional shared secret closes that hole. Every request must then carry the same value.
+
+| Where | What to do |
+| :--- | :--- |
+| **Apps Script** | ⚙️ Project Settings → Script Properties → Add → Key `API_SECRET`, Value = your secret → **Deploy → Manage deployments → ✏️ → New version → Deploy** |
+| **The app** (per device) | ⚙️ Settings & API → 🔐 **API Secret** → paste the same value → **Save Configuration** |
+| GitHub | Not used. GitHub Actions secrets never reach a static site. |
+
+Design safety: while the `API_SECRET` script property **does not exist**, `checkApiSecret()` returns
+`null` and the API behaves exactly as before. Nothing breaks until you explicitly add the property.
+To disable protection, delete the property and redeploy.
+
+Wrong or missing secret → every request is refused with `API_SECRET_INVALID`, and the app shows
+*"API secret is missing or incorrect — open Settings & API"*.
+
+> **Order matters:** do Apps Script (property + redeploy) **first**, then save the secret in each
+> device's Settings. Doing it the other way round stops every device from syncing.
+
+---
+
+## 11. Project structure
+
+```text
+SR_T/
+├── index.html                    # SPA shell: login screen, sidebar, 6 tabs, 6 modals
+├── README.md                     # this file
+├── CHANGELOG.md                  # every fix, newest first
+│
+├── css/
+│   └── styles.css                # layout, sidebar/drawer, tables, modals, print
+│
+├── js/
+│   ├── auth.js                   # login/logout, SHA-256 hashing, RBAC, rate limiting
+│   ├── api.js                    # seed data + cloud data layer + shared helpers
+│   ├── transport.js              # transport table, filters, add/edit modal
+│   ├── advances.js               # advances table, filters, add/edit modal
+│   ├── sheetview.js              # live Excel replica, section maths, zoom/fullscreen
+│   ├── excel.js                  # .xlsx export engine (ExcelJS) + SheetJS fallback
+│   ├── backup.js                 # snapshots, Drive backups, point-in-time restore
+│   └── app.js                    # orchestrator: routing, metrics, live sync, modals
+│
+├── libs/                         # bundled offline vendors — no CDN at runtime
+│   ├── exceljs.min.js
+│   ├── FileSaver.min.js
+│   └── xlsx.full.min.js
+│
+├── backend/
+│   └── Code.gs                   # Google Apps Script API (the cloud database layer)
+│
+├── docs/                         # deeper documentation (see section 14)
+│   ├── ARCHITECTURE.md           # modules, data flow, sync engine, cloud-only rules
+│   ├── DATA-MODEL.md             # sheet schemas, field semantics, calculations
+│   ├── BACKEND-API.md            # every Apps Script action and permission rule
+│   ├── DEPLOYMENT.md             # deploy, redeploy, API secret, recovery
+│   └── SECURITY.md               # threat model and hardening checklist
+│
+├── .github/workflows/pages.yml   # GitHub Pages static deploy
+└── reference xlsx / json files   # original Shinex workbook + extracted seed data
+```
+
+Local storage keys used by the app:
+
+| Key | Purpose |
+| :--- | :--- |
+| `transport_records_shinex_v9` | transport rows (write-only cache, never read back as data) |
+| `transport_advances_shinex_v9` | advances (write-only cache) |
+| `transport_sections_shinex_v9` | section definitions (cloud-authoritative) |
+| `transport_opening_bal_shinex_v9` | opening balance |
+| `shinex_data_version` | last seen cloud `DATA_VERSION` |
+| `transport_user_session_v2` | **sessionStorage**, current user + token |
+| `transport_auth_users_v2` | salted password hashes |
+| `shinex_backup_snapshots_v1` | device-local snapshots |
+| `shinex_api_secret` | optional shared API secret for this device |
+| `shinex_sections_dirty` | set while local section edits await push |
+
+Script and stylesheet URLs carry a cache buster (`?v=14.0`). **Bump it after every deploy** or
+browsers may keep serving an old file.
+
+---
+
+## 12. Deployment
+
+### Front end (Vercel)
+
+1. Push to the repository.
+2. Vercel (connected to the repo, `main`) redeploys automatically — no build command, output is the
+   repository root.
+3. Confirm <https://xtransport.vercel.app>.
+4. Hard-refresh on devices; if the old code sticks, bump the `?v=` cache busters.
+
+A GitHub Pages workflow (`.github/workflows/pages.yml`) also publishes the same static site.
+
+### Backend (Google Apps Script)
+
+1. Open the spreadsheet → **Extensions → Apps Script**.
+2. Replace the editor contents with [`backend/Code.gs`](backend/Code.gs).
+3. **Deploy → New deployment → Web app**, execute as **Me**, access **Anyone**.
+4. On later changes use **Deploy → Manage deployments → ✏️ → Version: New version → Deploy**
+   (editing the code alone does nothing until you redeploy).
+5. Verify with `curl "<web app URL>?action=getVersion"` — it must return
+   `{"success":true,"version":…}` **without** a Google login redirect.
+
+Full checklists and troubleshooting are in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+---
+
+## 13. Troubleshooting
+
+| Symptom | Cause | Fix |
+| :--- | :--- | :--- |
+| Login spinner feels slow | Apps Script round-trip on the login path | Already fixed — token upgrade is backgrounded |
+| Data not appearing on the other device | Cloud version not picked up | Check the sidebar status dot; press 🔄 Sync |
+| ☁️ "Cannot load the ledger" block screen | No internet, wrong URL, wrong permission, or wrong secret | The message names the cause; fix it and press **Retry now** |
+| "API secret is missing or incorrect" | Secret set on one device but not another | Re-paste the same value in ⚙️ Settings & API on every device |
+| Everyone locked out at once | `API_SECRET` added but devices not updated | Apps Script → Project Settings → delete `API_SECRET` → redeploy |
+| `Failed to fetch` / CORS error | Wrong web app URL, or preflight triggered | Use the full `/exec` URL; never send `application/json` |
+| Dates show as `Mon Apr 20 2026 …` | Raw sheet date leaked through | Already fixed by `formatSheetDate()` + `parseLegacyDateString()`; redeploy the backend |
+| Export shows "Paid" text, or a missing total | Stale cached `excel.js` | Bump cache busters and hard-refresh |
+| Delete button missing | You are signed in as Rudra | Expected — Admin only |
+| Saves rejected with "NOT saved" | Cloud write failed (app is cloud-only) | Nothing was saved; fix the connection and submit again |
+| Extra junk trip row appears | Old build without the empty-form guard | Redeploy; the current build blocks empty submits |
+
+---
+
+## 14. Further documentation
+
+| Document | What it covers |
+| :--- | :--- |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Module map, data flow, sync engine, cloud-only enforcement, UI structure, mobile behaviour |
+| [`docs/DATA-MODEL.md`](docs/DATA-MODEL.md) | Google Sheets schema, every field, dates, money, status, sections, auto section period |
+| [`docs/BACKEND-API.md`](docs/BACKEND-API.md) | Every Apps Script action, request envelope, API secret gate, permission rules |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Apps Script and Vercel deployment, API secret setup, redeploys, verification, recovery |
+| [`docs/SECURITY.md`](docs/SECURITY.md) | Threat model, what is protected and what is not, hardening checklist |
+| [`CHANGELOG.md`](CHANGELOG.md) | Every fix in order, with what broke and what changed |
+
+---
+
+**© 2026 Shinex UQ Genetic Seeds Pvt. Ltd. — Developed by Shravan Kumar. All rights reserved.**

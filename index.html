@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Transport Management & Ledger System</title>
-  <link rel="stylesheet" href="css/styles.css?v=4.6">
+  <link rel="stylesheet" href="css/styles.css?v=14.0">
   <!-- High-Performance Spreadsheet Engines (Local for 100% Offline & Private Repo Support) -->
   <script src="libs/exceljs.min.js?v=3.0"></script>
   <script src="libs/FileSaver.min.js?v=3.0"></script>
@@ -57,10 +57,31 @@
         <button type="submit" id="loginSubmitBtn" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-weight: 600; font-size: 1rem; border-radius: 8px;">🚀 Secure Login</button>
       </form>
 
-      <div style="margin-top: 1.25rem; padding-top: 0.85rem; border-top: 1px solid rgba(255,255,255,0.12); text-align: center; font-size: 0.72rem; color: #94a3b8; line-height: 1.6;">
-        🚛 Shinex Ledger • Transport &amp; Accounts<br>
-        © 2026 Shinex UQ Genetic Seeds Pvt. Ltd. All rights reserved.
+      <div style="margin-top: 1.25rem; padding-top: 0.85rem; border-top: 1px solid rgba(255,255,255,0.12); text-align: center; font-size: 0.74rem; color: #94a3b8; line-height: 1.7;">
+        Developed by <strong style="color: #1e40af; font-size: 0.8rem;">Shravan Kumar</strong><br>
+        Enterprise Freight &amp; Fleet Management • 2026
       </div>
+    </div>
+
+    <!-- Login page footer bar (same branding as every other page) -->
+    <div class="auth-footer-bar">
+      <span>🚛 <strong>SHINEX LEDGER</strong> • Enterprise Freight &amp; Fleet Management System</span>
+      <span>© 2026 Shinex UQ Genetic Seeds Pvt. Ltd. • Developed by <strong>Shravan Kumar</strong> • All Rights Reserved</span>
+    </div>
+  </div>
+
+  <!-- CLOUD-ONLY BLOCKER: shown when Google Sheets cannot be reached.
+       The ledger NEVER falls back to this device's browser cache. -->
+  <div id="cloudBlockScreen" style="display: none; position: fixed; inset: 0; z-index: 5000; background: #0f172a; align-items: center; justify-content: center; padding: 1.5rem;">
+    <div style="max-width: 520px; background: #fff; border-radius: 12px; padding: 2rem; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.4);">
+      <div style="font-size: 2.5rem; line-height: 1;">☁️</div>
+      <h2 style="margin: 0.5rem 0 0.25rem; color: #0f172a;">Cannot load the ledger</h2>
+      <p style="color: #475569; font-size: 0.92rem; margin: 0 0 1rem; line-height: 1.6;">
+        This app reads <strong>only</strong> from the Google Sheets cloud database — it never shows
+        numbers saved in this browser. Fix the connection and try again.
+      </p>
+      <div id="cloudBlockReason" style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; border-radius: 8px; padding: 0.75rem; font-size: 0.86rem; margin-bottom: 1.25rem; line-height: 1.5;"></div>
+      <button class="btn btn-primary" onclick="window.App.retryCloudLoad()" style="padding: 0.7rem 1.5rem; font-weight: 700;">🔄 Retry now</button>
     </div>
   </div>
 
@@ -76,6 +97,8 @@
             <span>Transport & Accounts</span>
           </div>
         </div>
+        <!-- Visible only on phones: unselect/close the slide-in menu -->
+        <button class="sidebar-close-btn" onclick="window.App ? App.closeSidebar() : document.querySelector('.app-sidebar').classList.remove('open')" aria-label="Close menu">✕</button>
       </div>
 
       <!-- User Profile Card -->
@@ -130,23 +153,23 @@
         <button id="logoutBtn" class="sidebar-logout-btn" onclick="window.App ? window.App.logout() : AuthService.logout()">
           <span>🚪</span> Logout
         </button>
-        <div style="text-align: center; font-size: 0.66rem; color: #64748b; line-height: 1.5;">
-          © 2026 Shinex UQ Genetic Seeds Pvt. Ltd.<br>All rights reserved.
-        </div>
       </div>
     </aside>
+
+    <!-- Dim overlay for the mobile drawer: tap anywhere outside the menu to close (deselect) it -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="window.App ? App.closeSidebar() : document.querySelector('.app-sidebar').classList.remove('open')"></div>
 
     <!-- RIGHT MAIN CONTENT VIEWPORT -->
     <div class="app-main-viewport">
       <!-- Mobile Bar (Shown only on small screens) -->
       <div class="mobile-top-bar">
-        <div style="display: flex; align-items: center; gap: 0.6rem;">
-          <span style="font-size: 1.3rem;">🚛</span>
+        <div class="mobile-top-brand">
+          <span class="mobile-top-icon">🚛</span>
           <strong>Shinex Transport Ledger</strong>
         </div>
-        <div style="display: flex; gap: 0.4rem; align-items: center;">
-          <button class="btn btn-sm btn-secondary" onclick="document.querySelector('.app-sidebar').classList.toggle('open')">☰ Menu</button>
-          <button class="btn btn-sm btn-secondary" onclick="window.App ? window.App.logout() : AuthService.logout()" style="background: rgba(239,68,68,0.2); color: #fca5a5; border-color: rgba(239,68,68,0.4); font-weight: 600; font-size: 0.78rem; padding: 3px 8px;">🚪 Logout</button>
+        <div class="mobile-top-actions">
+          <button class="btn btn-sm btn-secondary mobile-menu-btn" onclick="window.App ? App.toggleSidebar() : document.querySelector('.app-sidebar').classList.toggle('open')">☰ Menu</button>
+          <button class="btn btn-sm btn-secondary mobile-logout-btn" onclick="window.App ? window.App.logout() : AuthService.logout()">🚪 Logout</button>
         </div>
       </div>
 
@@ -245,9 +268,9 @@
 
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
               <button class="btn btn-secondary" onclick="App.openSectionModal()" style="background: #fef3c7; color: #92400e; border-color: #fde68a; font-weight: 600;">➕ Add Section</button>
-              <button class="btn btn-secondary" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
+              <button class="btn btn-secondary admin-only" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
               <button class="btn btn-secondary" onclick="App.openSheetView()" style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd; font-weight: 600;">📑 View Excel Sheet</button>
-              <button class="btn btn-secondary" onclick="window.App.restoreExactExcelSheetData()" title="Reset database to exact Shinex records">📋 Load Exact Excel Data</button>
+              <button class="btn btn-secondary admin-only" onclick="window.App.restoreExactExcelSheetData()" title="Reset database to exact Shinex records">📋 Load Exact Excel Data</button>
               <button class="btn btn-secondary" onclick="window.App.refreshData()">🔄 Refresh</button>
               <button id="btnTabAddTransport" class="btn btn-primary" onclick="window.TransportModule ? window.TransportModule.openAddModal() : TransportModule.openAddModal()">➕ Add Transport Record</button>
             </div>
@@ -307,7 +330,7 @@
 
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
               <button id="btnTabAddSection" class="btn btn-secondary" onclick="window.App ? window.App.openSectionModal() : App.openSectionModal()" style="background: #fef3c7; color: #92400e; border-color: #fde68a; font-weight: 600;">➕ Add Section</button>
-              <button class="btn btn-secondary" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
+              <button class="btn btn-secondary admin-only" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
               <button id="btnTabAddAdvance" class="btn btn-primary" onclick="window.AdvancesModule ? window.AdvancesModule.openAddModal() : AdvancesModule.openAddModal()">➕ Record New Advance</button>
             </div>
           </div>
@@ -360,7 +383,7 @@
               <button id="btnSheetAddTransport" class="btn btn-sm btn-primary" onclick="window.TransportModule ? window.TransportModule.openAddModal() : TransportModule.openAddModal()">➕ Add Transport</button>
               <button id="btnSheetAddAdvance" class="btn btn-sm btn-secondary" onclick="window.AdvancesModule ? window.AdvancesModule.openAddModal() : AdvancesModule.openAddModal()" style="background: #f0fdf4; color: #166534; border-color: #bbf7d0; font-weight: 600;">➕ Record Advance</button>
               <button id="btnAddSectionSheet" class="btn btn-sm btn-secondary" onclick="window.App ? window.App.openSectionModal() : App.openSectionModal()" style="font-weight: 600; background: #fef3c7; color: #92400e; border-color: #fde68a;" title="Create Section 3 or next sequence">➕ Add Section</button>
-              <button id="btnManageSections" class="btn btn-sm btn-secondary" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
+              <button id="btnManageSections" class="btn btn-sm btn-secondary admin-only" onclick="App.openManageSectionModal()" style="font-weight: 600;" title="Manage, Edit, or Delete Sections">⚙️ Manage Sections</button>
             </div>
 
             <!-- Zoom Controls -->
@@ -531,6 +554,16 @@
           </div>
 
           <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label for="settingsApiSecret">🔐 API Secret (optional security lock)</label>
+            <input type="password" id="settingsApiSecret" class="form-control" autocomplete="off" placeholder="Leave blank unless the backend has an API_SECRET property">
+            <small>
+              Anyone who knows the web app URL can read and write the ledger. Paste here the
+              <strong>same value</strong> as the <code>API_SECRET</code> Script Property in Apps Script
+              (Project Settings → Script Properties). Leave blank to keep the API open.
+            </small>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1.5rem;">
             <label for="settingsOpeningBal">March 2026 Opening Balance (₹)</label>
             <input type="number" id="settingsOpeningBal" class="form-control" placeholder="120000">
             <small>Carry forward balance from previous financial year.</small>
@@ -581,6 +614,12 @@
         </div>
       </section>
       </main>
+
+      <!-- Global footer bar: identical branding on every tab/page (Admin & Rudra) -->
+      <footer class="app-footer">
+        <span class="app-footer-brand">🚛 <strong>SHINEX LEDGER</strong> • Enterprise Freight &amp; Fleet Management System</span>
+        <span>© 2026 Shinex UQ Genetic Seeds Pvt. Ltd. • Developed by <strong>Shravan Kumar</strong> • All Rights Reserved</span>
+      </footer>
     </div>
   </div>
 
@@ -692,7 +731,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" onclick="TransportModule.closeModal()">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save Transport Record</button>
+          <button type="submit" class="btn btn-primary">Submit</button>
         </div>
       </form>
     </div>
@@ -739,7 +778,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" onclick="AdvancesModule.closeModal()">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save Advance Record</button>
+          <button type="submit" class="btn btn-primary">Submit</button>
         </div>
       </form>
     </div>
@@ -840,14 +879,14 @@
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Application Scripts with Cache Busters -->
-  <script src="js/auth.js?v=12.0"></script>
-  <script src="js/api.js?v=12.0"></script>
-  <script src="js/transport.js?v=12.0"></script>
-  <script src="js/advances.js?v=12.0"></script>
-  <script src="js/excel.js?v=12.1"></script>
-  <script src="js/sheetview.js?v=12.1"></script>
-  <script src="js/backup.js?v=12.0"></script>
-  <script src="js/app.js?v=12.1"></script>
+  <script src="js/auth.js?v=14.0"></script>
+  <script src="js/api.js?v=14.0"></script>
+  <script src="js/transport.js?v=14.0"></script>
+  <script src="js/advances.js?v=14.0"></script>
+  <script src="js/excel.js?v=14.0"></script>
+  <script src="js/sheetview.js?v=14.0"></script>
+  <script src="js/backup.js?v=14.0"></script>
+  <script src="js/app.js?v=14.0"></script>
 </body>
 </html>
 

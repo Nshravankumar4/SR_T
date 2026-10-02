@@ -23,7 +23,7 @@ const AdvancesModule = {
     let opts = '<option value="ALL">📋 All Sections (Combined)</option>';
     sections.forEach(s => {
       const isAct = !s.isArchive;
-      opts += `<option value="${s.name}">${isAct ? '🟢' : '📁'} ${s.name}: ${s.title || (isAct ? 'Active' : 'Archive')}</option>`;
+      opts += `<option value="${s.name}">${isAct ? '🟢' : '📁'} ${s.name}: ${window.escapeHtml(window.getSectionLabel(s))}</option>`;
     });
     filterEl.innerHTML = opts;
 
@@ -155,7 +155,7 @@ const AdvancesModule = {
 
     secSelect.innerHTML = sections.map(s => `
       <option value="${s.name}" ${s.name.toLowerCase() === target.toLowerCase() ? 'selected' : ''}>
-        ${s.name} (${s.title || (s.isArchive ? 'Archive' : 'Active')})
+        ${s.name} (${window.escapeHtml(window.getSectionLabel(s))})
       </option>
     `).join('');
   },
@@ -176,11 +176,11 @@ const AdvancesModule = {
     document.getElementById('advanceModalTitle').innerText = '➕ Record Advance Payment';
     this.setDefaultDate();
 
-    // Never leave the Save button stuck disabled from a previous failed submit
+    // Add mode shows "Submit"; edit mode shows "Save"
     const submitBtn = document.querySelector('#advanceForm button[type="submit"]');
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.innerText = 'Save Advance Record';
+      submitBtn.innerText = 'Submit';
     }
 
     // If preselectedSection not specified, check currently active section filter
@@ -207,6 +207,11 @@ const AdvancesModule = {
     document.getElementById('advanceAmount').value = adv.amount || '';
     document.getElementById('advanceDescription').value = adv.description || adv.note || '';
     document.getElementById('advanceReference').value = adv.reference || '';
+    const submitBtn = document.querySelector('#advanceForm button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerText = 'Save';
+    }
     document.getElementById('advanceModal').classList.add('active');
   },
 
@@ -221,6 +226,17 @@ const AdvancesModule = {
       window.App?.showToast?.('⏳ Still saving the previous request…', 'info');
       return;
     }
+
+    // Defense-in-depth: programmatic submits bypass native HTML5 validation —
+    // never let an empty advance reach Google Sheets.
+    const guardForm = document.getElementById('advanceForm');
+    if (guardForm && typeof guardForm.checkValidity === 'function' && !guardForm.checkValidity()) {
+      // reportValidity() highlights the first bad field and fires the shared
+      // "fill required fields" toast listener — no duplicate toast from here.
+      if (typeof guardForm.reportValidity === 'function') guardForm.reportValidity();
+      return;
+    }
+
     this.isSubmitting = true;
 
     // Instant visual feedback so the first tap never feels "dead"
@@ -272,7 +288,7 @@ const AdvancesModule = {
       this.isSubmitting = false;
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.innerText = 'Save Advance Record';
+        submitBtn.innerText = document.getElementById('advanceId')?.value ? 'Save' : 'Submit';
       }
     }
   },

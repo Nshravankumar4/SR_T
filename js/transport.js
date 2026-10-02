@@ -19,7 +19,7 @@ const TransportModule = {
     let opts = '<option value="ALL">📋 All Sections (Complete 2026-2027)</option>';
     sections.forEach(s => {
       const isAct = !s.isArchive;
-      opts += `<option value="${s.name}">${isAct ? '🟢' : '📁'} ${s.name}: ${s.title || (isAct ? 'Active' : 'Archive')}</option>`;
+      opts += `<option value="${s.name}">${isAct ? '🟢' : '📁'} ${s.name}: ${window.escapeHtml(window.getSectionLabel(s))}</option>`;
     });
     filterEl.innerHTML = opts;
     if (currentVal && Array.from(filterEl.options).some(o => o.value === currentVal)) {
@@ -107,10 +107,17 @@ const TransportModule = {
         else if (Number(r.amount) > 0 && Number(r.toPay) === 0) status = 'Billed';
         else status = 'Pending';
       }
+      if (r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid') {
+        status = 'Paid';
+      }
       const badgeClass = status === 'Paid' ? 'badge-success' : (status === 'Partially Paid' ? 'badge-warning' : (status === 'Billed' ? 'badge-primary' : 'badge-danger'));
       const formattedAmount = (Number(r.amount) || 0).toLocaleString('en-IN');
       const formattedToPay = (Number(r.toPay) || 0).toLocaleString('en-IN');
-      const formattedPaid = (Number(r.paid) || 0).toLocaleString('en-IN');
+      // paid is either a number or the literal string 'Paid' (fully settled trips).
+      // Number('Paid') is NaN, which used to render as a misleading ₹0 in this column.
+      const isPaidFlag = (status === 'Paid' || r.paid === 'Paid' || String(r.paid).toLowerCase() === 'paid' || (Number(r.toPay) > 0 && Number(r.balance) === 0 && (r.status === 'Paid' || Number(r.paid) >= Number(r.toPay))));
+      const paidNum = isPaidFlag ? (Number(r.toPay) || 0) : (window.parseAmount(r.paid));
+      const formattedPaid = paidNum.toLocaleString('en-IN');
       const formattedBalance = (Number(r.balance) || 0).toLocaleString('en-IN');
 
       return `
@@ -127,7 +134,7 @@ const TransportModule = {
           <td>${window.escapeHtml(r.mTax || '-')}</td>
           <td>₹${formattedAmount}</td>
           <td><strong>₹${formattedToPay}</strong></td>
-          <td style="color: var(--success);">₹${formattedPaid}</td>
+          <td style="color: var(--success); font-weight: ${isPaidFlag ? '700' : '400'};">${paidNum > 0 ? `₹${formattedPaid}` : ''}</td>
           <td style="color: ${r.balance > 0 ? 'var(--danger)' : 'var(--text-muted)'}; font-weight: bold;">₹${formattedBalance}</td>
           <td><span class="badge ${badgeClass}">${window.escapeHtml(status)}</span></td>
           <td>
@@ -158,7 +165,7 @@ const TransportModule = {
 
     secSelect.innerHTML = sections.map(s => `
       <option value="${s.name}" ${s.name.toLowerCase() === target.toLowerCase() ? 'selected' : ''}>
-        ${s.name} (${s.title || (s.isArchive ? 'Archive' : 'Active')})
+        ${s.name} (${window.escapeHtml(window.getSectionLabel(s))})
       </option>
     `).join('');
   },
@@ -202,11 +209,11 @@ const TransportModule = {
     document.getElementById('transportId').value = '';
     document.getElementById('transportModalTitle').innerText = '➕ Add Transport Record';
 
-    // Never leave the Save button stuck disabled from a previous failed submit
+    // Add mode shows "Submit"; edit mode shows "Save" (never stuck disabled either)
     const submitBtn = document.querySelector('#transportForm button[type="submit"]');
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.innerText = 'Save Transport Record';
+      submitBtn.innerText = 'Submit';
     }
     
     let sec = preselectedSection;
@@ -252,6 +259,12 @@ const TransportModule = {
     setVal('transportBalance', isPaid ? 0 : (Number(record.balance) || 0));
     setVal('transportNote', record.note || '');
 
+    const submitBtn = document.querySelector('#transportForm button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerText = 'Save';
+    }
+
     const titleEl = document.getElementById('transportModalTitle');
     if (titleEl) titleEl.innerText = `✏️ Edit Record (LR: ${record.lrNo || id})`;
     const modalEl = document.getElementById('transportModal');
@@ -292,6 +305,17 @@ const TransportModule = {
       window.App?.showToast?.('⏳ Still saving the previous request…', 'info');
       return;
     }
+
+    // Defense-in-depth: programmatic submits bypass native HTML5 validation,
+    // which previously let an empty record reach Google Sheets. Block junk here.
+    const guardForm = document.getElementById('transportForm');
+    if (guardForm && typeof guardForm.checkValidity === 'function' && !guardForm.checkValidity()) {
+      // reportValidity() highlights the first bad field and fires the shared
+      // "fill required fields" toast listener — no duplicate toast from here.
+      if (typeof guardForm.reportValidity === 'function') guardForm.reportValidity();
+      return;
+    }
+
     this.isSubmitting = true;
 
     // Instant visual feedback so the first tap never feels "dead"
@@ -363,7 +387,8 @@ const TransportModule = {
       this.isSubmitting = false;
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.innerText = 'Save Transport Record';
+        const isEdit = Boolean(document.getElementById('transportId')?.value);
+        submitBtn.innerText = isEdit ? 'Save' : 'Submit';
       }
     }
   },

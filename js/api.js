@@ -816,6 +816,15 @@ window.getLatestTripDate = function(trips, defaultDate = '23-09-2026') {
       month = mIn[2].padStart(2, '0');
       year = mIn[3];
     } else {
+      // Sheets Date cells stringify as "Mon Apr 20 2026 00:00:00 GMT+0530 (...)".
+      // Parse explicitly — iOS Safari cannot Date.parse() that form.
+      const legacy = (typeof window.parseLegacyDateString === 'function') ? window.parseLegacyDateString(s) : null;
+      if (legacy) {
+        const dLegacy = new Date(Number(legacy.year), Number(legacy.month) - 1, Number(legacy.day));
+        if (!isNaN(dLegacy.getTime())) {
+          return { ts: dLegacy.getTime(), str: `${legacy.day}-${legacy.month}-${legacy.year}` };
+        }
+      }
       const parsed = Date.parse(s);
       if (!isNaN(parsed)) {
         const dObj = new Date(parsed);
@@ -839,6 +848,23 @@ window.getLatestTripDate = function(trips, defaultDate = '23-09-2026') {
   return latest.str || defaultDate;
 };
 
+/**
+ * Parses the legacy Google-Sheets Date.toString() form, e.g.
+ * "Mon Apr 20 2026 00:00:00 GMT+0530 (India Standard Time)".
+ * Date.parse() handles this on Chrome but returns NaN on iOS/Safari,
+ * which previously leaked raw garbage into the table, sheet view and exports.
+ */
+window.parseLegacyDateString = function(s) {
+  if (!s) return null;
+  // Sheets format: "Mon Apr 20 2026 00:00:00 GMT+0530 (...)" -> month, day, year
+  const m = String(s).match(/([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2})\s+(\d{4})/);
+  if (!m) return null;
+  const months = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+  const mi = months[m[1].toLowerCase()];
+  if (!mi) return null;
+  return { day: String(m[2]).padStart(2, '0'), month: String(mi).padStart(2, '0'), year: m[3] };
+};
+
 window.parseDateToTimestamp = function(dStr) {
   if (!dStr) return 0;
   const s = String(dStr).trim().replace(/--+/g, '-').replace(/\/\/+/g, '/');
@@ -852,8 +878,86 @@ window.parseDateToTimestamp = function(dStr) {
     const d = new Date(Number(mIn[3]), Number(mIn[2]) - 1, Number(mIn[1]));
     return isNaN(d.getTime()) ? 0 : d.getTime();
   }
+  // Google Sheets Date objects arrive as "Mon Apr 20 2026 ..." — parse explicitly
+  // (iOS/Safari cannot parse the trailing "GMT+0530 (India Standard Time)" part).
+  const legacy = window.parseLegacyDateString(s);
+  if (legacy) {
+    const d = new Date(Number(legacy.year), Number(legacy.month) - 1, Number(legacy.day));
+    return isNaN(d.getTime()) ? 0 : d.getTime();
+  }
   const parsed = Date.parse(s);
   return isNaN(parsed) ? 0 : parsed;
+};
+
+// Auto section period label.
+//
+// Only titles the app generated itself (those starting with "NEW") are recomputed;
+// a title typed by hand in Manage Sections is always preserved.
+//
+//	Section 2 with trips from August, viewed in October
+//	  → "NEW August – October 2026"
+//	New empty section created in October
+//	  → "NEW October 2026"
+//
+// The END month is always the CURRENT month, so the ledger label keeps pace with
+// today's date without anyone editing anything.
+window.getSectionDisplayTitle = function(section) {
+  if (!section) return '';
+  const stored = String(section.title || '').trim();
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+                  'August', 'September', 'October', 'November', 'December'];
+
+  // Manual / archive titles are never touched (e.g. "April 2026 to August 2026")
+  if (!/^new\b/i.test(stored)) return stored;
+
+  const name = section.name;
+  const trips = (window.App && window.App.transportRecords) || [];
+  const advances = (window.App && window.App.advanceRecords) || [];
+
+  const stamps = [];
+  trips.forEach(r => {
+    if (window.getTripSection(r) === name) {
+      const t = window.parseDateToTimestamp(r.date);
+      if (t) stamps.push(t);
+    }
+  });
+  advances.forEach(a => {
+    if (window.getAdvanceSection(a) === name) {
+      const t = window.parseDateToTimestamp(a.date);
+      if (t) stamps.push(t);
+    }
+  });
+
+  const now = new Date();
+  const endM = now.getMonth();
+  const endY = now.getFullYear();
+
+  let startM = endM;
+  let startY = endY;
+  if (stamps.length) {
+    const oldest = new Date(Math.min.apply(null, stamps));
+    startM = oldest.getMonth();
+    startY = oldest.getFullYear();
+  }
+
+  let period;
+  if (startY === endY) {
+    period = (startM === endM)
+      ? `${MONTHS[startM]} ${endY}`
+      : `${MONTHS[startM]} – ${MONTHS[endM]} ${endY}`;
+  } else {
+    period = `${MONTHS[startM]} ${startY} – ${MONTHS[endM]} ${endY}`;
+  }
+
+  return `NEW ${period}`;
+};
+
+// Convenience wrapper: the auto label, or a sensible fallback when there is none.
+window.getSectionLabel = function(section, fallback = 'Active Period') {
+  const label = window.getSectionDisplayTitle(section);
+  if (label) return label;
+  if (section && section.isArchive) return 'Archive';
+  return fallback;
 };
 
 window.getNoteStyle = function(note) {
@@ -967,6 +1071,11 @@ window.formatDateForDisplay = function(dStr) {
     return `${day}-${month}-${year}`;
   }
 
+  // "Mon Apr 20 2026 00:00:00 GMT+0530 (India Standard Time)" — parse explicitly
+  // so iPhone/iPad (Safari) shows DD-MM-YYYY instead of the raw string.
+  const legacy = (typeof window.parseLegacyDateString === 'function') ? window.parseLegacyDateString(s) : null;
+  if (legacy) return `${legacy.day}-${legacy.month}-${legacy.year}`;
+
   const parsed = new Date(s);
   if (!isNaN(parsed.getTime())) {
     const day = String(parsed.getDate()).padStart(2, '0');
@@ -1008,13 +1117,39 @@ const API_CONFIG = {
 };
 
 const ApiService = {
+  // --- Optional shared API secret -------------------------------------------
+  // Lives only in this browser's localStorage. The backend rejects every request
+  // when its API_SECRET Script Property is set and this value does not match.
+  // While the backend property is empty this is ignored, so nothing breaks.
+  getApiSecret() {
+    return localStorage.getItem('shinex_api_secret') || '';
+  },
+
+  setApiSecret(secret) {
+    const value = String(secret || '').trim();
+    if (value) {
+      localStorage.setItem('shinex_api_secret', value);
+    } else {
+      localStorage.removeItem('shinex_api_secret');
+    }
+    return value;
+  },
+
+  // Appends ?secret=… to a GET URL when a secret is configured
+  withSecret(url) {
+    const secret = this.getApiSecret();
+    if (!secret) return url;
+    return `${url}${url.includes('?') ? '&' : '?'}secret=${encodeURIComponent(secret)}`;
+  },
+
   // Current device session identity + server-issued token for authorized envelopes
   getSessionEnvelope() {
     const u = typeof AuthService !== 'undefined' ? AuthService.getCurrentUser() : null;
     return {
       user: u ? u.name : '',
       role: u ? u.role : '',
-      token: u ? u.token : ''
+      token: u ? u.token : '',
+      secret: this.getApiSecret()
     };
   },
 
@@ -1026,7 +1161,7 @@ const ApiService = {
     const url = this.getApiUrl();
     if (!url) return [];
     const sep = url.includes('?') ? '&' : '?';
-    const reqUrl = `${url}${sep}action=listBackups&user=${encodeURIComponent(u.name || '')}&token=${encodeURIComponent(u.token || '')}&_=${Date.now()}`;
+    const reqUrl = this.withSecret(`${url}${sep}action=listBackups&user=${encodeURIComponent(u.name || '')}&token=${encodeURIComponent(u.token || '')}&_=${Date.now()}`);
     const response = await fetch(reqUrl, { method: 'GET', redirect: 'follow' });
     const text = await response.text();
     const data = JSON.parse(text);
@@ -1358,10 +1493,15 @@ const ApiService = {
   // Fetch all transport and advance records
   async fetchAll() {
     const url = this.getApiUrl();
-    if (url) {
+    this.cloudSyncWarning = null;
+    if (!url) {
+      throw new Error('Cloud database URL is not configured. Open Settings & API and paste the Apps Script Web App URL.');
+    }
+    {
+      let text = '';
       try {
-        const response = await fetch(`${url}?action=getAll`, { method: 'GET' });
-        const text = await response.text();
+        const response = await fetch(this.withSecret(`${url}?action=getAll`), { method: 'GET' });
+        text = await response.text();
         let result = null;
         try {
           result = JSON.parse(text);
@@ -1370,6 +1510,11 @@ const ApiService = {
             console.warn("⚠️ Google Apps Script requires deployment permission set to 'Anyone'.");
             if (window.App) window.App.cloudSyncWarning = "API Permission: Set to 'Anyone' in Apps Script";
           }
+        }
+
+        if (result && result.error === 'API_SECRET_INVALID') {
+          console.warn('⚠️ Backend rejected the API secret.');
+          throw new Error('API secret is missing or incorrect — open Settings & API and re-enter it.');
         }
 
         if (result && result.success && result.data) {
@@ -1422,40 +1567,35 @@ const ApiService = {
             };
           }
         }
-      } catch (err) {
-        console.warn("Cloud fetch failed, using local storage fallback:", err);
-        if (window.App) {
-          window.App.cloudSyncWarning = "API Permission: Set to 'Anyone' in Apps Script";
+
+        if (result && result.success !== true) {
+          // Cloud answered, but with a failure (bad secret, server busy, etc.)
+          throw new Error(result.message || result.error || 'Google Sheets rejected the request.');
         }
+      } catch (err) {
+        console.warn("Cloud fetch failed:", err);
+        const raw = String(err.message || '');
+        const isNetworkError = /failed to fetch|networkerror|load failed|network request failed/i.test(raw);
+        throw new Error(isNetworkError || !raw ? this.describeCloudFailure(text) : raw);
       }
     }
 
-    // Local fallback
-    this.initLocalData();
-    let transport = [];
-    let advances = [];
-    try { transport = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyTransport) || '[]'); } catch(e) {}
-    try { advances = JSON.parse(localStorage.getItem(API_CONFIG.storageKeyAdvances) || '[]'); } catch(e) {}
+    // CLOUD-ONLY: Google Sheets is the single source of truth. There is deliberately
+    // NO localStorage / browser-cache fallback here — if the cloud cannot be reached
+    // the app says so instead of quietly showing stale numbers from this device.
+    throw new Error(this.describeCloudFailure(''));
+  },
 
-    if (!transport || !Array.isArray(transport) || transport.length === 0) {
-      transport = REAL_SHINEX_TRANSPORT;
-      localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(REAL_SHINEX_TRANSPORT));
-    } else {
-      const deduped = this.deduplicateTransportRecords(transport);
-      if (deduped.length !== transport.length) {
-        transport = deduped;
-        localStorage.setItem(API_CONFIG.storageKeyTransport, JSON.stringify(transport));
-      }
+  // Turns a failed cloud response into a message the user can act on
+  describeCloudFailure(responseText) {
+    if (responseText && (responseText.includes('accounts.google.com') || responseText.includes('ServiceLogin'))) {
+      return "Google redirected to a sign-in page. In Apps Script set 'Who has access' to Anyone, then redeploy.";
     }
-    if (!advances || !Array.isArray(advances) || advances.length === 0) {
-      advances = REAL_SHINEX_ADVANCES;
-      localStorage.setItem(API_CONFIG.storageKeyAdvances, JSON.stringify(REAL_SHINEX_ADVANCES));
+    if (!this.getApiUrl()) {
+      return 'Cloud database URL is not configured. Open Settings & API and paste the Apps Script Web App URL.';
     }
-
-    // Normalize local records exactly like cloud records (comma parsing, balance, status)
-    const cleanLocalT = transport.map(t => this.normalizeTransportRecord(t)).filter(Boolean);
-    const cleanLocalA = advances.map(a => this.normalizeAdvanceRecord(a)).filter(Boolean);
-    return { transport: cleanLocalT, advances: cleanLocalA, source: 'local' };
+    if (this.cloudSyncWarning) return this.cloudSyncWarning;
+    return 'Cannot reach the Google Sheets cloud database. Check your internet connection and try again.';
   },
 
   async testConnection(customUrl) {
@@ -1464,13 +1604,13 @@ const ApiService = {
       return { success: false, message: "No Google Apps Script Web App URL provided." };
     }
     try {
-      const response = await fetch(`${url}?action=getAll`, { method: 'GET' });
-      const text = await response.text();
-      let data = null;
-      try {
-        data = JSON.parse(text);
-      } catch (jsonErr) {
-        if (text.includes('accounts.google.com') || text.includes('ServiceLogin')) {
+    const response = await fetch(this.withSecret(`${url}?action=getAll`), { method: 'GET' });
+    const text = await response.text();
+    let data = null;
+    try {
+      data = JSON.parse(text);
+    } catch (jsonErr) {
+      if (text.includes('accounts.google.com') || text.includes('ServiceLogin')) {
           return {
             success: false,
             isAuthRedirect: true,
@@ -1547,7 +1687,7 @@ const ApiService = {
     const url = this.getApiUrl();
     if (!url) return null;
     try {
-      const response = await fetch(`${url}?action=getVersion`, {
+      const response = await fetch(this.withSecret(`${url}?action=getVersion`), {
         method: 'GET',
         headers: { 'Accept': 'application/json' }
       });

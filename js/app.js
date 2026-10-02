@@ -167,6 +167,8 @@ window.App = {
       }
       
       const isAdmin = user.role === 'Admin';
+      // Body flag for CSS rules that hide admin-only UI for Rudra
+      document.body.classList.toggle('employee-mode', !isAdmin);
       // Toggle admin-only elements (e.g. changing Admin password, Settings & API tab)
       const adminOnlyElements = document.querySelectorAll('.admin-only');
       adminOnlyElements.forEach(el => {
@@ -184,6 +186,22 @@ window.App = {
     }
   },
 
+  // Mobile drawer: single source of truth for open/close + dim backdrop
+  toggleSidebar() {
+    const sb = document.querySelector('.app-sidebar');
+    if (!sb) return;
+    const open = !sb.classList.contains('open');
+    sb.classList.toggle('open', open);
+    document.getElementById('sidebarBackdrop')?.classList.toggle('show', open);
+    document.body.classList.toggle('sidebar-open', open);
+  },
+
+  closeSidebar() {
+    document.querySelector('.app-sidebar')?.classList.remove('open');
+    document.getElementById('sidebarBackdrop')?.classList.remove('show');
+    document.body.classList.remove('sidebar-open');
+  },
+
   logout() {
     if (typeof AuthService !== 'undefined') {
       AuthService.logout();
@@ -191,7 +209,7 @@ window.App = {
       sessionStorage.removeItem('transport_user_session_v2');
       try { sessionStorage.clear(); } catch (e) {}
     }
-    document.querySelector('.app-sidebar')?.classList.remove('open');
+    this.closeSidebar();
     this.checkAuth();
     this.showToast("Logged out successfully.", "info");
   },
@@ -208,6 +226,7 @@ window.App = {
 
     try {
       const result = await ApiService.fetchAll();
+      this.hideCloudBlock();
       this.transportRecords = result.transport || [];
       this.advanceRecords = result.advances || [];
       this.openingBalance = ApiService.getOpeningBalance();
@@ -239,12 +258,13 @@ window.App = {
         if (banner) banner.style.display = 'block';
       } else {
         // Cloud reachable-but-not-returned (or no URL): never claim "Live Database"
-        this.updateCloudStatus('⚠ Cloud Unreachable • Local Cache', 'offline');
+        this.updateCloudStatus('☁ Cloud unreachable', 'offline');
         if (banner) banner.style.display = 'none';
       }
     } catch (err) {
       console.error("refreshData error:", err);
-      this.updateCloudStatus('⚠ Cloud Unreachable • Local Cache', 'offline');
+      this.showCloudBlock(err.message || 'Cannot reach the cloud database.');
+      this.updateCloudStatus('☁ Cloud unreachable', 'offline');
     } finally {
       this.isSyncing = false;
       if (this._refreshQueued) {
@@ -258,6 +278,8 @@ window.App = {
     if (apiUrlInput) apiUrlInput.value = ApiService.getApiUrl();
     const openBalInput = document.getElementById('settingsOpeningBal');
     if (openBalInput) openBalInput.value = this.openingBalance;
+    const secretInput = document.getElementById('settingsApiSecret');
+    if (secretInput) secretInput.value = ApiService.getApiSecret ? ApiService.getApiSecret() : '';
   },
 
   async testCloudConnectionUI() {
@@ -453,7 +475,7 @@ window.App = {
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.85rem;">
                   <div>
                     <h4 style="color: var(--primary); font-size: 1.05rem; margin-bottom: 2px;">${sec.name} Reconciliation</h4>
-                    <div style="font-size: 0.8rem; color: var(--text-muted);">${sec.title || (isS1 ? 'April – August 2026' : 'Active Period')}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">${window.escapeHtml(window.getSectionLabel(sec, isS1 ? 'April – August 2026' : 'Active Period'))}</div>
                   </div>
                   <span class="badge ${badgeClass}">${badgeText}</span>
                 </div>
@@ -510,10 +532,12 @@ window.App = {
     }
     const sections = ApiService.getSections();
     const nextNum = sections.length + 1;
+    const newName = `Section ${nextNum}`;
     const nameInput = document.getElementById('newSectionName');
-    if (nameInput) nameInput.value = `Section ${nextNum}`;
+    if (nameInput) nameInput.value = newName;
     const titleInput = document.getElementById('newSectionTitle');
-    if (titleInput) titleInput.value = `NEW`;
+    // Pre-fill the period from today's month; it then auto-extends month by month
+    if (titleInput) titleInput.value = window.getSectionDisplayTitle({ name: newName, title: 'NEW' }) || 'NEW';
     document.getElementById('sectionModal')?.classList.add('active');
   },
 
@@ -582,7 +606,7 @@ window.App = {
               <span class="badge ${s.isArchive ? 'badge-secondary' : 'badge-success'}" style="font-size: 0.72rem;">${s.isArchive ? 'Archive' : 'Active'}</span>
             </div>
             <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">
-              ${window.escapeHtml(s.title || 'Standard Section')} • ${tripCount} trips, ${advCount} advances
+              ${window.escapeHtml(window.getSectionLabel(s, 'Standard Section'))} • ${tripCount} trips, ${advCount} advances
             </div>
           </div>
           <div style="display: flex; gap: 0.4rem;">
@@ -763,7 +787,7 @@ window.App = {
 
         // Mobile: close the slide-in menu after a tab is chosen (actions feel dead otherwise)
         if (window.innerWidth <= 900) {
-          document.querySelector('.app-sidebar')?.classList.remove('open');
+          window.App.closeSidebar();
         }
 
         if (target === 'sheetview' && typeof SheetViewModule !== 'undefined') {
@@ -840,9 +864,11 @@ window.App = {
     document.getElementById('saveSettingsBtn')?.addEventListener('click', () => {
       const url = document.getElementById('settingsApiUrl').value.trim();
       const openBal = Number(document.getElementById('settingsOpeningBal').value) || 0;
+      const secret = document.getElementById('settingsApiSecret')?.value || '';
       ApiService.setApiUrl(url);
       ApiService.setOpeningBalance(openBal);
-      this.showToast("Settings updated successfully!", "success");
+      if (ApiService.setApiSecret) ApiService.setApiSecret(secret);
+      this.showToast(secret.trim() ? 'Settings saved — API secret is now active.' : 'Settings updated successfully!', "success");
       this.refreshData();
     });
 
@@ -889,8 +915,34 @@ window.App = {
       this.refreshData();
     });
     window.addEventListener('offline', () => {
-      this.updateCloudStatus('Offline (Device Storage)', 'offline');
+      this.updateCloudStatus('Offline — cloud unreachable', 'offline');
     });
+  },
+
+  // ---- Cloud-only enforcement -------------------------------------------
+  // The app is cloud-only: nothing is ever rendered from this device's cache.
+  // When the very first cloud load fails we block the whole UI so no stale
+  // number can be mistaken for live data.
+  showCloudBlock(reason) {
+    const screen = document.getElementById('cloudBlockScreen');
+    const reasonEl = document.getElementById('cloudBlockReason');
+    if (reasonEl) reasonEl.innerText = reason || 'Unknown error.';
+    if (screen && !this._hasLoadedFromCloud) {
+      screen.style.display = 'flex';
+    }
+  },
+
+  hideCloudBlock() {
+    const screen = document.getElementById('cloudBlockScreen');
+    if (screen) screen.style.display = 'none';
+    this._hasLoadedFromCloud = true;
+  },
+
+  async retryCloudLoad() {
+    const screen = document.getElementById('cloudBlockScreen');
+    if (screen) screen.style.display = 'none';
+    this.showToast('🔄 Retrying cloud database…', 'info');
+    await this.refreshData();
   },
 
   showToast(message, type = 'info') {
