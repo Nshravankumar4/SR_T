@@ -255,7 +255,7 @@ function doGet(e) {
         // Passwords leave this server as salted SHA-256 hashes only; the
         // plaintext values never appear in any API response.
         auth: {
-          adminPassHash: hashPassword(props.getProperty('ADMIN_PASS') || 'Shravan'),
+          adminPassHash: hashPassword(props.getProperty('ADMIN_PASS') || 'Shravan@2505'),
           empPassHash: hashPassword(props.getProperty('EMP_PASS') || 'RudraSarika@2505')
         }
       });

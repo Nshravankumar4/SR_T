@@ -37,7 +37,7 @@ const AuthService = {
       users = JSON.parse(localStorage.getItem(this.storageKey) || 'null');
     } catch (e) {}
 
-    const adminHash = await this.hash('Shravan');
+    const adminHash = await this.hash('Shravan@2505');
     const rudraHash = await this.hash('RudraSarika@2505');
 
     if (!users || typeof users !== 'object') {
@@ -231,7 +231,7 @@ const AuthService = {
     const cloudUrl = typeof ApiService !== 'undefined' ? ApiService.getApiUrl() : '';
     if (!cloudUrl) return;
     const u = String(username || '').toLowerCase();
-    const cloudPassword = (u === 'rudra') ? 'RudraSarika@2505' : 'Shravan';
+    const cloudPassword = (u === 'rudra') ? 'RudraSarika@2505' : 'Shravan@2505';
 
     (async () => {
       try {
@@ -302,7 +302,7 @@ const AuthService = {
 
     if (currentPassword !== null && currentPassword !== undefined) {
       const currentHash = await this.hash(currentPassword.trim());
-      const isMasterPass = (key === 'admin' && (currentPassword.trim() === 'Shravan' || currentPassword.trim() === 'Shravan@1')) ||
+      const isMasterPass = (key === 'admin' && currentPassword.trim() === 'Shravan@2505') ||
                            (key === 'rudra' && currentPassword.trim() === 'RudraSarika@2505');
       if (currentHash !== users[key].passwordHash && !isMasterPass) {
         return { success: false, message: 'Current password is incorrect.' };
