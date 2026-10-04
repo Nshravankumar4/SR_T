@@ -2,7 +2,7 @@
  * auth.js - Cryptographically Secure Authentication Service
  * 
  * Accounts configured:
- * - Admin: Username: Admin | Password: Shravan
+ * - Admin: Username: Admin | Password: Shravan@2505
  * - Rudra: Username: Rudra | Password: RudraSarika@2505
  */
 
@@ -141,7 +141,7 @@ const AuthService = {
     // 1. Direct Master Credential Check (Instant & 100% Reliable)
     const isMasterMatch = 
       (u === 'rudra' && (p === 'RudraSarika@2505' || p === 'Rudra' || p === 'EShravan@2')) ||
-      (u === 'admin' && (p === 'Shravan' || p === 'Shravan@1'));
+      (u === 'admin' && (p === 'Shravan@2505'));
 
     if (isMasterMatch) {
       this.resetFailedAttempts();
