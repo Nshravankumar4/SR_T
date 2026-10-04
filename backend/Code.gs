@@ -255,7 +255,7 @@ function doGet(e) {
         // Passwords leave this server as salted SHA-256 hashes only; the
         // plaintext values never appear in any API response.
         auth: {
-          adminPassHash: hashPassword(props.getProperty('ADMIN_PASS') || 'Shravan'),
+          adminPassHash: hashPassword(props.getProperty('ADMIN_PASS') || 'Shravan@2505'),
           empPassHash: hashPassword(props.getProperty('EMP_PASS') || 'RudraSarika@2505')
         }
       });
@@ -336,7 +336,7 @@ function doPost(e) {
       var p = String(envelope.password || '').trim();
       var props = PropertiesService.getScriptProperties();
       var adminUser = props.getProperty('ADMIN_USER') || 'admin';
-      var adminPass = props.getProperty('ADMIN_PASS') || 'Shravan';
+      var adminPass = props.getProperty('ADMIN_PASS') || 'Shravan@2505';
       var empUser = props.getProperty('EMP_USER') || 'rudra';
       var empPass = props.getProperty('EMP_PASS') || 'RudraSarika@2505';
 
@@ -350,10 +350,10 @@ function doPost(e) {
       }
 
       var isAdminMatch = (u === 'admin' || u === 'admin1' || u === adminUser.toLowerCase()) &&
-                         (p === adminPass || p === 'Shravan' || p === 'Shravan@1');
+                         (p === adminPass);
 
       var isEmpMatch = (u === 'rudra' || u === 'sarika' || u === empUser.toLowerCase()) &&
-                       (p === empPass || p === 'RudraSarika@2505');
+                       (p === empPass);
 
       if (isAdminMatch) {
         props.setProperty('LOGIN_FAILS', '0');

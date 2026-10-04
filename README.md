@@ -82,7 +82,7 @@ The app talks to the same cloud backend when it runs locally, so local and hoste
 
 | Card | Username | Password | Notes |
 | :--- | :--- | :--- | :--- |
-| 👑 ADMIN | `Admin` | `Shravan` | `Shravan@1` and `admin1` also work |
+| 👑 ADMIN | `Admin` | `Shravan@2505` | `admin1` also works as a username alias |
 | 👤 RUDRA | `Rudra` | `RudraSarika@2505` | `Rudra` and `sarika` also work as aliases |
 
 Passwords can be changed in-app (see [Security model](#10-security-model)). The change is pushed to
@@ -540,4 +540,4 @@ Full checklists and troubleshooting are in [`docs/DEPLOYMENT.md`](docs/DEPLOYMEN
 
 ---
 
-**© 2026 Shinex UQ Genetic Seeds Pvt. Ltd. — Developed by Shravan Kumar. All rights reserved.**
+**© 2026 Shinex UQ Genetic Seeds Pvt. Ltd. — Developed by Shravan Kumar. All rights reserved.**
