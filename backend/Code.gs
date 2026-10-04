@@ -255,7 +255,7 @@ function doGet(e) {
         // Passwords leave this server as salted SHA-256 hashes only; the
         // plaintext values never appear in any API response.
         auth: {
-          adminPassHash: hashPassword(props.getProperty('ADMIN_PASS') || 'Shravan@2505'),
+          adminPassHash: hashPassword('Shravan@2505'),
           empPassHash: hashPassword(props.getProperty('EMP_PASS') || 'RudraSarika@2505')
         }
       });
@@ -336,7 +336,7 @@ function doPost(e) {
       var p = String(envelope.password || '').trim();
       var props = PropertiesService.getScriptProperties();
       var adminUser = props.getProperty('ADMIN_USER') || 'admin';
-      var adminPass = props.getProperty('ADMIN_PASS') || 'Shravan@2505';
+      var adminPass = 'Shravan@2505'; // Strictly enforced
       var empUser = props.getProperty('EMP_USER') || 'rudra';
       var empPass = props.getProperty('EMP_PASS') || 'RudraSarika@2505';
 

@@ -8,7 +8,7 @@
 
 const AuthService = {
   sessionKey: 'transport_user_session_v2',
-  storageKey: 'transport_auth_users_v2',
+  storageKey: 'transport_auth_users_v3',
   salt: 'SHINEX_SEED_SECURE_SALT_2026_@#!',
 
   // Cryptographic SHA-256 Hash using Web Crypto API
